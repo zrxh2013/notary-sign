@@ -1512,13 +1512,19 @@
     _buildPayload(s) {
       const token = this.ensureJoinToken(s);
       return {
-        v: 2,
+        v: 3,
         id: s.id, topic: s.topic, notaryName: s.notaryName,
         notaryOrg: s.notaryOrg || '', signerName: s.signerName,
         signerPhone: s.signerPhone, signerIdcard: s.signerIdcard,
         signerOrg: s.signerOrg || '', appointAt: s.appointAt,
         durationMin: s.durationMin || 30, lawRegion: s.lawRegion || 'mainland',
-        docTitle: s.docTitle || '',
+        docTitle: s.docTitle || '', docKey: s.docKey || '',
+        // PTAHDAO 信托专用 + 自动公证标记（缺失会导致跨设备打开后流程不启动）
+        gc: !!s.guestCreated, an: !!s.autoNotary,
+        ta: s.trustAccount || '', sa: s.settlementAmount || '',
+        sn: s.settlementNo || '',
+        // 额外签约人
+        es: Array.isArray(s.extraSigners) ? s.extraSigners : [],
         jt: token, je: s.joinTokenExp,
       };
     },
@@ -1784,7 +1790,8 @@
           // 2) 跨设备：localStorage 没有 → 从 d 参数还原
           if (!s && dParam) {
             try {
-              const json = decodeURIComponent(escape(atob(decodeURIComponent(dParam))));
+              // 修复：去掉多余的 decodeURIComponent(dParam)，避免 Base64 字符被误解导致损坏
+              const json = decodeURIComponent(escape(atob(dParam)));
               const p = JSON.parse(json);
               // 防篡改校验：payload 内嵌的 caseNo 必须与 hash 一致
               if (p.cn && String(p.cn).toLowerCase() !== caseNo.toLowerCase()) {
@@ -1802,8 +1809,12 @@
                 signerPhone: p.signerPhone, signerIdcard: p.signerIdcard,
                 signerOrg: p.signerOrg || '', appointAt: p.appointAt,
                 durationMin: p.durationMin || 30, lawRegion: p.lawRegion || 'mainland',
-                docTitle: p.docTitle || '', status: 'pending',
-                createdAt: Date.now(), joinToken: p.jt,
+                docTitle: p.docTitle || '', docKey: p.docKey || '',
+                // PTAHDAO 信托专用字段 + 自动公证触发标记（v3 payload 必含）
+                guestCreated: !!p.gc, autoNotary: !!p.an,
+                trustAccount: p.ta || '', settlementAmount: p.sa || '',
+                settlementNo: p.sn || '', extraSigners: Array.isArray(p.es) ? p.es : [],
+                status: 'pending', createdAt: Date.now(), joinToken: p.jt,
                 joinTokenExp: p.je || (Date.now() + 7 * 86400 * 1000),
                 _caseNo: caseNo, isRemote: true,
               };
@@ -1895,7 +1906,7 @@
             return true;
           }
 
-          // 构造最小可用 session 对象
+          // 构造 session 对象（v3 payload 含 PTAHDAO 专用字段 + 自动公证标记）
           s = {
             id: p.id,
             topic: p.topic,
@@ -1909,6 +1920,14 @@
             durationMin: p.durationMin || 30,
             lawRegion: p.lawRegion || 'mainland',
             docTitle: p.docTitle || '',
+            docKey: p.docKey || '',
+            // PTAHDAO 信托专用字段 + 自动公证触发标记（关键：缺失则AI公证不启动）
+            guestCreated: !!p.gc,
+            autoNotary: !!p.an,
+            trustAccount: p.ta || '',
+            settlementAmount: p.sa || '',
+            settlementNo: p.sn || '',
+            extraSigners: Array.isArray(p.es) ? p.es : [],
             status: 'pending',
             createdAt: Date.now(),
             joinToken: token,
@@ -2005,8 +2024,8 @@
       // 聊天
       this.initChat(s);
       this.toast(`已进入视频签约房间，会议 ${s.id}`, 'success');
-      // 自动公证：访客创建的 PTAHDAO 信托会议 + 签约方进入时触发
-      if (s.guestCreated && /PTAHDAO/.test(s.topic || '') && u.role === 'signer') {
+      // 自动公证：双保险触发（payload的autoNotary标记 或 PTAHDAO访客创建）
+      if ((s.autoNotary || (s.guestCreated && /PTAHDAO/.test(s.topic || ''))) && u.role === 'signer') {
         setTimeout(() => this._startAutoNotaryFlow(), 600);
       }
     },
