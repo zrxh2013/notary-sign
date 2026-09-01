@@ -1533,18 +1533,32 @@
       const json = JSON.stringify(payload);
       return btoa(unescape(encodeURIComponent(json)));
     },
-    // 获取应用根路径
+    // 页面内使用的根路径（沙箱/本地开发都适配）
     _appBaseUrl() {
       if (/traecontent\.cn/i.test(location.origin)) {
         return location.origin.replace(/(:\d+)?$/, ':16000') + '/';
       }
       return location.origin + location.pathname.replace(/[^/]*$/, '');
     },
+    // 【对外分享链接】使用的公网根路径（关键：本地/沙箱环境必须回落到GitHub Pages，
+    // 否则生成的 http://localhost:8000/... 链接发到他人手机上必定404 File not found）
+    _publicBaseUrl() {
+      const DEFAULT_PUBLIC = 'https://zrxh2013.github.io/notary-sign/';
+      const saved = Store.get('deployUrl', '');
+      if (saved) return saved.replace(/\/?$/, '/');
+      const host = (location.hostname || '').toLowerCase();
+      const isDevHost = host === 'localhost' || host === '127.0.0.1' ||
+                         /\.local$/.test(host) || /traecontent\.cn$/.test(host) ||
+                         /agent-sandbox/.test(host) || /^192\.168\./.test(host) ||
+                         /^10\./.test(host) || /^172\.(1[6-9]|2\d|3[01])\./.test(host);
+      if (isDevHost) return DEFAULT_PUBLIC;
+      return location.origin + location.pathname.replace(/[^/]*$/, '');
+    },
     buildSignerLink(s) {
       const token = this.ensureJoinToken(s);
       const payload = this._buildPayload(s);
       const b64 = this._encodePayload(payload);
-      const base = this._appBaseUrl();
+      const base = this._publicBaseUrl();
       return `${base}index.html?join=${token}&sid=${encodeURIComponent(s.id)}&d=${b64}`;
     },
     // 生成案件编号 Pt001 / Pt002 …
@@ -1565,24 +1579,20 @@
     // 编号短链（跨设备自包含）：https://域名/#Pt028&d=BASE64DATA
     buildCaseNoLink(s) {
       const caseNo = this.genCaseNo(s);
-      const base = this._appBaseUrl();
+      const base = this._publicBaseUrl();
       const customDomain = Store.get('linkDomain', '');
       const payload = this._buildPayload(s);
       payload.cn = caseNo; // 内嵌案件编号，跨设备校验防篡改
       const b64 = this._encodePayload(payload);
-      // 自定义域名（需自行配置 DNS 指向 GitHub Pages 才能生效）
+      // 自定义域名（仅展示格式，需自行配置DNS才能访问；未配置DNS时接收方可复制Hash部分到公网地址打开）
       if (customDomain) return `https://${customDomain}/#${caseNo}&d=${b64}`;
       return `${base}#${caseNo}&d=${b64}`;
     },
     // token 短链：https://域名/=TOKEN（同设备用，localStorage 直查）
+    // 注意：跨设备推荐用 buildSignerLink（带 d 参数的完整链）或 buildCaseNoLink（编号链带 d）
     buildSignerShortLink(s) {
       const token = this.ensureJoinToken(s);
-      // 取当前页面所在目录（兼容 GitHub Pages 子路径 /notary-sign/）
-      let base = location.origin + location.pathname.replace(/[^/]*$/, '');
-      if (/traecontent\.cn/i.test(location.origin)) {
-        base = location.origin.replace(/(:\d+)?$/, ':16000') + '/';
-      }
-      return `${base}=${token}`;
+      return `${this._publicBaseUrl()}=${token}`;
     },
     // 调用短链 API：先 is.gd（支持自定义后缀），失败回退 TinyURL
     async shortenLink(fullUrl, customAlias) {
