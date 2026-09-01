@@ -927,6 +927,9 @@
       this.updateCreateBtn();
       // topic 变化时实时更新费用预览
       $('#cm-topic').onchange = () => this.updateCreateFee();
+      // 时间字段手动输入时同步更新按钮选中态
+      $('#cm-time').oninput = () => this._renderQuickSlots();
+      $('#cm-time').onchange = () => this._renderQuickSlots();
       // 访客模式：显示系统指派公证人提示 + 渲染快捷时段
       this._renderGuestNotice();
       this._renderQuickSlots();
@@ -970,24 +973,42 @@
         { label: '🌙 晚间', time: '19:00' },
         { label: '🌙 夜间', time: '20:30' },
       ];
+      const currentVal = $('#cm-time')?.value || '';
       box.innerHTML = `
-        <div style="font-size:12px;color:#6b7280;margin-bottom:6px;">⚡ 快捷时段（点击自动填入预约时间）</div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+          <span style="font-size:12px;color:#6b7280;">⚡ 快捷时段（点击自动填入预约时间）</span>
+          <span id="cm-quick-selected" style="font-size:11px;color:#3b82f6;font-weight:600;">
+            ${currentVal ? '✓ 已选 ' + currentVal : '尚未选择'}
+          </span>
+        </div>
         <div style="display:flex;flex-wrap:wrap;gap:6px;">
-          ${slots.map(s => `
-            <button type="button" onclick="App._pickQuickSlot('${s.time}')" 
-              style="padding:5px 10px;border:1px solid #e5e7eb;border-radius:14px;background:#f8fafc;font-size:11px;cursor:pointer;transition:all .15s;"
-              onmouseover="this.style.borderColor='#3b82f6';this.style.background='#eff6ff';"
-              onmouseout="this.style.borderColor='#e5e7eb';this.style.background='#f8fafc';">
-              ${s.label} <b style="color:#3b82f6;">${s.time}</b>
-            </button>
-          `).join('')}
+          ${slots.map(s => {
+            const isSelected = currentVal === s.time;
+            return `
+            <button type="button" data-time="${s.time}" onclick="App._pickQuickSlot('${s.time}')"
+              style="padding:5px 10px;border-radius:14px;font-size:11px;cursor:pointer;transition:all .15s;${isSelected
+                ? 'border:1px solid #3b82f6;background:#3b82f6;color:#fff;box-shadow:0 2px 6px rgba(59,130,246,.3);'
+                : 'border:1px solid #e5e7eb;background:#f8fafc;color:inherit;'}
+              " onmouseover="if(!this.classList.contains('picked')){this.style.borderColor='#3b82f6';this.style.background='#eff6ff';}"
+              onmouseout="if(!this.classList.contains('picked')){this.style.borderColor='#e5e7eb';this.style.background='#f8fafc';}"
+              class="${isSelected ? 'picked' : ''}">
+              ${s.label} <b style="color:${isSelected ? '#fff' : '#3b82f6'};">${s.time}</b>
+            </button>`;
+          }).join('')}
         </div>`;
     },
     _pickQuickSlot(time) {
       const t = $('#cm-time');
       if (t) { t.value = time; t.dispatchEvent(new Event('change')); }
-      // 自动滚动到时间字段，给用户视觉反馈
-      t && t.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      // 重新渲染按钮组以更新选中态 + 已选提示
+      this._renderQuickSlots();
+      // 视觉反馈：临时高亮时间字段
+      if (t) {
+        t.style.borderColor = '#3b82f6';
+        t.style.background = '#eff6ff';
+        t.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        setTimeout(() => { t.style.borderColor = ''; t.style.background = ''; }, 2000);
+      }
       this.speak(`已选择 ${time} 时段`);
     },
     updateCreateFee() {
