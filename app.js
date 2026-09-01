@@ -1226,14 +1226,15 @@
       // 构造自包含深链：URL 带 join/sid/d 参数，任何设备均可还原 session
       return `${base}?join=${token}&sid=${encodeURIComponent(s.id)}&d=${b64}`;
     },
-    // 短链格式：https://www.ytt.com.hk/=TOKEN（同设备用，localStorage 直查）
+    // 短链格式：https://域名[/子路径]/=TOKEN（同设备用，localStorage 直查）
     buildSignerShortLink(s) {
       const token = this.ensureJoinToken(s);
-      let origin = location.origin;
-      if (/traecontent\.cn/i.test(origin)) {
-        origin = origin.replace(/(:\d+)?$/, ':16000');
+      // 取当前页面所在目录（兼容 GitHub Pages 子路径 /notary-sign/）
+      let base = location.origin + location.pathname.replace(/[^/]*$/, '');
+      if (/traecontent\.cn/i.test(location.origin)) {
+        base = location.origin.replace(/(:\d+)?$/, ':16000') + '/';
       }
-      return `${origin}/=${token}`;
+      return `${base}=${token}`;
     },
     showSignerLinkModal(s) {
       const link = this.buildSignerLink(s);
@@ -1367,8 +1368,8 @@
     _handleJoinDeepLink() {
       const u = new URL(location.href);
 
-      // 短链格式：/=TOKEN（同设备，用 token 从 localStorage 查找 session）
-      const pathMatch = u.pathname.match(/^\/=(.+)$/);
+      // 短链格式：[/子路径]/=TOKEN（同设备，用 token 从 localStorage 查找 session）
+      const pathMatch = u.pathname.match(/\/=(.+)$/);
       if (pathMatch) {
         const token = decodeURIComponent(pathMatch[1]);
         // 用 joinToken 匹配本地 session
@@ -1381,7 +1382,7 @@
           this.toast('链接已过期，请联系公证人重发', 'warning');
           return true;
         }
-        try { history.replaceState(null, '', location.pathname); } catch(e) {}
+        try { history.replaceState(null, '', location.pathname.replace(/\/=[^/]*$/, '/')); } catch(e) {}
         this.state.currentUser = {
           id: 'signer_' + s.id,
           name: s.signerName,
