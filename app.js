@@ -1236,30 +1236,55 @@
       }
       return `${base}=${token}`;
     },
+    // 调用 is.gd 短链 API（免费、免注册、支持自定义后缀）
+    async shortenLink(fullUrl, customAlias) {
+      try {
+        let apiUrl = `https://is.gd/create.php?format=json&url=${encodeURIComponent(fullUrl)}`;
+        if (customAlias) apiUrl += `&shorturl=${encodeURIComponent(customAlias)}`;
+        const resp = await fetch(apiUrl);
+        if (!resp.ok) return null;
+        const data = await resp.json();
+        return data.shorturl || null;
+      } catch (e) {
+        return null;
+      }
+    },
     showSignerLinkModal(s) {
       const link = this.buildSignerLink(s);
-      const shortLink = this.buildSignerShortLink(s);
       const token = s.joinToken;
       $('#signer-link-topic').textContent = s.topic;
       $('#signer-link-sid').textContent = s.id;
       $('#signer-link-when').textContent = `预约 ${fmtTime(s.appointAt)}`;
       $('#signer-link-name').textContent = s.signerName;
       $('#signer-link-notary').textContent = `${s.notaryName}（${s.notaryOrg || ''}）`;
-      $('#signer-link-url').value = shortLink;
+      // 先显示完整链，异步生成短链
+      $('#signer-link-url').value = link;
       $('#signer-link-token').textContent = `令牌：${token.slice(0,8)}...${token.slice(-6)} · 7 天内有效`;
-      // 渲染二维码（简易 SVG，便于扫描）
       const qr = $('#signer-link-qr');
-      if (qr) qr.innerHTML = this._renderQrSvg(shortLink, 96);
-      // 存储完整链接供跨设备使用
+      if (qr) qr.innerHTML = this._renderQrSvg(link, 96);
       this._fullSignerLink = link;
-      this._shortSignerLink = shortLink;
-      // 默认显示短链，高亮短链按钮
+      this._shortSignerLink = link;
+      // 默认高亮完整链按钮
       const btnShort = $('#link-mode-short');
       const btnFull = $('#link-mode-full');
-      if (btnShort) btnShort.style.fontWeight = '700';
-      if (btnFull) btnFull.style.fontWeight = '400';
+      if (btnShort) { btnShort.style.fontWeight = '400'; btnShort.textContent = '⏳ 生成短链中…'; }
+      if (btnFull) btnFull.style.fontWeight = '700';
       this.openModal('signer-link-modal');
       this.speak('签约人入口链接已生成，可复制或扫码分享给签约方。');
+      // 异步：用签约人手机号做短链后缀
+      const phone = (s.signerPhone || '').replace(/[^0-9]/g, '');
+      this.shortenLink(link, phone).then(shortUrl => {
+        if (!shortUrl || !this._modalOpen || this._modalOpen !== 'signer-link-modal') return;
+        this._shortSignerLink = shortUrl;
+        // 更新输入框和二维码为短链
+        $('#signer-link-url').value = shortUrl;
+        if (qr) qr.innerHTML = this._renderQrSvg(shortUrl, 96);
+        if (btnShort) { btnShort.style.fontWeight = '700'; btnShort.textContent = '短链（手机号）'; }
+        if (btnFull) btnFull.style.fontWeight = '400';
+        this.toast('短链已生成，可复制或扫码分享', 'success');
+      }).catch(() => {
+        if (btnShort) btnShort.textContent = '短链（生成失败）';
+      });
     },
     copySignerLink() {
       const inp = $('#signer-link-url');
@@ -3594,7 +3619,7 @@ ${bodyFragment}
     this.state.detailSession = s;
     this.openModal('detail-modal');
   };
-  App.openModal = function (id) { $('#' + id).classList.add('show'); };
+  App.openModal = function (id) { this._modalOpen = id; $('#' + id).classList.add('show'); };
 
   // ---------- ⑦ 录像回放查看器 ----------
   const STEP_DEFS = [
@@ -3695,6 +3720,7 @@ ${bodyFragment}
   // 关闭回放清理定时器
   const _origCloseModal = App.closeModal;
   App.closeModal = function (id) {
+    this._modalOpen = null;
     _origCloseModal ? _origCloseModal.call(this, id) : $('#' + id).classList.remove('show');
     if (id === 'playback-modal' && this.state.pbPlayTimer) {
       clearInterval(this.state.pbPlayTimer); this.state.pbPlayTimer = null;
