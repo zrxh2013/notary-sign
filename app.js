@@ -1236,18 +1236,27 @@
       }
       return `${base}=${token}`;
     },
-    // 调用 is.gd 短链 API（免费、免注册、支持自定义后缀）
+    // 调用短链 API：先 is.gd（支持自定义后缀），失败回退 TinyURL
     async shortenLink(fullUrl, customAlias) {
+      // 1. is.gd（支持自定义后缀）
       try {
         let apiUrl = `https://is.gd/create.php?format=json&url=${encodeURIComponent(fullUrl)}`;
         if (customAlias) apiUrl += `&shorturl=${encodeURIComponent(customAlias)}`;
         const resp = await fetch(apiUrl);
-        if (!resp.ok) return null;
-        const data = await resp.json();
-        return data.shorturl || null;
-      } catch (e) {
-        return null;
-      }
+        if (resp.ok) {
+          const data = await resp.json();
+          if (data.shorturl) return data.shorturl;
+        }
+      } catch (e) { /* CORS 或网络问题，继续回退 */ }
+      // 2. TinyURL 回退（不支持自定义后缀）
+      try {
+        const resp2 = await fetch(`https://tinyurl.com/api-create.php?url=${encodeURIComponent(fullUrl)}`);
+        if (resp2.ok) {
+          const text = await resp2.text();
+          if (text.startsWith('http')) return text.trim();
+        }
+      } catch (e2) { /* 两个都失败 */ }
+      return null;
     },
     showSignerLinkModal(s) {
       const link = this.buildSignerLink(s);
