@@ -1226,7 +1226,28 @@
       // 构造自包含深链：URL 带 join/sid/d 参数，任何设备均可还原 session
       return `${base}?join=${token}&sid=${encodeURIComponent(s.id)}&d=${b64}`;
     },
-    // 短链格式：https://域名[/子路径]/=TOKEN（同设备用，localStorage 直查）
+    // 生成案件编号 Pt001 / Pt002 …
+    genCaseNo(s) {
+      if (s._caseNo) return s._caseNo;
+      const list = Store.get('sessions', []);
+      let max = 0;
+      list.forEach(x => {
+        const m = (x._caseNo || '').match(/^Pt(\d+)$/i);
+        if (m) max = Math.max(max, parseInt(m[1], 10));
+      });
+      s._caseNo = 'Pt' + String(max + 1).padStart(3, '0');
+      // 持久化
+      const idx = list.findIndex(x => x.id === s.id);
+      if (idx >= 0) { list[idx]._caseNo = s._caseNo; Store.set('sessions', list); }
+      return s._caseNo;
+    },
+    // 编号短链：https://ytt.com.hk#Pt028（展示域名可配置）
+    buildCaseNoLink(s) {
+      const caseNo = this.genCaseNo(s);
+      const domain = Store.get('linkDomain', 'ytt.com.hk');
+      return `https://${domain}#${caseNo}`;
+    },
+    // token 短链：https://域名/=TOKEN（同设备用，localStorage 直查）
     buildSignerShortLink(s) {
       const token = this.ensureJoinToken(s);
       // 取当前页面所在目录（兼容 GitHub Pages 子路径 /notary-sign/）
@@ -1260,39 +1281,43 @@
     },
     showSignerLinkModal(s) {
       const link = this.buildSignerLink(s);
+      const caseLink = this.buildCaseNoLink(s);
+      const caseNo = s._caseNo || this.genCaseNo(s);
       const token = s.joinToken;
+      this._currentSignerSession = s;
       $('#signer-link-topic').textContent = s.topic;
       $('#signer-link-sid').textContent = s.id;
       $('#signer-link-when').textContent = `预约 ${fmtTime(s.appointAt)}`;
       $('#signer-link-name').textContent = s.signerName;
       $('#signer-link-notary').textContent = `${s.notaryName}（${s.notaryOrg || ''}）`;
-      // 先显示完整链，异步生成短链
-      $('#signer-link-url').value = link;
-      $('#signer-link-token').textContent = `令牌：${token.slice(0,8)}...${token.slice(-6)} · 7 天内有效`;
+      // 填充域名输入框
+      const domainInput = $('#link-domain-input');
+      if (domainInput) domainInput.value = Store.get('linkDomain', 'ytt.com.hk');
+      // 默认显示编号短链
+      $('#signer-link-url').value = caseLink;
+      $('#signer-link-token').textContent = `案件编号：${caseNo} · 令牌：${token.slice(0,8)}... · 7天有效`;
       const qr = $('#signer-link-qr');
-      if (qr) qr.innerHTML = this._renderQrSvg(link, 96);
+      if (qr) qr.innerHTML = this._renderQrSvg(caseLink, 96);
       this._fullSignerLink = link;
-      this._shortSignerLink = link;
-      // 默认高亮完整链按钮
+      this._caseNoLink = caseLink;
+      this._shortSignerLink = caseLink;
+      // 默认高亮编号短链按钮
+      const btnCase = $('#link-mode-case');
       const btnShort = $('#link-mode-short');
       const btnFull = $('#link-mode-full');
+      if (btnCase) { btnCase.style.fontWeight = '700'; btnCase.textContent = `编号短链 ${caseNo}`; }
       if (btnShort) { btnShort.style.fontWeight = '400'; btnShort.textContent = '⏳ 生成短链中…'; }
-      if (btnFull) btnFull.style.fontWeight = '700';
+      if (btnFull) btnFull.style.fontWeight = '400';
       this.openModal('signer-link-modal');
       this.speak('签约人入口链接已生成，可复制或扫码分享给签约方。');
-      // 异步：用签约人手机号做短链后缀
+      // 异步：用签约人手机号做短链后缀（is.gd/TinyURL）
       const phone = (s.signerPhone || '').replace(/[^0-9]/g, '');
       this.shortenLink(link, phone).then(shortUrl => {
         if (!shortUrl || !this._modalOpen || this._modalOpen !== 'signer-link-modal') return;
         this._shortSignerLink = shortUrl;
-        // 更新输入框和二维码为短链
-        $('#signer-link-url').value = shortUrl;
-        if (qr) qr.innerHTML = this._renderQrSvg(shortUrl, 96);
-        if (btnShort) { btnShort.style.fontWeight = '700'; btnShort.textContent = '短链（手机号）'; }
-        if (btnFull) btnFull.style.fontWeight = '400';
-        this.toast('短链已生成，可复制或扫码分享', 'success');
+        if (btnShort) { btnShort.style.fontWeight = '400'; btnShort.textContent = '外部短链'; }
       }).catch(() => {
-        if (btnShort) btnShort.textContent = '短链（生成失败）';
+        if (btnShort) btnShort.textContent = '短链（失败）';
       });
     },
     copySignerLink() {
@@ -1309,21 +1334,43 @@
         this._copyFallback(inp, url);
       }
     },
-    // 切换短链/完整链显示
+    // 切换编号短链/外部短链/完整链显示
     switchLinkMode(mode) {
       const inp = $('#signer-link-url');
       if (!inp) return;
       const qr = $('#signer-link-qr');
-      if (mode === 'short') {
-        inp.value = this._shortSignerLink || '';
-        if (qr) qr.innerHTML = this._renderQrSvg(this._shortSignerLink || '', 96);
-        $('#link-mode-short').style.fontWeight = '700';
-        $('#link-mode-full').style.fontWeight = '400';
+      const btns = ['link-mode-case', 'link-mode-short', 'link-mode-full'];
+      btns.forEach(id => { const b = $('#' + id); if (b) b.style.fontWeight = '400'; });
+      let url;
+      if (mode === 'case') {
+        url = this._caseNoLink || '';
+        $('#' + btns[0]) && ($('#link-mode-case').style.fontWeight = '700');
+      } else if (mode === 'short') {
+        url = this._shortSignerLink || '';
+        $('#' + btns[1]) && ($('#link-mode-short').style.fontWeight = '700');
       } else {
-        inp.value = this._fullSignerLink || '';
-        if (qr) qr.innerHTML = this._renderQrSvg(this._fullSignerLink || '', 96);
-        $('#link-mode-short').style.fontWeight = '400';
-        $('#link-mode-full').style.fontWeight = '700';
+        url = this._fullSignerLink || '';
+        $('#' + btns[2]) && ($('#link-mode-full').style.fontWeight = '700');
+      }
+      inp.value = url;
+      if (qr) qr.innerHTML = this._renderQrSvg(url, 96);
+    },
+    // 设置展示域名
+    setLinkDomain(val) {
+      const v = (val || '').trim().replace(/^https?:\/\//, '').replace(/\/.*$/, '');
+      Store.set('linkDomain', v || 'ytt.com.hk');
+      // 重新生成编号短链
+      if (this._currentSignerSession) {
+        const caseLink = this.buildCaseNoLink(this._currentSignerSession);
+        this._caseNoLink = caseLink;
+        this._shortSignerLink = caseLink;
+        // 如果当前显示的是编号短链，更新输入框
+        const btnCase = $('#link-mode-case');
+        if (btnCase && btnCase.style.fontWeight === '700') {
+          $('#signer-link-url').value = caseLink;
+          $('#signer-link-qr') && ($('#signer-link-qr').innerHTML = this._renderQrSvg(caseLink, 96));
+        }
+        this.toast(`展示域名已设为 ${v}`, 'success');
       }
     },
     _copyFallback(inp, url) {
@@ -1398,11 +1445,38 @@
       </svg>`;
     },
 
-    // ============ 深链入口：/=TOKEN 或 ?join=TOKEN&sid=ID&d=BASE64 自动跳转签约房间 ============
+    // ============ 深链入口：#Pt028 或 /=TOKEN 或 ?join=TOKEN&sid=ID&d=BASE64 ============
     _handleJoinDeepLink() {
       const u = new URL(location.href);
 
-      // 短链格式：[/子路径]/=TOKEN（同设备，用 token 从 localStorage 查找 session）
+      // 编号短链：#Pt028（同设备，用案件编号从 localStorage 查找 session）
+      const hashMatch = (u.hash || '').match(/^#(Pt\d+)$/i);
+      if (hashMatch) {
+        const caseNo = hashMatch[1];
+        let s = Store.get('sessions', []).find(x => (x._caseNo || '').toLowerCase() === caseNo.toLowerCase());
+        if (!s) {
+          this.toast(`未找到案件 ${caseNo}，请使用完整链接或联系公证人`, 'error');
+          return true;
+        }
+        if (s.joinTokenExp && Date.now() > s.joinTokenExp) {
+          this.toast('链接已过期，请联系公证人重发', 'warning');
+          return true;
+        }
+        try { history.replaceState(null, '', location.pathname); } catch(e) {}
+        this.state.currentUser = {
+          id: 'signer_' + s.id,
+          name: s.signerName,
+          phone: s.signerPhone,
+          role: 'signer',
+          org: s.signerOrg || '',
+        };
+        this.joinRoom(s.id);
+        this.toast(`欢迎 ${s.signerName}，已通过案件编号 ${caseNo} 进入「${s.topic}」签约房间`, 'success');
+        this.speak(`欢迎${s.signerName}，已进入签约房间。`);
+        return true;
+      }
+
+      // token 短链：[/子路径]/=TOKEN（同设备，用 token 从 localStorage 查找 session）
       const pathMatch = u.pathname.match(/\/=(.+)$/);
       if (pathMatch) {
         const token = decodeURIComponent(pathMatch[1]);

@@ -1174,11 +1174,17 @@
             style="flex:1;padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-family:monospace;font-size:11px;background:#f8fafc;color:#1e293b;" />
           <button class="btn-primary" onclick="App.copySignerLink()" style="white-space:nowrap;">📋 复制</button>
         </div>
-        <div style="display:flex;gap:8px;margin-bottom:6px;">
-          <button class="btn-ghost small" id="link-mode-short" onclick="App.switchLinkMode('short')" style="font-size:11px;">短链（同设备）</button>
+        <div style="display:flex;gap:8px;margin-bottom:6px;flex-wrap:wrap;">
+          <button class="btn-ghost small" id="link-mode-case" onclick="App.switchLinkMode('case')" style="font-size:11px;">编号短链</button>
+          <button class="btn-ghost small" id="link-mode-short" onclick="App.switchLinkMode('short')" style="font-size:11px;">⏳ 生成短链中…</button>
           <button class="btn-ghost small" id="link-mode-full" onclick="App.switchLinkMode('full')" style="font-size:11px;">完整链（跨设备）</button>
         </div>
-        <div class="muted small" style="margin-bottom:14px;">💡 短链适合扫码/同设备，完整链适合发给远程签约方手机直接打开</div>
+        <div class="muted small" style="margin-bottom:14px;">💡 编号短链同设备秒开，完整链适合发给远程签约方手机直接打开</div>
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:14px;">
+          <span style="font-size:11px;color:#64748b;white-space:nowrap;">展示域名：</span>
+          <input type="text" id="link-domain-input" placeholder="ytt.com.hk" onchange="App.setLinkDomain(this.value)"
+            style="flex:1;padding:5px 8px;border:1px solid var(--border);border-radius:6px;font-size:11px;font-family:monospace;background:#f8fafc;" />
+        </div>
 
         <div style="display:grid;grid-template-columns:120px 1fr;gap:16px;align-items:center;">
           <div id="signer-link-qr" style="background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:8px;display:flex;justify-content:center;"></div>
