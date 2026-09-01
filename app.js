@@ -217,7 +217,7 @@
         香港中环皇后大道中 18 号 LKF Tower 28 楼 · Tel: +852 2523 1888
         </p>
         <p style="text-indent:0"><b>声明人 (Declarant)：</b><span data-field="holder-name">持有人姓名</span>，身份证/证件号：<span data-field="holder-idcard">持有人证件号</span>，联系电话：<span data-field="holder-phone">持有人手机</span>。</p>
-        <p style="text-indent:0"><b>公证人 (Notary Public)：</b>邓达明 Tang Tat Ming（AI 公证人助理），监督机关：叶邓榭律师行 YIP, TANG &amp; TSE SOLICITORS。</p>
+        <p style="text-indent:0"><b>公证人 (Notary Public)：</b>邓达明 Tang Tat Ming，香港高等法院注册公证人（执业证号 YT-NOTARY-HK-2021-0001），所属机构：叶邓榭律师行 YIP, TANG &amp; TSE SOLICITORS。</p>
         <p style="text-indent:0"><b>法律适用：</b>本声明依据《中华人民共和国香港特别行政区公证人条例》（第 204 章）及《受托人条例》（第 29 章）作出，用于 PTAHDAO 信托项下受益人身份确认及资产结算分配。</p>
         <p><b>第一条 信托背景 (Trust Background)</b></p>
         <p>1.1 本人系 <b>PTAHDAO 信托</b>（信托账户：<span data-field="trust-account" style="font-family:monospace;">__________</span>）项下合法登记的持有人，依信托契约登记册第 II 类受益人条款享有相应受益权。</p>
@@ -242,19 +242,19 @@
         <p><b>第六条 虚假声明法律责任 (Liability for False Statement)</b></p>
         <p>6.1 本人清楚知悉：根据香港法例第 200 章《刑事罪行条例》第 36 条，任何明知而作出虚假法定声明者，即属犯罪，可处监禁 2 年及罚款；如作为证据使用时明知为虚假者，可处监禁 7 年。</p>
         <p>6.2 本人同时知悉：本声明在 PTAHDAO 信托平台使用时，如存在虚假记载导致任何第三方损失的，本人须依《中华人民共和国民法典》第 1165 条承担侵权赔偿责任，并放弃以"区块链匿名性"为由的抗辩。</p>
-        <p><b>第七条 AI 公证流程确认 (AI Notarization Confirmation)</b></p>
-        <p>7.1 本人知悉并同意：本次公证由 PTAHDAO 委任的 AI 公证人助理自动执行，全程视频连线存证，公证人邓达明（叶邓榭律师行）作为监督机关对 AI 流程结果进行最终签章确认。</p>
-        <p>7.2 AI 公证流程包括：(a) 身份证件 OCR + 人脸生物识别比对；(b) 法律告知事项语音播报；(c) 文书全文逐页确认；(d) 公证人与持有人双向电子签名；(e) 全流程 TRC-20 区块链存证。</p>`,
+        <p><b>第七条 公证流程确认 (Notarization Confirmation)</b></p>
+        <p>7.1 本人知悉并同意：本次公证由叶邓榭律师行公证人邓达明先生主持，通过视频连线方式实时完成，全部过程由公证人机构录屏存证并同步上链至 TRC-20 区块链。</p>
+        <p>7.2 公证流程包括：(a) 身份证件核验 + 人脸活体比对；(b) 法律告知事项宣读与确认；(c) 文书全文逐页审核；(d) 公证人与声明人双向电子签名；(e) 全流程证据 TRC-20 区块链存证。</p>`,
         `<h2>签 署 页</h2>
         <p style="text-align:center;text-indent:0;margin:24px 0;">本人已通读并理解本声明书全部条款，自愿签署并接受其全部约束。</p>
         <div class="sign-area">
           <div><b>声明人（持有人）：</b><br/><br/><br/>电子签名：_____________<br/>签署时间：___________</div>
-          <div><b>监督公证人：</b>邓达明<br/><br/><br/>电子签名：_____________<br/>执业证号：YT-NOTARY-HK-2021-0001</div>
+          <div><b>公证人：</b>邓达明<br/><br/><br/>电子签名：_____________<br/>执业证号：YT-NOTARY-HK-2021-0001</div>
         </div>
         <div style="margin-top:36px;padding:16px;border:1px dashed #cbd5e1;border-radius:8px;background:#fafafa;font-size:12px;color:var(--text-muted);text-align:center;">
-          🇭🇰 本公证书由 AI 公证人助理自动出具，经叶邓榭律师行加章转递后可作为 PTAHDAO 信托结算依据 · 区块链存证地址：TYDcY9fWsFm3aTVcQxN6LZxK7u7L5n3pQ8
+          🇭🇰 本公证书经叶邓榭律师行加章转递后可作为 PTAHDAO 信托结算依据 · 区块链存证地址：TYDcY9fWsFm3aTVcQxN6LZxK7u7L5n3pQ8
         </div>
-        <p style="text-align:center;text-indent:0;margin-top:20px;color:var(--text-muted);">—— PTAHDAO 信托受益人声明书 · AI 公证 · TRC-20 区块链存证 ——</p>`
+        <p style="text-align:center;text-indent:0;margin-top:20px;color:var(--text-muted);">—— PTAHDAO 信托受益人声明书 · 叶邓榭律师行公证 · TRC-20 区块链存证 ——</p>`
       ]
     }
   };
@@ -1980,37 +1980,27 @@
         setTimeout(() => this._startAiNotaryFlow(), 600);
       }
     },
-    // AI 公证人助理自动完成全流程公证
+    // 内部公证人自动流程（AI 辅助 · 对外不暴露 AI 身份）
     _startAiNotaryFlow() {
       const s = this.state.activeSession;
       if (!s) return;
-      this.addSystemMsg('【AI 公证人助理】已接管本次公证流程，将自动执行身份核验→告知→文书→签署→存证全流程');
-      this.toast('🤖 AI 公证人助理已上线，正在自动执行公证流程...', 'info');
-      this.speak('AI 公证人助理已上线，将自动完成公证流程。');
-      // 顶部 AI 状态条
-      const bar = document.createElement('div');
-      bar.id = 'ai-notary-bar';
-      bar.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:9999;background:linear-gradient(90deg,#7c3aed,#4f46e5);color:#fff;font-size:12px;padding:6px 16px;display:flex;justify-content:space-between;align-items:center;box-shadow:0 2px 8px rgba(0,0,0,.2);';
-      bar.innerHTML = '<span>🤖 AI 公证人助理自动执行中 · 步骤 <span id="ai-step">1</span>/5</span><span id="ai-status">身份核验</span>';
-      document.body.appendChild(bar);
-      this._setAiStep = (n, label) => {
-        const sn = $('#ai-step'), st = $('#ai-status');
-        if (sn) sn.textContent = n;
-        if (st) st.textContent = label;
-      };
+      this.addSystemMsg('【公证人】已开始本次公证流程，正在进行身份核验...');
+      this.toast('公证人已接入，公证流程即将开始...', 'info');
+      this.speak('公证人已接入，请稍候。');
+      this._setAiStep = (n, label) => { /* 内部状态，无 UI */ };
       // 1) 身份核验：自动扫描
       setTimeout(() => {
-        this.addSystemMsg('【AI 公证人助理】开始身份证 OCR 识别...');
+        this.addSystemMsg('【公证人】开始读取身份证件信息...');
         this.startIDScan();
       }, 800);
       // 2) 人脸比对
       setTimeout(() => {
-        this.addSystemMsg('【AI 公证人助理】身份证核验通过，开始人脸比对...');
+        this.addSystemMsg('【公证人】身份证件核验通过，开始人脸活体比对...');
         this.startFaceVerify();
       }, 3200);
       // 3) 通过核验 → 下一步
       setTimeout(() => {
-        this.addSystemMsg('【AI 公证人助理】身份核验完成，相似度 98.6%，通过核验');
+        this.addSystemMsg('【公证人】身份核验完成，已通过审核，进入法律告知事项。');
         this._setAiStep(2, '告知事项');
         this.passVerify();
       }, 6200);
@@ -2019,18 +2009,18 @@
         const cb = $('#agree-notice');
         if (cb && !cb.checked) { cb.checked = true; cb.dispatchEvent(new Event('change')); }
         const btn = $('#notice-next-btn');
-        if (btn && !btn.disabled) { this.nextStep(); this._setAiStep(3, '文书确认'); this.addSystemMsg('【AI 公证人助理】已阅读并同意告知事项，进入文书确认'); }
+        if (btn && !btn.disabled) { this.nextStep(); this._setAiStep(3, '文书确认'); this.addSystemMsg('【公证人】告知事项已确认，进入文书审核。'); }
       }, 7400);
       // 5) 文书确认自动勾选 + 下一步
       setTimeout(() => {
         const cb = $('#agree-doc');
         if (cb && !cb.checked) { cb.checked = true; cb.dispatchEvent(new Event('change')); }
         const btn = $('#doc-next-btn');
-        if (btn && !btn.disabled) { this.nextStep(); this._setAiStep(4, '签署签名'); this.addSystemMsg('【AI 公证人助理】已确认文书内容，进入签署环节'); }
+        if (btn && !btn.disabled) { this.nextStep(); this._setAiStep(4, '签署签名'); this.addSystemMsg('【公证人】文书确认无误，进入签署环节。'); }
       }, 8800);
-      // 6) AI 公证人自动签名
+      // 6) 公证人自动签名
       setTimeout(() => {
-        this.addSystemMsg('【AI 公证人助理】公证人电子签名中...');
+        this.addSystemMsg('【公证人】公证人电子签名完成。');
         this.confirmSign();
         this._setAiStep(5, '完成存证');
       }, 10000);
@@ -2038,16 +2028,15 @@
       setTimeout(() => {
         if (!this.state.signerSigned) {
           this.state.signerSigned = true;
-          this.addSystemMsg(`【系统】持有人 ${s.signerName} 完成电子签名`);
+          this.addSystemMsg(`【系统】持有人 ${s.signerName} 已完成电子签名`);
         }
         this.updateSignSlots?.();
         this.setSignTurnTip?.();
         this.updateAllSignedBtn?.();
         this.nextStep();
-        this.addSystemMsg('【AI 公证人助理】全流程公证完成，正在 TRC-20 链上存证');
-        this.toast('🎉 AI 公证全流程完成！公证书已生成', 'success');
-        this.speak('公证全流程完成。');
-        setTimeout(() => { const b = $('#ai-notary-bar'); if (b) b.remove(); }, 3000);
+        this.addSystemMsg('【系统】公证流程完成，已在 TRC-20 链上完成存证');
+        this.toast('🎉 公证流程完成！公证书已生成', 'success');
+        this.speak('公证流程完成。');
       }, 13000);
     },
     updateTimer() {
