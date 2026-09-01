@@ -222,7 +222,7 @@
             <b>香港公证人 (Notary Public HK)：</b><br/><br/><br/>
             签字：_________________<br/>
             姓名：邓达明 TANG Tat Ming<br/>
-            公证人编号：NP00328<br/>
+            公证人编号：CAO-HK-D0468（司法部注册）<br/>
             <div style="margin-top:10px;font-size:11px;color:var(--text-muted);">叶谢邓律师行 · 中国委托公证人 · 香港中环永安集团大厦 · 专用章已加贴</div>
           </div>
         </div>
@@ -275,7 +275,7 @@
         <p style="text-align:center;text-indent:0;margin:24px 0;">本人已通读并理解本声明书全部条款，自愿签署并接受其全部约束。</p>
         <div class="sign-area">
           <div><b>声明人（持有人）：</b><br/><br/><br/>电子签名：_____________<br/>签署时间：___________</div>
-          <div><b>公证人：</b>邓达明<br/><br/><br/>电子签名：_____________<br/>执业证号：YT-NOTARY-HK-2021-0001</div>
+          <div><b>公证人：</b>邓达明<br/><br/><br/>电子签名：_____________<br/>执业证号：CAO-HK-D0468（司法部注册）</div>
         </div>
         <div style="margin-top:36px;padding:16px;border:1px dashed #cbd5e1;border-radius:8px;background:#fafafa;font-size:12px;color:var(--text-muted);text-align:center;">
           🇭🇰 本公证书经叶谢邓律师行加章转递后可作为 PTAHDAO 信托结算依据 · 区块链存证地址：TYDcY9fWsFm3aTVcQxN6LZxK7u7L5n3pQ8
@@ -4160,7 +4160,7 @@ ${bodyFragment}
         <g transform="translate(110,86)">
           <text text-anchor="middle" y="-4" fill="#991b1b" font-family="SimSun,serif" font-size="15" font-weight="800" letter-spacing="4">鄧 達 明</text>
           <text text-anchor="middle" y="14" fill="#991b1b" font-family="Arial,SimSun" font-size="10" font-weight="700">TANG  TAT  MING</text>
-          <text text-anchor="middle" y="29" fill="#7f1d1d" font-family="monospace" font-size="10" font-weight="700">執業編號 No. NP00328</text>
+          <text text-anchor="middle" y="29" fill="#7f1d1d" font-family="monospace" font-size="10" font-weight="700">執業編號 CAO-HK-D0468</text>
         </g>
         <g transform="translate(110,148)">
           <text text-anchor="middle" y="0" fill="#991b1b" font-family="SimSun,serif" font-size="9.5" font-weight="700">葉謝鄧律師行</text>
