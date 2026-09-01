@@ -21,7 +21,7 @@ const MIME = {
   '.map':  'application/json; charset=utf-8',
 };
 
-const ALLOWED = new Set(['index.html','styles.css','app.js','favicon.ico']);
+const ALLOWED = new Set(['index.html','styles.css','app.js','favicon.ico','notary-api.js']);
 
 const server = http.createServer((req, res) => {
   let urlPath = decodeURIComponent(req.url.split('?')[0]);

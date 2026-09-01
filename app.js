@@ -31,6 +31,15 @@
     set(k, v) { localStorage.setItem(k, JSON.stringify(v)); }
   };
 
+  /* ========= 默认公证人（前端访客自助创建时系统自动指派） ========= */
+  const DEFAULT_NOTARY = {
+    id: 'notary_ytt328',
+    name: '邓达明',
+    org: '香港叶邓榭律师行',
+    certNo: 'YT-NOTARY-HK-2021-0001',
+    region: 'HK',
+  };
+
   /* ========= 示例文书内容 ========= */
   const SAMPLE_DOCS = {
     '借款合同公证': {
@@ -887,6 +896,19 @@
     },
 
     /* ========= 创建会议弹窗 ========= */
+    // 访客自助创建入口：免登录直接打开创建弹窗（用于嵌入第三方平台 / APP 跳转）
+    guestCreateMeeting() {
+      // 设置临时访客身份（不写入 Store，刷新即失效）
+      if (!this.state.currentUser || this.state.currentUser.role !== 'notary') {
+        this.state.currentUser = {
+          id: 'guest_' + Date.now().toString().slice(-6),
+          name: '访客',
+          role: 'guest',
+          isGuest: true,
+        };
+      }
+      this.openCreateModal();
+    },
     openCreateModal() {
       const modal = $('#create-modal');
       modal.classList.add('show');
@@ -905,6 +927,68 @@
       this.updateCreateBtn();
       // topic 变化时实时更新费用预览
       $('#cm-topic').onchange = () => this.updateCreateFee();
+      // 访客模式：显示系统指派公证人提示 + 渲染快捷时段
+      this._renderGuestNotice();
+      this._renderQuickSlots();
+    },
+    // 访客模式提示
+    _renderGuestNotice() {
+      const u = this.state.currentUser;
+      const isGuest = !u || u.role !== 'notary';
+      let box = $('#cm-guest-notice');
+      if (!isGuest) { if (box) box.remove(); return; }
+      if (!box) {
+        box = document.createElement('div');
+        box.id = 'cm-guest-notice';
+        box.style.cssText = 'background:linear-gradient(135deg,#eff6ff,#dbeafe);border:1px solid #3b82f6;border-radius:10px;padding:10px 14px;margin-bottom:14px;font-size:12px;color:#1e40af;';
+        const head = $('#create-modal .modal-body');
+        head && head.insertBefore(box, head.firstChild);
+      }
+      box.innerHTML = `<b>🛡 系统已自动指派公证人</b><br/>
+        <span style="color:#475569;">${DEFAULT_NOTARY.name}（${DEFAULT_NOTARY.org}）· 执业证号 ${DEFAULT_NOTARY.certNo}</span><br/>
+        <span style="color:#64748b;font-size:11px;">访客模式：付费后立即生成会议号与签约链接，无需注册登录</span>`;
+    },
+    // 快捷时段选择（早晨/上午/下午/晚上）
+    _renderQuickSlots() {
+      let box = $('#cm-quick-slots');
+      if (!box) {
+        box = document.createElement('div');
+        box.id = 'cm-quick-slots';
+        const dateField = $('#cm-date')?.closest('.field')?.parentElement;
+        if (dateField) dateField.parentElement.insertBefore(box, dateField);
+        else {
+          const body = $('#create-modal .modal-body');
+          body && body.insertBefore(box, body.firstChild);
+        }
+      }
+      const slots = [
+        { label: '🌅 早晨', time: '09:00' },
+        { label: '🌅 上午', time: '10:00' },
+        { label: '🌤 中午', time: '12:00' },
+        { label: '🌤 下午', time: '14:00' },
+        { label: '🌆 傍晚', time: '16:00' },
+        { label: '🌙 晚间', time: '19:00' },
+        { label: '🌙 夜间', time: '20:30' },
+      ];
+      box.innerHTML = `
+        <div style="font-size:12px;color:#6b7280;margin-bottom:6px;">⚡ 快捷时段（点击自动填入预约时间）</div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px;">
+          ${slots.map(s => `
+            <button type="button" onclick="App._pickQuickSlot('${s.time}')" 
+              style="padding:5px 10px;border:1px solid #e5e7eb;border-radius:14px;background:#f8fafc;font-size:11px;cursor:pointer;transition:all .15s;"
+              onmouseover="this.style.borderColor='#3b82f6';this.style.background='#eff6ff';"
+              onmouseout="this.style.borderColor='#e5e7eb';this.style.background='#f8fafc';">
+              ${s.label} <b style="color:#3b82f6;">${s.time}</b>
+            </button>
+          `).join('')}
+        </div>`;
+    },
+    _pickQuickSlot(time) {
+      const t = $('#cm-time');
+      if (t) { t.value = time; t.dispatchEvent(new Event('change')); }
+      // 自动滚动到时间字段，给用户视觉反馈
+      t && t.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      this.speak(`已选择 ${time} 时段`);
     },
     updateCreateFee() {
       const topic = $('#cm-topic')?.value || '借款合同公证';
@@ -1084,6 +1168,8 @@
       this.closeModal('pay-modal');
       this.toast(`✅ 缴费确认成功！${s.pendingFee.method} · ${s.pendingFee.amount}（≈ ${s.pendingFee.hkd}）`, 'success');
       this.speak('缴费确认成功，正在创建会议。');
+      // 通知第三方平台：缴费成功
+      this._emitSdkEvent('pay', { method: s.pendingFee.method, amount: s.pendingFee.amount, hkd: s.pendingFee.hkd, txHash: s.pendingFee.txHash });
       // 延迟一下再创建会议，让用户看到 toast
       setTimeout(() => this.submitCreate(), 800);
     },
@@ -1144,12 +1230,27 @@
       if (!phoneOk) return this.toast('请输入正确的手机号（内地 11 位 / 香港 8 位或 +852 开头）', 'warning');
       if (!date || !time) return this.toast('请选择预约日期时间', 'warning');
       const u = this.state.currentUser;
+      // 访客自助模式：未登录或非公证人角色 → 系统自动指派默认公证人
+      const isGuest = !u || u.role !== 'notary';
+      const notary = isGuest ? DEFAULT_NOTARY : u;
       const appointAt = new Date(date + 'T' + time + ':00').getTime();
       if (isNaN(appointAt)) return this.toast('预约时间无效', 'warning');
+      // 时间冲突校验：同公证人同一时段（±30 分钟）不能重复预约
+      const allSessions = Store.get('sessions', []);
+      const conflict = allSessions.some(x =>
+        x.notaryId === notary.id && x.status !== 'canceled' && x.status !== 'done' &&
+        Math.abs((x.appointAt || 0) - appointAt) < 30 * 60 * 1000
+      );
+      if (conflict) return this.toast('该时段已被占用，请选择其他时间（前后 30 分钟内已有预约）', 'warning');
+      // 过往时间校验：不允许预约早于现在的时间
+      if (appointAt < Date.now() - 5 * 60 * 1000) {
+        return this.toast('预约时间不能早于当前时间，请重新选择', 'warning');
+      }
       const s = {
         id: 'GZ' + Date.now().toString().slice(-8),
         topic, status: 'pending',
-        notaryId: u.id, notaryName: u.name, notaryOrg: u.org || '--',
+        notaryId: notary.id, notaryName: notary.name, notaryOrg: notary.org || '--',
+        notaryCertNo: notary.certNo || '',
         signerName: name, signerPhone: phone, signerIdcard: idcard || '未提供',
         appointAt, duration, remark,
         docKey: SAMPLE_DOCS[topic] ? topic : '借款合同公证',
@@ -1157,6 +1258,8 @@
         feePaid: !!this.state.pendingFee,
         fee: this.state.pendingFee ? `${this.state.pendingFee.amount}（≈ ${this.state.pendingFee.hkd}）` : '未缴费',
         feeDetail: this.state.pendingFee || null,
+        guestCreated: isGuest, // 标记访客自助创建
+        selfBooked: true, // 用户自行选择时间
       };
       // 收集额外签约方
       const extras = (this.state.extraSigners || []).filter(e => e.name && e.name.trim());
@@ -1176,9 +1279,20 @@
       // 清除 pendingFee
       this.state.pendingFee = null;
       this.state.pendingTxHash = null;
-      this.renderSessions(); this.renderHome(); this.updatePendingBadge();
+      // 访客模式：不渲染 dashboard（无登录态），仅展示签约链接弹窗
+      if (!isGuest) {
+        this.renderSessions(); this.renderHome(); this.updatePendingBadge();
+      }
       // 弹出签约人入口链接（含专属令牌 + 二维码）
       this.showSignerLinkModal(s);
+      // 通知第三方平台：创建会议成功
+      this._emitSdkEvent('create', {
+        sessionId: s.id, caseNo: s._caseNo || this.genCaseNo(s),
+        caseLink: this.buildCaseNoLink(s), signerLink: this.buildSignerLink(s),
+        notary: { name: notary.name, org: notary.org, certNo: notary.certNo },
+        appointAt: s.appointAt, topic: s.topic, signerName: name, signerPhone: phone,
+        feePaid: s.feePaid, feeDetail: s.feeDetail,
+      });
     },
 
     /* ============ 签约人入口链接 ============ */
@@ -1194,37 +1308,38 @@
       }
       return s.joinToken;
     },
+    // 构造 session payload（用于深链 base64 编码）
+    _buildPayload(s) {
+      const token = this.ensureJoinToken(s);
+      return {
+        v: 2,
+        id: s.id, topic: s.topic, notaryName: s.notaryName,
+        notaryOrg: s.notaryOrg || '', signerName: s.signerName,
+        signerPhone: s.signerPhone, signerIdcard: s.signerIdcard,
+        signerOrg: s.signerOrg || '', appointAt: s.appointAt,
+        durationMin: s.durationMin || 30, lawRegion: s.lawRegion || 'mainland',
+        docTitle: s.docTitle || '',
+        jt: token, je: s.joinTokenExp,
+      };
+    },
+    // payload → base64
+    _encodePayload(payload) {
+      const json = JSON.stringify(payload);
+      return btoa(unescape(encodeURIComponent(json)));
+    },
+    // 获取应用根路径
+    _appBaseUrl() {
+      if (/traecontent\.cn/i.test(location.origin)) {
+        return location.origin.replace(/(:\d+)?$/, ':16000') + '/';
+      }
+      return location.origin + location.pathname.replace(/[^/]*$/, '');
+    },
     buildSignerLink(s) {
       const token = this.ensureJoinToken(s);
-      // 构造远程签约方可恢复的 payload（含令牌+过期时间，远程设备可独立校验防篡改）
-      const payload = {
-        v: 2,                       // v2: 新增 jt/je 字段
-        id: s.id,
-        topic: s.topic,
-        notaryName: s.notaryName,
-        notaryOrg: s.notaryOrg || '',
-        signerName: s.signerName,
-        signerPhone: s.signerPhone,
-        signerIdcard: s.signerIdcard,
-        signerOrg: s.signerOrg || '',
-        appointAt: s.appointAt,
-        durationMin: s.durationMin || 30,
-        lawRegion: s.lawRegion || 'mainland',
-        docTitle: s.docTitle || '',
-        jt: token,                   // joinToken — 远程设备用它和 URL 的 join 参数比对
-        je: s.joinTokenExp,          // joinTokenExp — 远程设备据此判断过期
-      };
-      // base64 编码（encodeURIComponent + btoa 安全处理中文）
-      const json = JSON.stringify(payload);
-      const b64 = btoa(unescape(encodeURIComponent(json)));
-      // 沙箱 preview 环境：默认端口(443)有鉴权网关拦截外部设备
-      // 需走 PREVIEW_PROXY_PUBLIC_PORT(16000) 公开端口
-      let base = location.origin + location.pathname.replace(/[^/]*$/, 'index.html');
-      if (/traecontent\.cn/i.test(location.origin)) {
-        base = location.origin.replace(/(:\d+)?$/, ':16000') + '/index.html';
-      }
-      // 构造自包含深链：URL 带 join/sid/d 参数，任何设备均可还原 session
-      return `${base}?join=${token}&sid=${encodeURIComponent(s.id)}&d=${b64}`;
+      const payload = this._buildPayload(s);
+      const b64 = this._encodePayload(payload);
+      const base = this._appBaseUrl();
+      return `${base}index.html?join=${token}&sid=${encodeURIComponent(s.id)}&d=${b64}`;
     },
     // 生成案件编号 Pt001 / Pt002 …
     genCaseNo(s) {
@@ -1241,18 +1356,17 @@
       if (idx >= 0) { list[idx]._caseNo = s._caseNo; Store.set('sessions', list); }
       return s._caseNo;
     },
-    // 编号短链：https://zrxh2013.github.io/notary-sign/#Pt028（展示域名可配置）
+    // 编号短链（跨设备自包含）：https://域名/#Pt028&d=BASE64DATA
     buildCaseNoLink(s) {
       const caseNo = this.genCaseNo(s);
-      // 沙箱环境用 16000 端口
-      let base = location.origin + location.pathname.replace(/[^/]*$/, '');
-      if (/traecontent\.cn/i.test(location.origin)) {
-        base = location.origin.replace(/(:\d+)?$/, ':16000') + '/';
-      }
-      // 允许用户自定义展示域名（需自行配置 DNS 才能生效）
+      const base = this._appBaseUrl();
       const customDomain = Store.get('linkDomain', '');
-      if (customDomain) return `https://${customDomain}#${caseNo}`;
-      return `${base}#${caseNo}`;
+      const payload = this._buildPayload(s);
+      payload.cn = caseNo; // 内嵌案件编号，跨设备校验防篡改
+      const b64 = this._encodePayload(payload);
+      // 自定义域名（需自行配置 DNS 指向 GitHub Pages 才能生效）
+      if (customDomain) return `https://${customDomain}/#${caseNo}&d=${b64}`;
+      return `${base}#${caseNo}&d=${b64}`;
     },
     // token 短链：https://域名/=TOKEN（同设备用，localStorage 直查）
     buildSignerShortLink(s) {
@@ -1456,31 +1570,74 @@
     _handleJoinDeepLink() {
       const u = new URL(location.href);
 
-      // 编号短链：#Pt028（同设备，用案件编号从 localStorage 查找 session）
-      const hashMatch = (u.hash || '').match(/^#(Pt\d+)$/i);
-      if (hashMatch) {
-        const caseNo = hashMatch[1];
-        let s = Store.get('sessions', []).find(x => (x._caseNo || '').toLowerCase() === caseNo.toLowerCase());
-        if (!s) {
-          this.toast(`未找到案件 ${caseNo}，请使用完整链接或联系公证人`, 'error');
+      // 编号短链：#Pt028（同设备） 或 #Pt028&d=BASE64（跨设备自包含）
+      // 兼容第三方平台 APP 跳转：嵌入数据后无需 localStorage 即可还原 session
+      const hashStr = (u.hash || '').replace(/^#/, '');
+      if (hashStr) {
+        const sepIdx = hashStr.indexOf('&d=');
+        const caseNo = sepIdx >= 0 ? hashStr.slice(0, sepIdx) : hashStr;
+        const dParam  = sepIdx >= 0 ? hashStr.slice(sepIdx + 3) : '';
+        if (/^Pt\d+$/i.test(caseNo)) {
+          // 1) 优先从本地 localStorage 取（公证人同设备场景）
+          let s = Store.get('sessions', []).find(x => (x._caseNo || '').toLowerCase() === caseNo.toLowerCase());
+          let isRemote = false;
+          // 2) 跨设备：localStorage 没有 → 从 d 参数还原
+          if (!s && dParam) {
+            try {
+              const json = decodeURIComponent(escape(atob(decodeURIComponent(dParam))));
+              const p = JSON.parse(json);
+              // 防篡改校验：payload 内嵌的 caseNo 必须与 hash 一致
+              if (p.cn && String(p.cn).toLowerCase() !== caseNo.toLowerCase()) {
+                this.toast('链接案件号校验失败，数据可能被篡改', 'error');
+                return true;
+              }
+              // 过期校验
+              if (p.je && Date.now() > p.je) {
+                this.toast('链接已过期，请联系公证人重发', 'warning');
+                return true;
+              }
+              s = {
+                id: p.id, topic: p.topic, notaryName: p.notaryName,
+                notaryOrg: p.notaryOrg || '', signerName: p.signerName,
+                signerPhone: p.signerPhone, signerIdcard: p.signerIdcard,
+                signerOrg: p.signerOrg || '', appointAt: p.appointAt,
+                durationMin: p.durationMin || 30, lawRegion: p.lawRegion || 'mainland',
+                docTitle: p.docTitle || '', status: 'pending',
+                createdAt: Date.now(), joinToken: p.jt,
+                joinTokenExp: p.je || (Date.now() + 7 * 86400 * 1000),
+                _caseNo: caseNo, isRemote: true,
+              };
+              const ss = Store.get('sessions', []);
+              ss.unshift(s);
+              Store.set('sessions', ss);
+              isRemote = true;
+              this.toast('已从编号链接恢复会议数据（跨设备）', 'success');
+            } catch (e) {
+              this.toast('链接数据解析失败：' + (e.message || '未知错误'), 'error');
+              return true;
+            }
+          }
+          if (!s) {
+            this.toast(`未找到案件 ${caseNo}，请使用完整链接或联系公证人`, 'error');
+            return true;
+          }
+          if (!isRemote && s.joinTokenExp && Date.now() > s.joinTokenExp) {
+            this.toast('链接已过期，请联系公证人重发', 'warning');
+            return true;
+          }
+          try { history.replaceState(null, '', location.pathname); } catch(e) {}
+          this.state.currentUser = {
+            id: 'signer_' + s.id,
+            name: s.signerName,
+            phone: s.signerPhone,
+            role: 'signer',
+            org: s.signerOrg || '',
+          };
+          this.joinRoom(s.id);
+          this.toast(`欢迎 ${s.signerName}，已通过案件编号 ${caseNo} 进入「${s.topic}」签约房间`, 'success');
+          this.speak(`欢迎${s.signerName}，已进入签约房间。`);
           return true;
         }
-        if (s.joinTokenExp && Date.now() > s.joinTokenExp) {
-          this.toast('链接已过期，请联系公证人重发', 'warning');
-          return true;
-        }
-        try { history.replaceState(null, '', location.pathname); } catch(e) {}
-        this.state.currentUser = {
-          id: 'signer_' + s.id,
-          name: s.signerName,
-          phone: s.signerPhone,
-          role: 'signer',
-          org: s.signerOrg || '',
-        };
-        this.joinRoom(s.id);
-        this.toast(`欢迎 ${s.signerName}，已通过案件编号 ${caseNo} 进入「${s.topic}」签约房间`, 'success');
-        this.speak(`欢迎${s.signerName}，已进入签约房间。`);
-        return true;
       }
 
       // token 短链：[/子路径]/=TOKEN（同设备，用 token 从 localStorage 查找 session）
@@ -2476,8 +2633,12 @@ ${bodyFragment}
       this.bindAuth();
       this.bindMenus();
       this.initStep2();
-      // 优先处理签约人深链入口（?join=TOKEN&sid=ID）
+      // 暴露外部 API（window.NotaryAPI + postMessage 监听）
+      this._initExternalAPI();
+      // 优先处理签约人深链入口（?join=TOKEN&sid=ID 或 #Pt028&d=BASE64）
       if (this._handleJoinDeepLink()) return;
+      // embed 模式：第三方平台嵌入，渲染极简创建 UI
+      if (this._handleEmbedMode()) return;
       // 尝试自动登录
       const uidSaved = Store.get('session_user');
       if (uidSaved) {
@@ -2485,7 +2646,197 @@ ${bodyFragment}
         if (u) { this.state.currentUser = u; this.enterDashboard(); return; }
       }
       this.showPage('auth-page');
-    }
+    },
+    // embed 模式：?embed=1 → 隐藏登录页装饰，直接打开访客创建弹窗
+    _handleEmbedMode() {
+      const u = new URL(location.href);
+      const isEmbed = u.searchParams.get('embed') === '1' || u.searchParams.get('embed') === 'true';
+      if (!isEmbed) return false;
+      // 隐藏所有页面 + 导航栏，只保留 auth-page 容器
+      $$('.page').forEach(el => el.classList.remove('active'));
+      const authPage = $('#auth-page');
+      if (authPage) {
+        authPage.classList.add('active');
+        // 隐藏品牌装饰、tabs、登录表单，只保留创建弹窗可弹
+        const brand = authPage.querySelector('.auth-brand');
+        if (brand) brand.style.display = 'none';
+        const card = authPage.querySelector('.auth-card');
+        if (card) card.style.display = 'none';
+        // 注入极简嵌入头部
+        let head = $('#embed-head');
+        if (!head) {
+          head = document.createElement('div');
+          head.id = 'embed-head';
+          head.style.cssText = 'text-align:center;padding:24px 16px 8px;';
+          head.innerHTML = `
+            <h2 style="font-size:18px;color:#1e293b;margin:0 0 6px;">🔗 视频签约 · 自助创建</h2>
+            <p style="font-size:12px;color:#64748b;margin:0;">由 信签云 提供公证服务 · 香港叶邓榭律师行 邓达明公证人</p>`;
+          authPage.querySelector('.auth-container')?.insertBefore(head, authPage.querySelector('.auth-container').firstChild);
+        }
+      }
+      // 自动打开访客创建弹窗
+      setTimeout(() => this.guestCreateMeeting(), 200);
+      this.toast('已进入嵌入模式，可直接创建会议', 'success');
+      return true;
+    },
+    // 暴露给第三方平台调用的 API（postMessage / window.NotaryAPI）
+    _initExternalAPI() {
+      // window.NotaryAPI 同步 API
+      window.NotaryAPI = {
+        version: '1.0.0',
+        // 打开创建会议弹窗
+        openCreate: () => this.guestCreateMeeting(),
+        // 直接创建会议（编程式调用，返回 Promise）
+        create: (opts) => this._apiCreateMeeting(opts || {}),
+        // 通过编号短链还原会议
+        resolveLink: (url) => this._apiResolveLink(url),
+        // 获取当前应用根路径
+        getBaseUrl: () => this._appBaseUrl(),
+        // 监听第三方平台 postMessage 请求
+        _onMessage: (e) => {
+          if (!e.data || e.data.type !== 'notary-api') return;
+          const { id, action, args } = e.data;
+          if (!window.NotaryAPI[action]) {
+            e.source.postMessage({ type: 'notary-api-resp', id, error: 'unknown action: ' + action }, '*');
+            return;
+          }
+          Promise.resolve(window.NotaryAPI[action](...(args || [])))
+            .then(result => e.source.postMessage({ type: 'notary-api-resp', id, result }, '*'))
+            .catch(err => e.source.postMessage({ type: 'notary-api-resp', id, error: String(err) }, '*'));
+        },
+      };
+      window.addEventListener('message', window.NotaryAPI._onMessage);
+      // 通知父窗口 SDK 已就绪（嵌入到第三方平台时）
+      this._postToParent({ type: 'notary-ready', version: '1.0.0', url: location.href });
+    },
+    // 向父窗口 postMessage（仅当被嵌入到 iframe 时有意义）
+    _postToParent(msg) {
+      try {
+        if (window.parent && window.parent !== window) {
+          window.parent.postMessage(msg, '*');
+        }
+      } catch (e) { /* 跨域被阻止，忽略 */ }
+    },
+    // 触发 SDK 事件（create / close / pay / join）
+    _emitSdkEvent(event, payload) {
+      this._postToParent({ type: 'notary-event', event, payload });
+    },
+    // 编程式创建会议：opts = { topic, signerName, signerPhone, signerIdcard, date, time, duration, remark, extraSigners, paid }
+    // 返回 Promise<{ sessionId, caseNo, caseLink, signerLink }>
+    _apiCreateMeeting(opts) {
+      return new Promise((resolve, reject) => {
+        try {
+          // 校验必填字段
+          if (!opts.signerName) return reject(new Error('signerName required'));
+          if (!opts.signerPhone) return reject(new Error('signerPhone required'));
+          if (!opts.date || !opts.time) return reject(new Error('date and time required'));
+          // 准备临时访客身份
+          if (!this.state.currentUser || this.state.currentUser.role !== 'notary') {
+            this.state.currentUser = {
+              id: 'guest_api_' + Date.now().toString().slice(-6),
+              name: '访客(API)',
+              role: 'guest',
+              isGuest: true,
+            };
+          }
+          // 模拟表单数据
+          this.state.tempFiles = [];
+          this.state.extraSigners = (opts.extraSigners || []).map(e => ({ name: e.name || '', phone: e.phone || '', idcard: e.idcard || '' }));
+          this.state.pendingFee = opts.paid ? {
+            method: opts.payMethod || 'TRC-20',
+            amount: (756 * (1 + (opts.extraSigners || []).filter(e => e.name).length)) + ' USDT',
+            hkd: 'HK$ ' + (756 * (1 + (opts.extraSigners || []).filter(e => e.name).length) * 7.80).toFixed(2),
+            txHash: opts.txHash || ('api-' + Date.now()),
+            address: 'TYDcY9fWsFm3aTVcQxN6LZxK7u7L5n3pQ8',
+          } : null;
+          // 构造 session 对象（不走表单，直接构造）
+          const notary = DEFAULT_NOTARY;
+          const appointAt = new Date(opts.date + 'T' + opts.time + ':00').getTime();
+          if (isNaN(appointAt)) return reject(new Error('invalid date/time'));
+          if (appointAt < Date.now() - 5 * 60 * 1000) return reject(new Error('past appointment not allowed'));
+          const allSessions = Store.get('sessions', []);
+          const conflict = allSessions.some(x =>
+            x.notaryId === notary.id && x.status !== 'canceled' && x.status !== 'done' &&
+            Math.abs((x.appointAt || 0) - appointAt) < 30 * 60 * 1000
+          );
+          if (conflict) return reject(new Error('time slot conflict'));
+          const topic = opts.topic || '借款合同公证';
+          const extras = (opts.extraSigners || []).filter(e => e.name);
+          const s = {
+            id: 'GZ' + Date.now().toString().slice(-8),
+            topic, status: 'pending',
+            notaryId: notary.id, notaryName: notary.name, notaryOrg: notary.org,
+            notaryCertNo: notary.certNo,
+            signerName: opts.signerName, signerPhone: opts.signerPhone,
+            signerIdcard: opts.signerIdcard || '未提供',
+            appointAt, duration: opts.duration || '30 分钟',
+            remark: opts.remark || '',
+            docKey: SAMPLE_DOCS[topic] ? topic : '借款合同公证',
+            files: [], feePaid: !!this.state.pendingFee,
+            fee: this.state.pendingFee ? `${this.state.pendingFee.amount}（≈ ${this.state.pendingFee.hkd}）` : '未缴费',
+            feeDetail: this.state.pendingFee || null,
+            guestCreated: true, selfBooked: true, apiCreated: true,
+          };
+          if (extras.length) {
+            s.extraSigners = extras.map(e => ({ name: e.name, phone: e.phone || '未提供', idcard: e.idcard || '未提供' }));
+            s.signerCount = 1 + s.extraSigners.length;
+          }
+          allSessions.unshift(s);
+          Store.set('sessions', allSessions);
+          // 清理临时状态
+          this.state.pendingFee = null;
+          this.state.pendingTxHash = null;
+          // 生成链接
+          const caseNo = this.genCaseNo(s);
+          const caseLink = this.buildCaseNoLink(s);
+          const signerLink = this.buildSignerLink(s);
+          resolve({
+            sessionId: s.id, caseNo, caseLink, signerLink,
+            notary: { name: notary.name, org: notary.org, certNo: notary.certNo },
+            appointAt, topic,
+          });
+        } catch (e) { reject(e); }
+      });
+    },
+    // 通过链接解析会议（支持 #Pt028&d=BASE64 / ?join=TOKEN&sid=ID&d=BASE64）
+    _apiResolveLink(url) {
+      try {
+        const u = new URL(url, this._appBaseUrl());
+        const hashStr = (u.hash || '').replace(/^#/, '');
+        const result = { url, type: 'unknown' };
+        if (hashStr) {
+          const sepIdx = hashStr.indexOf('&d=');
+          const caseNo = sepIdx >= 0 ? hashStr.slice(0, sepIdx) : hashStr;
+          if (/^Pt\d+$/i.test(caseNo)) {
+            result.type = 'caseNo';
+            result.caseNo = caseNo;
+            if (sepIdx >= 0) {
+              const dParam = hashStr.slice(sepIdx + 3);
+              try {
+                const json = decodeURIComponent(escape(atob(decodeURIComponent(dParam))));
+                const p = JSON.parse(json);
+                result.sessionId = p.id;
+                result.topic = p.topic;
+                result.notaryName = p.notaryName;
+                result.signerName = p.signerName;
+                result.appointAt = p.appointAt;
+                result.embeddable = true;
+              } catch (e) { result.parseError = String(e); }
+            }
+            return result;
+          }
+        }
+        const join = u.searchParams.get('join');
+        const sid = u.searchParams.get('sid');
+        if (join && sid) {
+          result.type = 'token';
+          result.joinToken = join;
+          result.sessionId = sid;
+          return result;
+        }
+        return result;
+      } catch (e) { return { url, error: String(e) }; }
+    },
   };
 
   // 绑定 Tab 的一些通用事件
