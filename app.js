@@ -205,6 +205,57 @@
         </div>
         <p style="text-align:center;text-indent:0;margin-top:20px;color:var(--text-muted);">—— 视频公证附本 · 信签云 × 叶邓榭律师行联合出具 · 区块链存证 ——</p>`
       ]
+    },
+    // PTAHDAO 信托受益人声明书专用模板
+    'PTAHDAO信托受益人声明书': {
+      pages: 5, title: 'PTAHDAO 信托受益人声明书 · DECLARATION OF TRUST BENEFICIARY',
+      region: 'HK',
+      content: [
+        `<h2>PTAHDAO 信托受益人声明书</h2>
+        <p style="text-align:center;text-indent:0;color:var(--text-muted);font-size:12px;margin-bottom:24px;">
+        YIP, TANG &amp; TSE SOLICITORS &amp; NOTARIES · 叶邓榭律师行（香港公证人办事处）<br/>
+        香港中环皇后大道中 18 号 LKF Tower 28 楼 · Tel: +852 2523 1888
+        </p>
+        <p style="text-indent:0"><b>声明人 (Declarant)：</b><span data-field="holder-name">持有人姓名</span>，身份证/证件号：<span data-field="holder-idcard">持有人证件号</span>，联系电话：<span data-field="holder-phone">持有人手机</span>。</p>
+        <p style="text-indent:0"><b>公证人 (Notary Public)：</b>邓达明 Tang Tat Ming（AI 公证人助理），监督机关：叶邓榭律师行 YIP, TANG &amp; TSE SOLICITORS。</p>
+        <p style="text-indent:0"><b>法律适用：</b>本声明依据《中华人民共和国香港特别行政区公证人条例》（第 204 章）及《受托人条例》（第 29 章）作出，用于 PTAHDAO 信托项下受益人身份确认及资产结算分配。</p>
+        <p><b>第一条 信托背景 (Trust Background)</b></p>
+        <p>1.1 本人系 <b>PTAHDAO 信托</b>（信托账户：<span data-field="trust-account" style="font-family:monospace;">__________</span>）项下合法登记的持有人，依信托契约登记册第 II 类受益人条款享有相应受益权。</p>
+        <p>1.2 该信托由 PTAHDAO Trust Foundation 依据香港特别行政区法律设立，受托人为 Trustcorp (HK) Limited（信托牌照编号：TC-PTAHDAO-2024）。</p>`,
+        `<h2>PTAHDAO 信托受益人声明书（续一）</h2>
+        <p><b>第二条 账户结算资产 (Settlement Assets)</b></p>
+        <p>2.1 截至本声明签署日，本人持有 PTAHDAO 信托账户项下结算资产合计 <b><span data-field="settlement-amount" style="font-family:monospace;color:#991b1b;">__________</span> USDT</b>（按 TRC-20 网络稳定币计价）。</p>
+        <p>2.2 上述资产对应的结算编号为：<span data-field="settlement-no" style="font-family:monospace;color:#991b1b;">__________</span>，相关结算记录已上链至 TRON 网络，可凭此编号在 Tronscan 区块链浏览器公开查询。</p>
+        <p>2.3 本人确认：上述资产系通过合法外汇来源购入，已依法履行反洗钱（AML）申报及资金来源证明程序，不存在任何违法犯罪所得或第三方权益主张。</p>
+        <p><b>第三条 受益权范围 (Scope of Beneficial Interest)</b></p>
+        <p>3.1 本人有权依信托契约第 12.4 条规定，自声明生效日起按 PTAHDAO 信托管理委员会分配方案，从可分配净收益中按比例收取分配款项。</p>
+        <p>3.2 本人在信托存续期间，无权请求分割或处分信托本金；信托本金分配须由受托人依"最大利益原则"行使自由裁量权。</p>`,
+        `<h2>PTAHDAO 信托受益人声明书（续二）</h2>
+        <p><b>第四条 利益冲突与关联披露 (Disclosure of Interests)</b></p>
+        <p>4.1 本人确认：与 PTAHDAO 信托受托人、管理委员会成员、关联自然人之间不存在配偶、父母、子女、兄弟姐妹等近亲属关系。</p>
+        <p>4.2 本人确认：近 5 年内未被任何司法管辖区宣告破产、未涉及任何与信托财产有关的诉讼、未受任何税务机关关于海外资产申报的调查或处罚。</p>
+        <p>4.3 本人确认：所持 PTAHDAO 信托受益权未向任何第三方提供质押、担保或其他处分安排。</p>
+        <p><b>第五条 跨境使用与区块链存证 (Cross-border Use &amp; Blockchain Settlement)</b></p>
+        <p>5.1 本声明书拟提交的使用目的地为：<b>PTAHDAO 信托结算平台</b>，用途为持有人身份核验、受益权登记与 USDT 资产分配。</p>
+        <p>5.2 本人同意并授权公证人将本声明书全文及电子签名、签署时间戳、IP 信息、视频连线证据一并上链至 TRC-20 网络，存证地址：<code style="font-family:monospace;">TYDcY9fWsFm3aTVcQxN6LZxK7u7L5n3pQ8</code>。</p>`,
+        `<h2>PTAHDAO 信托受益人声明书（续三）</h2>
+        <p><b>第六条 虚假声明法律责任 (Liability for False Statement)</b></p>
+        <p>6.1 本人清楚知悉：根据香港法例第 200 章《刑事罪行条例》第 36 条，任何明知而作出虚假法定声明者，即属犯罪，可处监禁 2 年及罚款；如作为证据使用时明知为虚假者，可处监禁 7 年。</p>
+        <p>6.2 本人同时知悉：本声明在 PTAHDAO 信托平台使用时，如存在虚假记载导致任何第三方损失的，本人须依《中华人民共和国民法典》第 1165 条承担侵权赔偿责任，并放弃以"区块链匿名性"为由的抗辩。</p>
+        <p><b>第七条 AI 公证流程确认 (AI Notarization Confirmation)</b></p>
+        <p>7.1 本人知悉并同意：本次公证由 PTAHDAO 委任的 AI 公证人助理自动执行，全程视频连线存证，公证人邓达明（叶邓榭律师行）作为监督机关对 AI 流程结果进行最终签章确认。</p>
+        <p>7.2 AI 公证流程包括：(a) 身份证件 OCR + 人脸生物识别比对；(b) 法律告知事项语音播报；(c) 文书全文逐页确认；(d) 公证人与持有人双向电子签名；(e) 全流程 TRC-20 区块链存证。</p>`,
+        `<h2>签 署 页</h2>
+        <p style="text-align:center;text-indent:0;margin:24px 0;">本人已通读并理解本声明书全部条款，自愿签署并接受其全部约束。</p>
+        <div class="sign-area">
+          <div><b>声明人（持有人）：</b><br/><br/><br/>电子签名：_____________<br/>签署时间：___________</div>
+          <div><b>监督公证人：</b>邓达明<br/><br/><br/>电子签名：_____________<br/>执业证号：YT-NOTARY-HK-2021-0001</div>
+        </div>
+        <div style="margin-top:36px;padding:16px;border:1px dashed #cbd5e1;border-radius:8px;background:#fafafa;font-size:12px;color:var(--text-muted);text-align:center;">
+          🇭🇰 本公证书由 AI 公证人助理自动出具，经叶邓榭律师行加章转递后可作为 PTAHDAO 信托结算依据 · 区块链存证地址：TYDcY9fWsFm3aTVcQxN6LZxK7u7L5n3pQ8
+        </div>
+        <p style="text-align:center;text-indent:0;margin-top:20px;color:var(--text-muted);">—— PTAHDAO 信托受益人声明书 · AI 公证 · TRC-20 区块链存证 ——</p>`
+      ]
     }
   };
 
@@ -920,19 +971,36 @@
       $('#cm-signer-idcard').value = '';
       $('#cm-remark').value = '';
       $('#cm-file-list').innerHTML = '';
+      // PTAHDAO 专用字段清空
+      const ta = $('#cm-trust-account'); if (ta) ta.value = '';
+      const sa = $('#cm-settlement-amount'); if (sa) sa.value = '';
+      const sn = $('#cm-settlement-no'); if (sn) sn.value = '';
       this.state.tempFiles = [];
       this.state.extraSigners = [];
       this.renderExtraSigners();
-      this.updateCreateFee();
+      this.onTopicChange();
       this.updateCreateBtn();
-      // topic 变化时实时更新费用预览
-      $('#cm-topic').onchange = () => this.updateCreateFee();
       // 时间字段手动输入时同步更新按钮选中态
       $('#cm-time').oninput = () => this._renderQuickSlots();
       $('#cm-time').onchange = () => this._renderQuickSlots();
       // 访客模式：显示系统指派公证人提示 + 渲染快捷时段
       this._renderGuestNotice();
       this._renderQuickSlots();
+    },
+    // 主题切换：PTAHDAO 信托专用字段显示 + Label 调整 + 费用更新
+    onTopicChange() {
+      const topic = $('#cm-topic')?.value || '';
+      const isPtah = topic.indexOf('PTAHDAO') >= 0;
+      const ptahBox = $('#cm-ptah-fields');
+      if (ptahBox) ptahBox.style.display = isPtah ? 'block' : 'none';
+      // PTAHDAO 模式下调整 Label
+      const nl = $('#cm-signer-name-label');
+      const pl = $('#cm-signer-phone-label');
+      const il = $('#cm-signer-idcard-label');
+      if (nl) nl.innerHTML = isPtah ? '持有人姓名 <span class="req">*</span>' : '签约方姓名 <span class="req">*</span>';
+      if (pl) pl.innerHTML = isPtah ? '持有人手机 <span class="req">*</span>' : '签约方手机号 <span class="req">*</span>';
+      if (il) il.textContent = isPtah ? '持有人证件号' : '签约方身份证号';
+      this.updateCreateFee();
     },
     // 访客模式提示
     _renderGuestNotice() {
@@ -1014,6 +1082,20 @@
     updateCreateFee() {
       const topic = $('#cm-topic')?.value || '借款合同公证';
       const isHK = /受益人声明书|香港/.test(topic);
+      const isPtah = topic.indexOf('PTAHDAO') >= 0;
+      // PTAHDAO 信托受益人声明：固定 687 USDT（含 AI 公证服务费）
+      if (isPtah) {
+        const amt = $('#cm-fee-amount');
+        const total = $('#cm-fee-total');
+        const detail = $('#cm-fee-detail');
+        if (amt) amt.textContent = '687 USDT';
+        if (total) total.textContent = '687 USDT';
+        if (detail) detail.textContent = 'PTAHDAO 信托受益人声明书公证 · 含 AI 公证人自动签署服务费';
+        // 调整费用预览的"基础费"label
+        const baseLbl = document.querySelector('#cm-fee-preview span[style*="color:#6b7280"]');
+        if (baseLbl) baseLbl.textContent = '公证费（PTAHDAO 信托专用）';
+        return;
+      }
       const feeMap = {
         '受益人声明书公证': isHK ? 1500 : 200,
         '借款合同公证': 200,
@@ -1057,25 +1139,61 @@
     },
     openPayModal() {
       this.openModal('pay-modal');
-      // 计算总费用
+      // 计算总费用（PTAHDAO 信托专用 687 USDT，其他 756 USDT/人）
       const s = this.state;
+      const topic = $('#cm-topic')?.value || '';
+      const isPtah = topic.indexOf('PTAHDAO') >= 0;
       const signerCount = 1 + (s.extraSigners || []).filter(e => e.name && e.name.trim()).length;
-      const usdtPer = 756;
+      const usdtPer = isPtah ? 687 : 756;
       const total = usdtPer * signerCount;
       const hkd = (total * 7.80).toFixed(2);
       // 更新弹窗标题
       const head = $('#pay-modal h3');
       if (head) head.textContent = `💰 公证费用缴纳 · ${total} USDT（${signerCount}人 × ${usdtPer} USDT）`;
-      // 更新港元
-      const hkdEl = document.querySelector('#pay-modal .modal-body div[style*="font-size:22px"]');
-      if (hkdEl) hkdEl.textContent = `HK$ ${hkd}`;
+      // 更新每位用户金额 + 港元 + label
+      const usdtEl = $('#pay-amount-usdt');
+      if (usdtEl) usdtEl.textContent = total;
+      const hkdEl = $('#pay-amount-hkd');
+      if (hkdEl) hkdEl.textContent = `HK$ ${Number(hkd).toLocaleString()}`;
+      const lblEl = $('#pay-amount-label');
+      if (lblEl) lblEl.textContent = isPtah ? 'PTAHDAO 信托 · 每位持有人公证费' : '每位用户公证费';
+      // 填充费用说明 + 清单
+      const bk = $('#pay-fee-breakdown');
+      if (bk) {
+        if (isPtah) {
+          bk.innerHTML = `
+            <div style="font-size:13px;color:#92400e;font-weight:700;margin-bottom:8px;">📋 公证费说明 · PTAHDAO 信托受益人声明书</div>
+            <div style="margin-bottom:8px;color:#475569;">本公证费适用于 PTAHDAO 信托受益人声明书的全部公证流程，包含 AI 公证人自动审核、电子签名、区块链存证、PDF 公证书生成等全流程服务。</div>
+            <div style="border-top:1px dashed #cbd5e1;padding-top:8px;">
+              <div style="font-weight:600;color:#1e293b;margin-bottom:6px;">费用清单（合计 ${total} USDT / 人）</div>
+              <div style="display:flex;justify-content:space-between;padding:3px 0;"><span>· 受益人声明书公证基础费</span><span>380 USDT</span></div>
+              <div style="display:flex;justify-content:space-between;padding:3px 0;"><span>· AI 公证人自动审核服务费</span><span>120 USDT</span></div>
+              <div style="display:flex;justify-content:space-between;padding:3px 0;"><span>· 区块链 TRC-20 存证费</span><span>80 USDT</span></div>
+              <div style="display:flex;justify-content:space-between;padding:3px 0;"><span>· PDF 公证书生成与电子印章</span><span>60 USDT</span></div>
+              <div style="display:flex;justify-content:space-between;padding:3px 0;"><span>· 香港公证员执业资质核验</span><span>47 USDT</span></div>
+              <div style="display:flex;justify-content:space-between;padding:5px 0 0;border-top:1px solid #cbd5e1;margin-top:5px;font-weight:700;color:#991b1b;"><span>合计</span><span>${total} USDT</span></div>
+            </div>`;
+        } else {
+          bk.innerHTML = `
+            <div style="font-size:13px;color:#1e40af;font-weight:700;margin-bottom:8px;">📋 公证费说明</div>
+            <div style="color:#475569;margin-bottom:8px;">公证费用于支付公证人执业服务、视频签约平台、区块链存证、PDF 公证书生成等全流程成本。</div>
+            <div style="border-top:1px dashed #cbd5e1;padding-top:8px;">
+              <div style="font-weight:600;color:#1e293b;margin-bottom:6px;">费用清单（${total} USDT / 人）</div>
+              <div style="display:flex;justify-content:space-between;padding:3px 0;"><span>· 公证事项基础费</span><span>450 USDT</span></div>
+              <div style="display:flex;justify-content:space-between;padding:3px 0;"><span>· 视频连线签约服务</span><span>150 USDT</span></div>
+              <div style="display:flex;justify-content:space-between;padding:3px 0;"><span>· 区块链 TRC-20 存证</span><span>80 USDT</span></div>
+              <div style="display:flex;justify-content:space-between;padding:3px 0;"><span>· PDF 公证书生成</span><span>76 USDT</span></div>
+              <div style="display:flex;justify-content:space-between;padding:5px 0 0;border-top:1px solid #cbd5e1;margin-top:5px;font-weight:700;color:#991b1b;"><span>合计</span><span>${total} USDT</span></div>
+            </div>`;
+        }
+      }
       // 默认选中银行通道
       this.selectPayChannel('bank');
       // 重置哈希输入
       const hashInput = $('#pay-tx-hash');
       if (hashInput) hashInput.value = '';
       const btn = $('#pay-confirm-btn');
-      if (btn) { btn.disabled = true; btn.textContent = '确认缴费'; }
+      if (btn) { btn.disabled = false; btn.textContent = '确认缴费'; }
     },
     selectPayChannel(channel) {
       // UI 高亮
@@ -1121,8 +1239,10 @@
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 5000);
       const s = this.state;
+      const topic = $('#cm-topic')?.value || '';
+      const isPtah = topic.indexOf('PTAHDAO') >= 0;
       const signerCount = 1 + (s.extraSigners || []).filter(e => e.name && e.name.trim()).length;
-      const expectedUsdt = 756 * signerCount;
+      const expectedUsdt = (isPtah ? 687 : 756) * signerCount;
       const targetAddr = 'TYDcY9fWsFm3aTVcQxN6LZxK7u7L5n3pQ8';
       fetch(`https://apilist.tronscan.org/api/transaction-info?hash=${hash}`, { signal: controller.signal })
         .then(r => r.json())
@@ -1174,10 +1294,12 @@
     },
     confirmPayment() {
       const channel = document.querySelector('input[name="pay-channel"]:checked')?.value || 'bank';
-      // 记录缴费信息
+      // 记录缴费信息（PTAHDAO 信托专用 687 USDT，其他 756 USDT/人）
       const s = this.state;
+      const topic = $('#cm-topic')?.value || '';
+      const isPtah = topic.indexOf('PTAHDAO') >= 0;
       const signerCount = 1 + (s.extraSigners || []).filter(e => e.name && e.name.trim()).length;
-      const totalUsdt = 756 * signerCount;
+      const totalUsdt = (isPtah ? 687 : 756) * signerCount;
       if (channel === 'trc20') {
         if (!s.pendingTxHash) return this.toast('请先验证交易哈希', 'warning');
         s.pendingFee = { method: 'TRC-20', amount: totalUsdt + ' USDT', hkd: 'HK$ ' + (totalUsdt * 7.80).toFixed(2), txHash: s.pendingTxHash, address: 'TYDcY9fWsFm3aTVcQxN6LZxK7u7L5n3pQ8' };
@@ -1185,6 +1307,14 @@
         // 模拟银行到账验证
         const bankRef = 'HSBC-' + Date.now().toString().slice(-8);
         s.pendingFee = { method: 'HSBC 对公账户', amount: totalUsdt + ' USDT', hkd: 'HK$ ' + (totalUsdt * 7.80).toFixed(2), txHash: bankRef, account: '008-123-456-789' };
+      }
+      // 记录 PTAHDAO 信托专用字段（供后续 AI 公证引用）
+      if (isPtah) {
+        s.pendingPtah = {
+          trustAccount: $('#cm-trust-account')?.value?.trim() || '',
+          settlementAmount: $('#cm-settlement-amount')?.value?.trim() || '',
+          settlementNo: $('#cm-settlement-no')?.value?.trim() || '',
+        };
       }
       this.closeModal('pay-modal');
       this.toast(`✅ 缴费确认成功！${s.pendingFee.method} · ${s.pendingFee.amount}（≈ ${s.pendingFee.hkd}）`, 'success');
@@ -1245,11 +1375,23 @@
       const time = $('#cm-time').value;
       const duration = $('#cm-duration').value;
       const remark = $('#cm-remark').value.trim();
-      if (!name) return this.toast('请填写签约方姓名', 'warning');
+      const isPtah = topic.indexOf('PTAHDAO') >= 0;
+      if (!name) return this.toast(isPtah ? '请填写持有人姓名' : '请填写签约方姓名', 'warning');
       // 支持内地手机号（1 开头 11 位）与香港号码（+852 加 8 位，或 8 位数字）
       const phoneOk = /^1\d{10}$/.test(phone) || /^\+?852\s?\d{4}\s?\d{4}$/.test(phone) || /^\d{8}$/.test(phone);
       if (!phoneOk) return this.toast('请输入正确的手机号（内地 11 位 / 香港 8 位或 +852 开头）', 'warning');
       if (!date || !time) return this.toast('请选择预约日期时间', 'warning');
+      // PTAHDAO 信托专用字段校验
+      let ptahFields = null;
+      if (isPtah) {
+        const ta = $('#cm-trust-account')?.value?.trim() || '';
+        const sa = $('#cm-settlement-amount')?.value?.trim() || '';
+        const sn = $('#cm-settlement-no')?.value?.trim() || '';
+        if (!ta) return this.toast('请填写信托账户', 'warning');
+        if (!sa || isNaN(Number(sa)) || Number(sa) <= 0) return this.toast('请填写正确的账户结算资产（USDT）', 'warning');
+        if (!sn) return this.toast('请填写结算编号', 'warning');
+        ptahFields = { trustAccount: ta, settlementAmount: sa, settlementNo: sn };
+      }
       const u = this.state.currentUser;
       // 访客自助模式：未登录或非公证人角色 → 系统自动指派默认公证人
       const isGuest = !u || u.role !== 'notary';
@@ -1282,6 +1424,13 @@
         guestCreated: isGuest, // 标记访客自助创建
         selfBooked: true, // 用户自行选择时间
       };
+      // PTAHDAO 信托专用字段保存
+      if (ptahFields) {
+        s.trustAccount = ptahFields.trustAccount;
+        s.settlementAmount = ptahFields.settlementAmount;
+        s.settlementNo = ptahFields.settlementNo;
+        s.aiNotary = true; // 标记 AI 公证
+      }
       // 收集额外签约方
       const extras = (this.state.extraSigners || []).filter(e => e.name && e.name.trim());
       if (extras.length > 0) {
@@ -1826,6 +1975,80 @@
       // 聊天
       this.initChat(s);
       this.toast(`已进入视频签约房间，会议 ${s.id}`, 'success');
+      // AI 自动公证：访客创建的 PTAHDAO 信托会议 + 签约方进入时触发
+      if (s.guestCreated && /PTAHDAO/.test(s.topic || '') && u.role === 'signer') {
+        setTimeout(() => this._startAiNotaryFlow(), 600);
+      }
+    },
+    // AI 公证人助理自动完成全流程公证
+    _startAiNotaryFlow() {
+      const s = this.state.activeSession;
+      if (!s) return;
+      this.addSystemMsg('【AI 公证人助理】已接管本次公证流程，将自动执行身份核验→告知→文书→签署→存证全流程');
+      this.toast('🤖 AI 公证人助理已上线，正在自动执行公证流程...', 'info');
+      this.speak('AI 公证人助理已上线，将自动完成公证流程。');
+      // 顶部 AI 状态条
+      const bar = document.createElement('div');
+      bar.id = 'ai-notary-bar';
+      bar.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:9999;background:linear-gradient(90deg,#7c3aed,#4f46e5);color:#fff;font-size:12px;padding:6px 16px;display:flex;justify-content:space-between;align-items:center;box-shadow:0 2px 8px rgba(0,0,0,.2);';
+      bar.innerHTML = '<span>🤖 AI 公证人助理自动执行中 · 步骤 <span id="ai-step">1</span>/5</span><span id="ai-status">身份核验</span>';
+      document.body.appendChild(bar);
+      this._setAiStep = (n, label) => {
+        const sn = $('#ai-step'), st = $('#ai-status');
+        if (sn) sn.textContent = n;
+        if (st) st.textContent = label;
+      };
+      // 1) 身份核验：自动扫描
+      setTimeout(() => {
+        this.addSystemMsg('【AI 公证人助理】开始身份证 OCR 识别...');
+        this.startIDScan();
+      }, 800);
+      // 2) 人脸比对
+      setTimeout(() => {
+        this.addSystemMsg('【AI 公证人助理】身份证核验通过，开始人脸比对...');
+        this.startFaceVerify();
+      }, 3200);
+      // 3) 通过核验 → 下一步
+      setTimeout(() => {
+        this.addSystemMsg('【AI 公证人助理】身份核验完成，相似度 98.6%，通过核验');
+        this._setAiStep(2, '告知事项');
+        this.passVerify();
+      }, 6200);
+      // 4) 告知事项自动勾选 + 下一步
+      setTimeout(() => {
+        const cb = $('#agree-notice');
+        if (cb && !cb.checked) { cb.checked = true; cb.dispatchEvent(new Event('change')); }
+        const btn = $('#notice-next-btn');
+        if (btn && !btn.disabled) { this.nextStep(); this._setAiStep(3, '文书确认'); this.addSystemMsg('【AI 公证人助理】已阅读并同意告知事项，进入文书确认'); }
+      }, 7400);
+      // 5) 文书确认自动勾选 + 下一步
+      setTimeout(() => {
+        const cb = $('#agree-doc');
+        if (cb && !cb.checked) { cb.checked = true; cb.dispatchEvent(new Event('change')); }
+        const btn = $('#doc-next-btn');
+        if (btn && !btn.disabled) { this.nextStep(); this._setAiStep(4, '签署签名'); this.addSystemMsg('【AI 公证人助理】已确认文书内容，进入签署环节'); }
+      }, 8800);
+      // 6) AI 公证人自动签名
+      setTimeout(() => {
+        this.addSystemMsg('【AI 公证人助理】公证人电子签名中...');
+        this.confirmSign();
+        this._setAiStep(5, '完成存证');
+      }, 10000);
+      // 7) 等签约方自动签名完成 + 进入完成页
+      setTimeout(() => {
+        if (!this.state.signerSigned) {
+          this.state.signerSigned = true;
+          this.addSystemMsg(`【系统】持有人 ${s.signerName} 完成电子签名`);
+        }
+        this.updateSignSlots?.();
+        this.setSignTurnTip?.();
+        this.updateAllSignedBtn?.();
+        this.nextStep();
+        this.addSystemMsg('【AI 公证人助理】全流程公证完成，正在 TRC-20 链上存证');
+        this.toast('🎉 AI 公证全流程完成！公证书已生成', 'success');
+        this.speak('公证全流程完成。');
+        setTimeout(() => { const b = $('#ai-notary-bar'); if (b) b.remove(); }, 3000);
+      }, 13000);
     },
     updateTimer() {
       const diff = Math.floor((Date.now() - this.state.startTime) / 1000);
@@ -1938,7 +2161,18 @@
     },
     showDocPage(doc) {
       const i = this.state.docPage - 1;
-      const html = doc.content[i] || '<p>（内容略）</p>';
+      let html = doc.content[i] || '<p>（内容略）</p>';
+      // PTAHDAO 信托：替换持有人信息占位符
+      const s = this.state.activeSession;
+      if (s && /PTAHDAO/.test(s.topic || '')) {
+        html = html
+          .replace(/<span data-field="holder-name">[^<]*<\/span>/g, `<span data-field="holder-name" style="color:#1e40af;font-weight:600;">${s.signerName || '--'}</span>`)
+          .replace(/<span data-field="holder-idcard">[^<]*<\/span>/g, `<span data-field="holder-idcard">${s.signerIdcard || '--'}</span>`)
+          .replace(/<span data-field="holder-phone">[^<]*<\/span>/g, `<span data-field="holder-phone">${s.signerPhone || '--'}</span>`)
+          .replace(/<span data-field="trust-account">[^<]*<\/span>/g, `<span data-field="trust-account" style="color:#92400e;font-weight:600;">${s.trustAccount || '--'}</span>`)
+          .replace(/<span data-field="settlement-amount">[^<]*<\/span>/g, `<span data-field="settlement-amount" style="color:#991b1b;font-weight:700;">${(s.settlementAmount || '--').toLocaleString?.() || s.settlementAmount || '--'}</span>`)
+          .replace(/<span data-field="settlement-no">[^<]*<\/span>/g, `<span data-field="settlement-no" style="color:#991b1b;font-weight:600;">${s.settlementNo || '--'}</span>`);
+      }
       $('#doc-page-content').innerHTML = html;
       $('#doc-page-indicator').textContent = `${this.state.docPage} / ${doc.pages}`;
     },

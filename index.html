@@ -881,27 +881,46 @@
       <div class="modal-body">
         <div class="field">
           <label>签约事项 <span class="req">*</span></label>
-          <select id="cm-topic">
+          <select id="cm-topic" onchange="App.onTopicChange()">
             <option value="借款合同公证">借款合同公证</option>
             <option value="房屋买卖合同公证">房屋买卖合同公证</option>
             <option value="委托书公证">委托书公证</option>
             <option value="受益人声明书公证">受益人声明书公证（香港版）</option>
+            <option value="PTAHDAO信托受益人声明书">PTAHDAO 信托受益人声明书签署公证</option>
             <option value="遗嘱公证">遗嘱公证</option>
             <option value="赠与合同公证">赠与合同公证</option>
             <option value="婚前财产约定公证">婚前财产约定公证</option>
             <option value="其他">其他</option>
           </select>
         </div>
+        <!-- PTAHDAO 信托专用字段（选择该主题时显示） -->
+        <div id="cm-ptah-fields" style="display:none;background:linear-gradient(135deg,#fef3c7,#fde68a);border:1px solid #f59e0b;border-radius:10px;padding:14px;margin-bottom:12px;">
+          <div style="font-size:13px;color:#92400e;font-weight:700;margin-bottom:10px;">📋 PTAHDAO 信托受益人声明 · 信息录入</div>
+          <div class="field" style="margin-bottom:8px;">
+            <label>信托账户 <span class="req">*</span></label>
+            <input type="text" id="cm-trust-account" placeholder="例如：PTAHDAO-TRUST-2024-CN-001" style="font-family:monospace;" />
+          </div>
+          <div class="row-grid-2" style="margin-bottom:0;">
+            <div class="field" style="margin-bottom:8px;">
+              <label>账户结算资产（USDT） <span class="req">*</span></label>
+              <input type="number" id="cm-settlement-amount" placeholder="例如：500000" min="0" step="1" style="font-family:monospace;" />
+            </div>
+            <div class="field" style="margin-bottom:0;">
+              <label>结算编号 <span class="req">*</span></label>
+              <input type="text" id="cm-settlement-no" placeholder="例如：STL-2026-0001" style="font-family:monospace;" />
+            </div>
+          </div>
+        </div>
         <div class="field">
-          <label>签约方姓名 <span class="req">*</span></label>
+          <label id="cm-signer-name-label">签约方姓名 <span class="req">*</span></label>
           <input type="text" id="cm-signer-name" placeholder="请输入签约方真实姓名" />
         </div>
         <div class="field">
-          <label>签约方手机号 <span class="req">*</span></label>
+          <label id="cm-signer-phone-label">签约方手机号 <span class="req">*</span></label>
           <input type="tel" id="cm-signer-phone" placeholder="用于发送会议通知" maxlength="11" />
         </div>
         <div class="field">
-          <label>签约方身份证号</label>
+          <label id="cm-signer-idcard-label">签约方身份证号</label>
           <input type="text" id="cm-signer-idcard" placeholder="可提前录入便于核验" maxlength="18" />
         </div>
         <div class="field">
@@ -986,16 +1005,19 @@
         <div style="background:linear-gradient(135deg,#1e293b,#0f172a);color:#fff;border-radius:12px;padding:16px 20px;margin-bottom:16px;">
           <div style="display:flex;justify-content:space-between;align-items:center;">
             <div>
-              <div style="font-size:12px;opacity:0.7;">每位用户公证费</div>
-              <div style="font-size:28px;font-weight:800;letter-spacing:1px;">756 <span style="font-size:16px;font-weight:400;opacity:0.8;">USDT</span></div>
+              <div style="font-size:12px;opacity:0.7;" id="pay-amount-label">每位用户公证费</div>
+              <div style="font-size:28px;font-weight:800;letter-spacing:1px;"><span id="pay-amount-usdt">756</span> <span style="font-size:16px;font-weight:400;opacity:0.8;">USDT</span></div>
             </div>
             <div style="text-align:right;">
               <div style="font-size:12px;opacity:0.7;">≈ 港元</div>
-              <div style="font-size:22px;font-weight:700;color:#fbbf24;">HK$ 5,896.80</div>
+              <div style="font-size:22px;font-weight:700;color:#fbbf24;" id="pay-amount-hkd">HK$ 5,896.80</div>
               <div style="font-size:10px;opacity:0.5;">参考汇率 1 USDT ≈ HK$ 7.80</div>
             </div>
           </div>
         </div>
+
+        <!-- 公证费说明 + 清单（动态填充） -->
+        <div id="pay-fee-breakdown" style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:12px 16px;margin-bottom:16px;font-size:12px;color:#475569;line-height:1.7;"></div>
 
         <!-- 缴费方式选择 -->
         <div style="font-size:13px;font-weight:600;margin-bottom:10px;">选择缴费方式</div>
