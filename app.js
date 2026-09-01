@@ -413,7 +413,8 @@
       scanDone: false,
       faceDone: false,
       tempFiles: [],
-      canvasCtx: null
+      canvasCtx: null,
+      clientIP: null
     },
 
     /* ========= 页面/视图切换 ========= */
@@ -1678,7 +1679,7 @@
         area.appendChild(cv);
         this.drawSampleSign(cv.getContext('2d'), this.state.activeSession.notaryName, '#1e40af');
         const meta = $('#slot-notary-meta');
-        meta.innerHTML = `签名人：${this.state.activeSession.notaryName} · ${fmtTime(Date.now())}<br/>IP: 127.0.0.1 · CA: 信鉴CA`;
+        meta.innerHTML = `签名人：${this.state.activeSession.notaryName} · ${fmtTime(Date.now())}<br/>IP: ${this.state.clientIP || '获取中'} · CA: 信鉴CA`;
       } else {
         $('#slot-notary-area').innerHTML = '<span class="slot-placeholder">' + (this.state.currentUser.role === 'notary' ? '请点击签名板签名' : '待公证人签名') + '</span>';
         $('#slot-notary-meta').textContent = '--';
@@ -1692,7 +1693,7 @@
         area.appendChild(cv);
         this.drawSampleSign(cv.getContext('2d'), this.state.activeSession.signerName, '#991b1b');
         const meta = $('#slot-signer-meta');
-        meta.innerHTML = `签名人：${this.state.activeSession.signerName} · ${fmtTime(Date.now())}<br/>IP: 127.0.0.1 · 人脸: ✓`;
+        meta.innerHTML = `签名人：${this.state.activeSession.signerName} · ${fmtTime(Date.now())}<br/>IP: ${this.state.clientIP || '获取中'} · 人脸: ✓`;
       } else {
         $('#slot-signer-area').innerHTML = '<span class="slot-placeholder">' + (this.state.currentUser.role === 'signer' && this.state.notarySigned ? '请点击签名板签名' : '等待中') + '</span>';
         $('#slot-signer-meta').textContent = '--';
@@ -1821,7 +1822,7 @@
               area.classList.remove('dim', 'active');
             }
             const meta = $('#slot-extra-' + found + '-meta');
-            if (meta) meta.innerHTML = `签名人：${extras[found].name} · ${fmtTime(Date.now())}<br/>IP: 127.0.0.1`;
+            if (meta) meta.innerHTML = `签名人：${extras[found].name} · ${fmtTime(Date.now())}<br/>IP: ${this.state.clientIP || '获取中'}`;
           } else {
             return this.toast('所有签名已完成', 'warning');
           }
@@ -1859,7 +1860,7 @@
             area.classList.remove('dim', 'active');
           }
           const meta = $('#slot-extra-' + i + '-meta');
-          if (meta) meta.innerHTML = `签名人：${s.extraSigners[i].name} · ${fmtTime(Date.now())}<br/>IP: 127.0.0.1`;
+          if (meta) meta.innerHTML = `签名人：${s.extraSigners[i].name} · ${fmtTime(Date.now())}<br/>IP: ${this.state.clientIP || '获取中'}`;
           this.updateSignSlots(); this.setSignTurnTip(); this.updateAllSignedBtn();
           i++;
           signNext();
@@ -2281,7 +2282,16 @@ ${bodyFragment}
     },
 
     /* ========= 启动 ========= */
+    // 异步获取客户端公网 IP（用于签名存证元数据）
+    initClientIP() {
+      if (this.state.clientIP) return;
+      fetch('https://api.ipify.org?format=json')
+        .then(r => r.json())
+        .then(d => { this.state.clientIP = d.ip || '未知'; })
+        .catch(() => { this.state.clientIP = '本地'; });
+    },
     init() {
+      this.initClientIP();
       this.bindAuth();
       this.bindMenus();
       this.initStep2();
