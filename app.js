@@ -1226,19 +1226,37 @@
       // 构造自包含深链：URL 带 join/sid/d 参数，任何设备均可还原 session
       return `${base}?join=${token}&sid=${encodeURIComponent(s.id)}&d=${b64}`;
     },
+    // 短链格式：https://www.ytt.com.hk/=TOKEN（同设备用，localStorage 直查）
+    buildSignerShortLink(s) {
+      const token = this.ensureJoinToken(s);
+      let origin = location.origin;
+      if (/traecontent\.cn/i.test(origin)) {
+        origin = origin.replace(/(:\d+)?$/, ':16000');
+      }
+      return `${origin}/=${token}`;
+    },
     showSignerLinkModal(s) {
       const link = this.buildSignerLink(s);
+      const shortLink = this.buildSignerShortLink(s);
       const token = s.joinToken;
       $('#signer-link-topic').textContent = s.topic;
       $('#signer-link-sid').textContent = s.id;
       $('#signer-link-when').textContent = `预约 ${fmtTime(s.appointAt)}`;
       $('#signer-link-name').textContent = s.signerName;
       $('#signer-link-notary').textContent = `${s.notaryName}（${s.notaryOrg || ''}）`;
-      $('#signer-link-url').value = link;
+      $('#signer-link-url').value = shortLink;
       $('#signer-link-token').textContent = `令牌：${token.slice(0,8)}...${token.slice(-6)} · 7 天内有效`;
       // 渲染二维码（简易 SVG，便于扫描）
       const qr = $('#signer-link-qr');
-      if (qr) qr.innerHTML = this._renderQrSvg(link, 96);
+      if (qr) qr.innerHTML = this._renderQrSvg(shortLink, 96);
+      // 存储完整链接供跨设备使用
+      this._fullSignerLink = link;
+      this._shortSignerLink = shortLink;
+      // 默认显示短链，高亮短链按钮
+      const btnShort = $('#link-mode-short');
+      const btnFull = $('#link-mode-full');
+      if (btnShort) btnShort.style.fontWeight = '700';
+      if (btnFull) btnFull.style.fontWeight = '400';
       this.openModal('signer-link-modal');
       this.speak('签约人入口链接已生成，可复制或扫码分享给签约方。');
     },
@@ -1254,6 +1272,23 @@
         );
       } else {
         this._copyFallback(inp, url);
+      }
+    },
+    // 切换短链/完整链显示
+    switchLinkMode(mode) {
+      const inp = $('#signer-link-url');
+      if (!inp) return;
+      const qr = $('#signer-link-qr');
+      if (mode === 'short') {
+        inp.value = this._shortSignerLink || '';
+        if (qr) qr.innerHTML = this._renderQrSvg(this._shortSignerLink || '', 96);
+        $('#link-mode-short').style.fontWeight = '700';
+        $('#link-mode-full').style.fontWeight = '400';
+      } else {
+        inp.value = this._fullSignerLink || '';
+        if (qr) qr.innerHTML = this._renderQrSvg(this._fullSignerLink || '', 96);
+        $('#link-mode-short').style.fontWeight = '400';
+        $('#link-mode-full').style.fontWeight = '700';
       }
     },
     _copyFallback(inp, url) {
@@ -1328,9 +1363,39 @@
       </svg>`;
     },
 
-    // ============ 深链入口：?join=TOKEN&sid=ID&d=BASE64 自动跳转签约房间 ============
+    // ============ 深链入口：/=TOKEN 或 ?join=TOKEN&sid=ID&d=BASE64 自动跳转签约房间 ============
     _handleJoinDeepLink() {
       const u = new URL(location.href);
+
+      // 短链格式：/=TOKEN（同设备，用 token 从 localStorage 查找 session）
+      const pathMatch = u.pathname.match(/^\/=(.+)$/);
+      if (pathMatch) {
+        const token = decodeURIComponent(pathMatch[1]);
+        // 用 joinToken 匹配本地 session
+        let s = Store.get('sessions', []).find(x => x.joinToken === token);
+        if (!s) {
+          this.toast('短链未找到会议数据，请使用完整链接或联系公证人', 'error');
+          return true;
+        }
+        if (s.joinTokenExp && Date.now() > s.joinTokenExp) {
+          this.toast('链接已过期，请联系公证人重发', 'warning');
+          return true;
+        }
+        try { history.replaceState(null, '', location.pathname); } catch(e) {}
+        this.state.currentUser = {
+          id: 'signer_' + s.id,
+          name: s.signerName,
+          phone: s.signerPhone,
+          role: 'signer',
+          org: s.signerOrg || '',
+        };
+        this.joinRoom(s.id);
+        this.toast(`欢迎 ${s.signerName}，已通过专属链接进入「${s.topic}」签约房间`, 'success');
+        this.speak(`欢迎${s.signerName}，已进入签约房间。`);
+        return true;
+      }
+
+      // 完整链格式：?join=TOKEN&sid=ID&d=BASE64（跨设备，自包含数据）
       const token = u.searchParams.get('join');
       const sid = u.searchParams.get('sid');
       const dParam = u.searchParams.get('d');
