@@ -1,0 +1,1238 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>信签云 · 公证人视频签约平台</title>
+  <link rel="stylesheet" href="styles.css?v=2026090118j" />
+</head>
+<body>
+  <!-- ============== 顶部导航栏 ============== -->
+  <header id="navbar" class="hidden">
+    <div class="nav-left">
+      <div class="logo">
+        <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="#3b82f6" stroke-width="2">
+          <path d="M9 12l2 2 4-4M12 2l9 4v6c0 5-4 9-9 10-5-1-9-5-9-10V6l9-4z"/>
+        </svg>
+        <span>信签云</span>
+      </div>
+    </div>
+    <div class="nav-center" id="nav-role-label">公证人工作台</div>
+    <div class="nav-right">
+      <button class="btn-text kb-hint" id="lang-toggle-btn" onclick="App.toggleLang()" title="三语切换：简体→繁体→English→简体">
+        <span id="lang-label">简</span>
+      </button>
+      <button class="btn-text kb-hint" id="voice-toggle-btn" onclick="App.toggleVoice()" title="语音指导开关">
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 5L6 9H2v6h4l5 4V5z"/><path d="M15.5 8.5a5 5 0 010 7M19 5a9 9 0 010 14" id="voice-on-icon"/></svg>
+        <span id="voice-label">语音</span>
+      </button>
+      <button class="btn-text kb-hint" id="role-switch-btn" onclick="App.switchPerspective()" title="快速切换角色视角（演示用）">
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 1l4 4-4 4M3 11V9a4 4 0 014-4h14M7 23l-4-4 4-4M21 13v2a4 4 0 01-4 4H3"/></svg>
+        切换视角
+      </button>
+      <div class="notif-wrap">
+        <button class="btn-text notif-bell" onclick="App.toggleNotif(event)" title="站内通知">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8a6 6 0 10-12 0c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 01-3.46 0"/></svg>
+          <em class="badge notif-dot" id="notif-dot" hidden></em>
+        </button>
+        <div class="notif-panel" id="notif-panel" hidden>
+          <div class="notif-head">
+            <span>通知中心</span>
+            <a class="link small" onclick="App.clearAllNotif()">全部已读</a>
+          </div>
+          <div class="notif-list" id="notif-list"></div>
+        </div>
+      </div>
+      <span id="nav-user">--</span>
+      <button class="btn-text" onclick="App.logout()">退出登录</button>
+    </div>
+  </header>
+
+  <!-- ============== 登录 / 注册页面 ============== -->
+  <section id="auth-page" class="page active">
+    <div class="auth-bg">
+      <div class="bg-shape s1"></div>
+      <div class="bg-shape s2"></div>
+      <div class="bg-shape s3"></div>
+    </div>
+    <div class="auth-container">
+      <div class="auth-brand">
+        <div class="big-logo">
+          <svg viewBox="0 0 24 24" width="56" height="56" fill="none" stroke="#3b82f6" stroke-width="1.8">
+            <path d="M9 12l2 2 4-4M12 2l9 4v6c0 5-4 9-9 10-5-1-9-5-9-10V6l9-4z"/>
+          </svg>
+        </div>
+        <h1>信签云</h1>
+        <p class="tagline">远程公证 · 视频签约 · 全程留痕 · 合法合规</p>
+        <ul class="brand-points">
+          <li><span class="dot ok"></span>双向高清视频连线</li>
+          <li><span class="dot ok"></span>人脸身份核验</li>
+          <li><span class="dot ok"></span>电子签名法律效力</li>
+          <li><span class="dot ok"></span>区块链存证可追溯</li>
+        </ul>
+      </div>
+      <div class="auth-card">
+        <div class="tabs">
+          <button class="tab active" data-tab="login">登录</button>
+          <button class="tab" data-tab="register">注册</button>
+        </div>
+
+        <!-- 登录表单 -->
+        <form id="login-form" class="form active">
+          <div class="role-switch">
+            <label class="role-opt active">
+              <input type="radio" name="loginRole" value="notary" checked />
+              <span>公证人</span>
+            </label>
+            <label class="role-opt">
+              <input type="radio" name="loginRole" value="signer" />
+              <span>签约方</span>
+            </label>
+          </div>
+          <div class="field">
+            <label>账号</label>
+            <input type="text" id="login-account" placeholder="手机号 / 工号" autocomplete="username" />
+          </div>
+          <div class="field">
+            <label>密码</label>
+            <input type="password" id="login-password" placeholder="请输入密码" autocomplete="current-password" />
+          </div>
+          <div class="form-hint">
+            <label><input type="checkbox" id="remember-me" /> 记住我</label>
+            <a href="#">忘记密码？</a>
+          </div>
+          <button type="submit" class="btn-primary btn-block">登 录</button>
+          <div class="divider"><span>快速体验</span></div>
+          <div class="demo-row" style="flex-wrap:wrap;">
+            <button type="button" class="btn-ghost" onclick="App.demoLogin('notary')">公证人 · 陈正义（北京中信）</button>
+            <button type="button" class="btn-ghost" onclick="App.demoLogin('signer')">签约方 · 李华</button>
+          </div>
+          <div class="demo-row" style="flex-wrap:wrap;margin-top:8px;">
+            <button type="button" class="btn-ghost" style="border-color:#b91c1c;color:#991b1b;background:#fff1f2;" onclick="App.demoLogin('notary_hk')">🇭🇰 香港公证人 · 邓达明（叶邓榭律师行）</button>
+            <button type="button" class="btn-ghost" style="border-color:#b91c1c;color:#991b1b;background:#fff1f2;" onclick="App.demoLogin('signer_hk')">🇭🇰 声明人 · 陈嘉怡</button>
+          </div>
+          <p class="form-hint" style="text-align:center;margin-top:10px;">所有演示账号统一密码：<code>123456</code></p>
+        </form>
+
+        <!-- 注册表单 -->
+        <form id="register-form" class="form">
+          <div class="role-switch">
+            <label class="role-opt active">
+              <input type="radio" name="regRole" value="notary" checked />
+              <span>我是公证人</span>
+            </label>
+            <label class="role-opt">
+              <input type="radio" name="regRole" value="signer" />
+              <span>我是签约方</span>
+            </label>
+          </div>
+          <div class="field">
+            <label>真实姓名</label>
+            <input type="text" id="reg-name" placeholder="请输入真实姓名" />
+          </div>
+          <div class="field" id="reg-notary-field">
+            <label>公证机构 / 执业证号</label>
+            <input type="text" id="reg-notary-id" placeholder="如：XX公证处 110101XXXX" />
+          </div>
+          <div class="field">
+            <label>手机号</label>
+            <input type="tel" id="reg-phone" placeholder="请输入手机号" maxlength="11" />
+          </div>
+          <div class="field">
+            <label>身份证号</label>
+            <input type="text" id="reg-idcard" placeholder="用于实名认证" maxlength="18" />
+          </div>
+          <div class="field">
+            <label>设置密码</label>
+            <input type="password" id="reg-password" placeholder="至少 6 位" />
+          </div>
+          <div class="field">
+            <label>确认密码</label>
+            <input type="password" id="reg-password2" placeholder="再次输入密码" />
+          </div>
+          <div class="form-hint">
+            <label><input type="checkbox" id="agree-terms" checked /> 我已阅读并同意<a href="#">《服务协议》</a>与<a href="#">《隐私政策》</a></label>
+          </div>
+          <button type="submit" class="btn-primary btn-block">注 册 账 号</button>
+        </form>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============== 公证人工作台 ============== -->
+  <section id="notary-dashboard" class="page">
+    <div class="layout">
+      <aside class="sidebar">
+        <div class="menu-item active" data-view="home">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12l9-9 9 9v9a2 2 0 01-2 2h-4v-7H9v7H5a2 2 0 01-2-2v-9z"/></svg>
+          <span>工作台</span>
+        </div>
+        <div class="menu-item" data-view="sessions">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>
+          <span>签约会议</span>
+          <em class="badge" id="notary-pending-badge">0</em>
+        </div>
+        <div class="menu-item" data-view="history">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/></svg>
+          <span>历史记录</span>
+        </div>
+        <div class="menu-item" data-view="calendar">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+          <span>排程日历</span>
+        </div>
+        <div class="menu-item" data-view="templates">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16v4H4zM4 12h16v8H4z"/></svg>
+          <span>文书模板</span>
+        </div>
+        <div class="menu-item" onclick="App.openFeeCalc()">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
+          <span>公证收费</span>
+        </div>
+        <div class="menu-item" data-view="profile">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0116 0"/></svg>
+          <span>执业信息</span>
+        </div>
+      </aside>
+
+      <main class="content">
+        <!-- 工作台首页 -->
+        <div class="view active" id="view-home">
+          <div class="welcome-card">
+            <div>
+              <h2 id="welcome-title">欢迎回来，公证员</h2>
+              <p>今日待办 <b id="today-count">0</b> 场签约，随时准备开始您的远程公证服务</p>
+            </div>
+            <div class="welcome-actions">
+              <button class="btn-primary" onclick="App.go('sessions');App.openCreateModal()">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
+                创建签约会议
+              </button>
+            </div>
+          </div>
+
+          <div class="stat-row">
+            <div class="stat-card grad1">
+              <div class="stat-num" id="stat-total">0</div>
+              <div class="stat-label">累计公证场次</div>
+              <div class="stat-icon">📑</div>
+            </div>
+            <div class="stat-card grad2">
+              <div class="stat-num" id="stat-month">0</div>
+              <div class="stat-label">本月完成</div>
+              <div class="stat-icon">✅</div>
+            </div>
+            <div class="stat-card grad3">
+              <div class="stat-num" id="stat-pending">0</div>
+              <div class="stat-label">待开始会议</div>
+              <div class="stat-icon">⏰</div>
+            </div>
+            <div class="stat-card grad4">
+              <div class="stat-num" id="stat-rate">0%</div>
+              <div class="stat-label">客户满意度</div>
+              <div class="stat-icon">⭐</div>
+            </div>
+          </div>
+
+          <!-- 法域统计卡 -->
+          <div class="region-stats" id="region-stats-notary">
+            <div class="rs-card cn">
+              <div class="rs-head"><span>🏛️ 内地公证</span></div>
+              <div class="rs-body">
+                <div class="rs-num" id="rs-cn-total">0</div>
+                <div class="rs-breakdown">
+                  <span class="rs-tag pending">待 <b id="rs-cn-pending">0</b></span>
+                  <span class="rs-tag ongoing">中 <b id="rs-cn-ongoing">0</b></span>
+                  <span class="rs-tag done">完 <b id="rs-cn-done">0</b></span>
+                </div>
+              </div>
+              <div class="rs-bar"><div class="rs-bar-fill cn" id="rs-cn-bar" style="width:0%"></div></div>
+            </div>
+            <div class="rs-card hk">
+              <div class="rs-head"><span>🇭🇰 香港公证</span></div>
+              <div class="rs-body">
+                <div class="rs-num" id="rs-hk-total">0</div>
+                <div class="rs-breakdown">
+                  <span class="rs-tag pending">待 <b id="rs-hk-pending">0</b></span>
+                  <span class="rs-tag ongoing">中 <b id="rs-hk-ongoing">0</b></span>
+                  <span class="rs-tag done">完 <b id="rs-hk-done">0</b></span>
+                </div>
+              </div>
+              <div class="rs-bar"><div class="rs-bar-fill hk" id="rs-hk-bar" style="width:0%"></div></div>
+            </div>
+          </div>
+
+          <div class="home-grid">
+            <div class="calendar-widget panel">
+              <div class="panel-head">
+                <h3>📅 本月日程</h3>
+                <div class="cal-nav">
+                  <button class="btn-ghost small" onclick="App.calPrev()">‹</button>
+                  <span id="cal-title" class="cal-title">--</span>
+                  <button class="btn-ghost small" onclick="App.calNext()">›</button>
+                </div>
+              </div>
+              <div class="cal-weekdays"><div>一</div><div>二</div><div>三</div><div>四</div><div>五</div><div>六</div><div>日</div></div>
+              <div class="cal-grid" id="cal-grid"></div>
+              <div class="cal-foot">
+                <span class="dot ok"></span> 待开始
+                <span class="dot" style="background:var(--primary);"></span> 进行中
+                <span class="dot" style="background:var(--success);"></span> 已完成
+              </div>
+            </div>
+
+            <div class="panel">
+              <div class="panel-head">
+                <h3>即将开始的签约会议</h3>
+                <a class="link" onclick="App.go('sessions')">查看全部 →</a>
+              </div>
+              <table class="data-table" id="upcoming-table">
+                <thead>
+                  <tr><th>会议编号</th><th>签约事项</th><th>签约方</th><th>预约时间</th><th>状态</th><th>操作</th></tr>
+                </thead>
+                <tbody></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- 签约会议列表 -->
+        <div class="view" id="view-sessions">
+          <div class="content-head">
+            <h2>签约会议管理</h2>
+            <button class="btn-primary" onclick="App.openCreateModal()">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
+              创建新会议
+            </button>
+          </div>
+          <div class="filter-bar">
+            <div class="tabs small">
+              <button class="tab active" data-filter="all">全部</button>
+              <button class="tab" data-filter="pending">待开始</button>
+              <button class="tab" data-filter="ongoing">进行中</button>
+              <button class="tab" data-filter="done">已完成</button>
+              <button class="tab" data-filter="canceled">已取消</button>
+            </div>
+            <div class="region-filter" id="region-filter-sessions" title="法域筛选">
+              <span class="chip active" data-region="all" onclick="App.setRegion('session','all',this)">🌐 全部</span>
+              <span class="chip" data-region="cn" onclick="App.setRegion('session','cn',this)">🏛️ 内地</span>
+              <span class="chip hk" data-region="hk" onclick="App.setRegion('session','hk',this)">🇭🇰 香港</span>
+            </div>
+            <div class="search-box">
+              <input type="text" id="session-search" placeholder="搜索会议编号 / 签约方姓名 / 事项" oninput="App.renderSessions()" />
+            </div>
+          </div>
+          <table class="data-table" id="sessions-table">
+            <thead>
+              <tr><th>会议编号</th><th>签约事项</th><th>签约方</th><th>预约时间</th><th>时长</th><th>状态</th><th>操作</th></tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+
+        <!-- 历史记录 -->
+        <div class="view" id="view-history">
+          <div class="content-head">
+            <h2>公证历史记录</h2>
+            <div class="filter-bar inline">
+              <div class="region-filter" id="region-filter-history">
+                <span class="chip active" data-region="all" onclick="App.setRegion('history','all',this)">🌐 全部</span>
+                <span class="chip" data-region="cn" onclick="App.setRegion('history','cn',this)">🏛️ 内地</span>
+                <span class="chip hk" data-region="hk" onclick="App.setRegion('history','hk',this)">🇭🇰 香港</span>
+              </div>
+              <input type="date" id="history-date-start" onchange="App.renderHistory()" />
+              <span>至</span>
+              <input type="date" id="history-date-end" onchange="App.renderHistory()" />
+              <button class="btn-ghost" onclick="App.exportHistory()">导出记录</button>
+            </div>
+          </div>
+          <table class="data-table" id="history-table">
+            <thead>
+              <tr><th>会议编号</th><th>签约事项</th><th>签约方</th><th>完成时间</th><th>公证耗时</th><th>文书</th><th>操作</th></tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+
+        <!-- 批量排程日历 -->
+        <div class="view" id="view-calendar">
+          <div class="content-head">
+            <h2>📅 批量排程日历</h2>
+            <div class="filter-bar inline">
+              <div class="tabs small" id="cal-mode-tabs">
+                <button class="tab active" data-mode="month" onclick="App.setCalMode('month')">月视图</button>
+                <button class="tab" data-mode="week" onclick="App.setCalMode('week')">周视图</button>
+              </div>
+              <div class="region-filter" id="region-filter-calendar">
+                <span class="chip active" data-region="all" onclick="App.setRegion('calendar','all',this)">🌐 全部</span>
+                <span class="chip" data-region="cn" onclick="App.setRegion('calendar','cn',this)">🏛️ 内地</span>
+                <span class="chip hk" data-region="hk" onclick="App.setRegion('calendar','hk',this)">🇭🇰 香港</span>
+              </div>
+              <button class="btn-ghost small" onclick="App.calToday()">今天</button>
+              <button class="btn-ghost small" onclick="App.calPrev()">‹ 上一页</button>
+              <span id="full-cal-title" class="cal-title" style="font-weight:600;min-width:160px;text-align:center;">--</span>
+              <button class="btn-ghost small" onclick="App.calNext()">下一页 ›</button>
+              <button class="btn-primary small" onclick="App.openCreateModal()" style="margin-left:auto;">＋ 新建签约</button>
+            </div>
+          </div>
+          <div class="full-cal-wrap">
+            <div class="full-cal-weekdays">
+              <div>周一</div><div>周二</div><div>周三</div><div>周四</div><div>周五</div><div>周六</div><div>周日</div>
+            </div>
+            <div class="full-cal-grid" id="full-cal-grid"></div>
+          </div>
+          <div class="cal-legend">
+            <span><span class="dot ok"></span> 待开始</span>
+            <span><span class="dot" style="background:var(--primary);"></span> 进行中</span>
+            <span><span class="dot" style="background:var(--success);"></span> 已完成</span>
+            <span><span class="dot" style="background:#dc2626;"></span> 已取消</span>
+            <span class="muted small" style="margin-left:auto;">点击有会议的日期可展开当日全部排程 · 切换月/周视图批量浏览</span>
+          </div>
+          <!-- 当日排程详情面板 -->
+          <div class="cal-day-detail" id="cal-day-detail" hidden>
+            <div class="panel-head">
+              <h3 id="cal-day-detail-title">当日排程</h3>
+              <button class="btn-text" onclick="document.getElementById('cal-day-detail').hidden=true">×</button>
+            </div>
+            <table class="data-table" id="cal-day-table">
+              <thead>
+                <tr><th>时间</th><th>会议编号</th><th>签约事项</th><th>签约方</th><th>公证人</th><th>状态</th><th>操作</th></tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- 文书模板 -->
+        <div class="view" id="view-templates">
+          <div class="content-head">
+            <h2>文书模板库</h2>
+            <button class="btn-primary" onclick="App.uploadTemplate()">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
+              上传模板
+            </button>
+          </div>
+          <div class="template-grid" id="template-grid"></div>
+        </div>
+
+        <!-- 执业信息 -->
+        <div class="view" id="view-profile">
+          <h2>执业信息</h2>
+          <div class="profile-card">
+            <div class="avatar-lg" id="profile-avatar">公</div>
+            <div class="profile-body">
+              <div class="row"><label>姓名</label><span id="profile-name">--</span></div>
+              <div class="row"><label>性别</label><span>--</span></div>
+              <div class="row"><label>执业证号</label><span id="profile-notary-id">--</span></div>
+              <div class="row"><label>所属机构</label><span id="profile-org">--</span></div>
+              <div class="row"><label>执业年限</label><span id="profile-years">--</span></div>
+              <div class="row"><label>联系电话</label><span id="profile-phone">--</span></div>
+              <div class="row"><label>身份证号</label><span id="profile-idcard">--</span></div>
+              <div class="row"><label>实名认证</label><span class="tag green">已通过</span></div>
+              <div class="row"><label>执业资质</label><span class="tag blue">有效</span></div>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+  </section>
+
+  <!-- ============== 签约方工作台 ============== -->
+  <section id="signer-dashboard" class="page">
+    <div class="layout">
+      <aside class="sidebar signer">
+        <div class="menu-item active" data-view="home-signer">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12l9-9 9 9v9a2 2 0 01-2 2h-4v-7H9v7H5a2 2 0 01-2-2v-9z"/></svg>
+          <span>我的签约</span>
+        </div>
+        <div class="menu-item" data-view="meetings-signer">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M7 10h10M7 14h6"/></svg>
+          <span>预约会议</span>
+          <em class="badge" id="signer-pending-badge">0</em>
+        </div>
+        <div class="menu-item" data-view="docs-signer">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/></svg>
+          <span>我的文书</span>
+        </div>
+        <div class="menu-item" data-view="profile-signer">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0116 0"/></svg>
+          <span>个人中心</span>
+        </div>
+      </aside>
+
+      <main class="content">
+        <!-- 签约方首页 -->
+        <div class="view active" id="view-home-signer">
+          <div class="welcome-card">
+            <div>
+              <h2 id="signer-welcome">您好，签约用户</h2>
+              <p id="signer-welcome-sub">您有 <b id="signer-pending-count">0</b> 场待完成的视频签约，请提前准备好身份证件</p>
+            </div>
+            <div class="welcome-actions">
+              <button class="btn-primary" onclick="App.go('meetings-signer')">查看待办会议</button>
+            </div>
+          </div>
+          <div class="stat-row">
+            <div class="stat-card grad2">
+              <div class="stat-num" id="signer-done">0</div>
+              <div class="stat-label">已完成签约</div>
+              <div class="stat-icon">✅</div>
+            </div>
+            <div class="stat-card grad3">
+              <div class="stat-num" id="signer-upcoming">0</div>
+              <div class="stat-label">即将开始</div>
+              <div class="stat-icon">⏰</div>
+            </div>
+            <div class="stat-card grad1">
+              <div class="stat-num" id="signer-docs">0</div>
+              <div class="stat-label">我的文书</div>
+              <div class="stat-icon">📑</div>
+            </div>
+            <div class="stat-card grad4">
+              <div class="stat-num" id="signer-verified"><span class="tag green small-txt">已认证</span></div>
+              <div class="stat-label">实名状态</div>
+              <div class="stat-icon">🛡️</div>
+            </div>
+          </div>
+
+          <!-- 法域统计卡 -->
+          <div class="region-stats" id="region-stats-signer">
+            <div class="rs-card cn">
+              <div class="rs-head"><span>🏛️ 内地签约</span></div>
+              <div class="rs-body">
+                <div class="rs-num" id="rs-s-cn-total">0</div>
+                <div class="rs-breakdown">
+                  <span class="rs-tag pending">待 <b id="rs-s-cn-pending">0</b></span>
+                  <span class="rs-tag done">完 <b id="rs-s-cn-done">0</b></span>
+                </div>
+              </div>
+              <div class="rs-bar"><div class="rs-bar-fill cn" id="rs-s-cn-bar" style="width:0%"></div></div>
+            </div>
+            <div class="rs-card hk">
+              <div class="rs-head"><span>🇭🇰 香港签署</span></div>
+              <div class="rs-body">
+                <div class="rs-num" id="rs-s-hk-total">0</div>
+                <div class="rs-breakdown">
+                  <span class="rs-tag pending">待 <b id="rs-s-hk-pending">0</b></span>
+                  <span class="rs-tag done">完 <b id="rs-s-hk-done">0</b></span>
+                </div>
+              </div>
+              <div class="rs-bar"><div class="rs-bar-fill hk" id="rs-s-hk-bar" style="width:0%"></div></div>
+            </div>
+          </div>
+
+          <div class="home-grid">
+            <div class="calendar-widget panel">
+              <div class="panel-head">
+                <h3>📅 本月我的签约</h3>
+                <div class="cal-nav">
+                  <button class="btn-ghost small" onclick="App.calPrev()">‹</button>
+                  <span id="cal-title-signer" class="cal-title">--</span>
+                  <button class="btn-ghost small" onclick="App.calNext()">›</button>
+                </div>
+              </div>
+              <div class="cal-weekdays"><div>一</div><div>二</div><div>三</div><div>四</div><div>五</div><div>六</div><div>日</div></div>
+              <div class="cal-grid" id="cal-grid-signer"></div>
+              <div class="cal-foot">
+                <span class="dot ok"></span> 待开始
+                <span class="dot" style="background:var(--primary);"></span> 进行中
+                <span class="dot" style="background:var(--success);"></span> 已完成
+              </div>
+            </div>
+            <div class="panel">
+              <div class="panel-head"><h3>近期签约安排</h3></div>
+              <table class="data-table" id="signer-upcoming-table">
+                <thead><tr><th>会议编号</th><th>签约事项</th><th>公证人</th><th>预约时间</th><th>状态</th><th>操作</th></tr></thead>
+                <tbody></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- 签约方会议列表 -->
+        <div class="view" id="view-meetings-signer">
+          <div class="content-head"><h2>预约会议</h2></div>
+          <div class="filter-bar">
+            <div class="tabs small">
+              <button class="tab active" data-filter-signer="all">全部</button>
+              <button class="tab" data-filter-signer="pending">待开始</button>
+              <button class="tab" data-filter-signer="ongoing">进行中</button>
+              <button class="tab" data-filter-signer="done">已完成</button>
+            </div>
+            <div class="region-filter" id="region-filter-signer">
+              <span class="chip active" data-region="all" onclick="App.setRegion('signer','all',this)">🌐 全部</span>
+              <span class="chip" data-region="cn" onclick="App.setRegion('signer','cn',this)">🏛️ 内地</span>
+              <span class="chip hk" data-region="hk" onclick="App.setRegion('signer','hk',this)">🇭🇰 香港</span>
+            </div>
+          </div>
+          <table class="data-table" id="signer-meetings-table">
+            <thead><tr><th>会议编号</th><th>签约事项</th><th>公证人</th><th>所属机构</th><th>预约时间</th><th>状态</th><th>操作</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+
+        <!-- 签约方文书 -->
+        <div class="view" id="view-docs-signer">
+          <div class="content-head">
+            <h2>我的文书</h2>
+            <button class="btn-ghost" onclick="App.demoAlert('文件下载已发送到您的邮箱')">批量下载</button>
+          </div>
+          <table class="data-table" id="signer-docs-table">
+            <thead><tr><th>文书名称</th><th>关联会议</th><th>签署日期</th><th>公证人</th><th>状态</th><th>操作</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+
+        <!-- 签约方个人中心 -->
+        <div class="view" id="view-profile-signer">
+          <h2>个人中心</h2>
+          <div class="profile-card">
+            <div class="avatar-lg" id="signer-avatar">签</div>
+            <div class="profile-body">
+              <div class="row"><label>姓名</label><span id="signer-name">--</span></div>
+              <div class="row"><label>手机号</label><span id="signer-phone">--</span></div>
+              <div class="row"><label>身份证号</label><span id="signer-idcard">--</span></div>
+              <div class="row"><label>实名认证</label><span class="tag green">已通过</span></div>
+              <div class="row"><label>人脸核验</label><span class="tag green">已录入</span></div>
+              <div class="row"><label>电子签名</label><span class="tag blue">已设置</span></div>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+  </section>
+
+  <!-- ============== 视频签约房间 ============== -->
+  <section id="video-room" class="page">
+    <div class="room-layout">
+      <!-- 左侧：视频区 -->
+      <div class="video-area">
+        <div class="video-main" id="video-main">
+          <div class="video-placeholder">
+            <div class="avatar-huge" id="main-avatar">公</div>
+            <div class="video-name" id="main-name">公证人画面</div>
+            <div class="video-status-live"><span class="pulse"></span>高清 · 在线</div>
+          </div>
+          <div class="video-controls-bottom">
+            <button class="vc-btn" id="mic-btn" onclick="App.toggleMedia('mic')" title="麦克风">
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0014 0M12 18v4"/></svg>
+            </button>
+            <button class="vc-btn" id="cam-btn" onclick="App.toggleMedia('cam')" title="摄像头">
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 7l-7 5 7 5V7zM14 5H3a2 2 0 00-2 2v10a2 2 0 002 2h11a2 2 0 002-2V7a2 2 0 00-2-2z"/></svg>
+            </button>
+            <button class="vc-btn" onclick="App.shareScreen()" title="共享屏幕">
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="14" rx="2"/><path d="M8 22h8M12 18v4"/></svg>
+            </button>
+            <button class="vc-btn chat-toggle" onclick="App.toggleChat()" title="聊天">
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+            </button>
+            <button class="vc-btn hangup" onclick="App.endRoom()" title="结束会议">
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.86 19.86 0 01-8.63-3.07 19.5 19.5 0 01-6-6A19.86 19.86 0 012.12 4.18 2 2 0 014.11 2h3a2 2 0 012 1.72c.13.96.36 1.9.68 2.81a2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.91.32 1.85.55 2.81.68A2 2 0 0122 16.92z"/></svg>
+            </button>
+          </div>
+        </div>
+        <div class="video-pip" id="video-pip">
+          <div class="video-placeholder small">
+            <div class="avatar-med" id="pip-avatar">签</div>
+            <div class="video-name" id="pip-name">签约方</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 右侧：签约流程区 -->
+      <div class="process-area">
+        <div class="process-head">
+          <div>
+            <div class="process-title">视频签约流程</div>
+            <div class="process-sub" id="room-session-id">会议编号: --</div>
+          </div>
+          <div class="timer" id="room-timer">00:00:00</div>
+        </div>
+
+        <!-- 步骤条 -->
+        <div class="stepper">
+          <div class="step active" data-step="1">
+            <div class="step-circle">1</div>
+            <div class="step-label">身份核验</div>
+          </div>
+          <div class="step-line"></div>
+          <div class="step" data-step="2">
+            <div class="step-circle">2</div>
+            <div class="step-label">告知事项</div>
+          </div>
+          <div class="step-line"></div>
+          <div class="step" data-step="3">
+            <div class="step-circle">3</div>
+            <div class="step-label">文书确认</div>
+          </div>
+          <div class="step-line"></div>
+          <div class="step" data-step="4">
+            <div class="step-circle">4</div>
+            <div class="step-label">签署文件</div>
+          </div>
+          <div class="step-line"></div>
+          <div class="step" data-step="5">
+            <div class="step-circle">5</div>
+            <div class="step-label">存档完成</div>
+          </div>
+        </div>
+
+        <!-- 步骤内容 -->
+        <div class="step-content-wrapper">
+          <!-- 步骤1：身份核验 -->
+          <div class="step-content active" data-step-c="1">
+            <div class="verify-card">
+              <div class="verify-icon">🪪</div>
+              <h3>身份核验环节</h3>
+              <p class="muted">公证人将核验您的身份信息，请按照提示操作</p>
+
+              <div class="verify-box" id="verify-signer">
+                <h4>签约方身份信息</h4>
+                <div class="row"><label>姓名</label><b id="v-signer-name">--</b></div>
+                <div class="row"><label>身份证号</label><b id="v-signer-idcard">--</b></div>
+                <div class="row"><label>核验状态</label><span class="tag" id="v-signer-status">待核验</span></div>
+              </div>
+
+              <div class="idcard-scan-area">
+                <div class="scan-frame" id="scan-frame">
+                  <div class="scan-line"></div>
+                  <div class="scan-placeholder" id="scan-placeholder">📷<br/>身份证读卡区</div>
+                </div>
+                <div class="face-area">
+                  <div class="face-frame" id="face-frame">
+                    <div class="face-placeholder" id="face-placeholder">😊<br/>人脸识别</div>
+                    <div class="face-guide hidden" id="face-guide">请将面部对准框内...</div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="step-actions" id="step1-actions">
+                <button class="btn-ghost" onclick="App.startIDScan()">读取身份证</button>
+                <button class="btn-ghost" onclick="App.startFaceVerify()">人脸比对</button>
+                <button class="btn-primary" id="verify-pass-btn" onclick="App.passVerify()" disabled>核验通过 →</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- 步骤2：告知事项 -->
+          <div class="step-content" data-step-c="2">
+            <div class="notice-card">
+              <h3>📋 公证告知事项</h3>
+              <div class="notice-text" id="notice-text">
+                <p><b>一、公证的法律效力</b></p>
+                <p>根据《中华人民共和国公证法》，经公证的民事法律行为、有法律意义的事实和文书，应当作为认定事实的根据，但有相反证据足以推翻该项公证的除外。</p>
+                <p><b>二、当事人的权利义务</b></p>
+                <p>1. 您有权对公证文书内容提出修改意见；</p>
+                <p>2. 您应当如实陈述情况，并提供真实、合法、充分的证明材料；</p>
+                <p>3. 您有权要求公证员对相关事项予以保密；</p>
+                <p>4. 您应当按照规定支付公证费。</p>
+                <p><b>三、视频签约说明</b></p>
+                <p>本次签约过程全程录音录像，并同步上传至区块链存证平台，签约记录永久保存、不可篡改。</p>
+                <p><b>四、法律责任提示</b></p>
+                <p>提供虚假证明材料骗取公证书的，将依法承担法律责任；构成犯罪的，依法追究刑事责任。</p>
+              </div>
+              <label class="check-row">
+                <input type="checkbox" id="agree-notice" />
+                我已认真阅读并理解上述告知事项的全部内容
+              </label>
+              <div class="step-actions">
+                <button class="btn-ghost" onclick="App.prevStep()">← 上一步</button>
+                <button class="btn-primary" id="notice-next-btn" onclick="App.nextStep()" disabled>我已知晓 →</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- 步骤3：文书确认 -->
+          <div class="step-content" data-step-c="3">
+            <div class="doc-review">
+              <div class="doc-review-head">
+                <h3>📄 待确认文书</h3>
+                <div class="doc-meta">
+                  <span class="tag" id="doc-type-tag">借款合同</span>
+                  <span class="muted" id="doc-page-count">共 5 页</span>
+                </div>
+              </div>
+
+              <div class="doc-preview" id="doc-preview">
+                <div class="doc-page" id="doc-page-content">
+                  <!-- 动态注入文档内容 -->
+                </div>
+                <div class="doc-nav">
+                  <button class="btn-ghost small" onclick="App.prevPage()">上一页</button>
+                  <span id="doc-page-indicator">1 / 5</span>
+                  <button class="btn-ghost small" onclick="App.nextPage()">下一页</button>
+                </div>
+              </div>
+
+              <label class="check-row">
+                <input type="checkbox" id="agree-doc" />
+                我已完整阅读并确认文书内容，同意按照该文本进行签署
+              </label>
+              <div class="step-actions">
+                <button class="btn-ghost" onclick="App.prevStep()">← 上一步</button>
+                <button class="btn-primary" id="doc-next-btn" onclick="App.nextStep()" disabled>文书确认无误 →</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- 步骤4：签署文件 -->
+          <div class="step-content" data-step-c="4">
+            <div class="sign-panel">
+              <div class="sign-head">
+                <h3>✍️ 电子签名环节</h3>
+                <div class="sign-tip muted" id="sign-turn-tip">请 <b class="blue">公证人</b> 先签名</div>
+              </div>
+
+              <div class="sign-slots">
+                <div class="sign-slot" id="slot-notary">
+                  <div class="slot-label">公证人签名</div>
+                  <div class="slot-area" id="slot-notary-area">
+                    <span class="slot-placeholder">待签名</span>
+                  </div>
+                  <div class="slot-meta" id="slot-notary-meta">--</div>
+                </div>
+                <div class="sign-slot" id="slot-signer">
+                  <div class="slot-label">签约方签名</div>
+                  <div class="slot-area dim" id="slot-signer-area">
+                    <span class="slot-placeholder">请等待</span>
+                  </div>
+                  <div class="slot-meta" id="slot-signer-meta">--</div>
+                </div>
+                <!-- 额外签约方签名槽（多方签署时动态生成） -->
+                <div id="extra-slots-container" style="display:none;"></div>
+              </div>
+
+              <!-- 签名板弹窗（内嵌） -->
+              <div class="sign-pad-area" id="sign-pad-area">
+                <div class="pad-head">
+                  <span>请在下方签名区域手写签名</span>
+                  <button class="btn-text" onclick="App.clearPad()">清除笔迹</button>
+                </div>
+                <canvas id="sign-canvas" width="560" height="200"></canvas>
+                <div class="pad-actions">
+                  <button class="btn-ghost" onclick="App.useDefaultSign()">使用系统默认签名</button>
+                  <button class="btn-primary" id="confirm-sign-btn" onclick="App.confirmSign()">确认签名</button>
+                </div>
+              </div>
+
+              <div class="step-actions">
+                <button class="btn-ghost" onclick="App.prevStep()">← 上一步</button>
+                <button class="btn-primary" id="all-signed-btn" onclick="App.nextStep()" disabled>全部签署完成 →</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- 步骤5：存档完成 -->
+          <div class="step-content" data-step-c="5">
+            <div class="done-card">
+              <div class="done-check">✓</div>
+              <h3>签约完成！</h3>
+              <p class="muted">所有文书已完成签署并已上传至区块链存证</p>
+
+              <div class="hash-card">
+                <div class="hash-label">📦 区块链存证哈希</div>
+                <div class="hash-value" id="tx-hash">0x7a3f...e81b</div>
+                <div class="hash-meta">
+                  <span>存证时间：<span id="save-time">--</span></span>
+                  <span>区块高度：#<span id="block-h">--</span></span>
+                </div>
+              </div>
+
+              <div class="summary-list" id="summary-list"></div>
+
+              <div class="step-actions">
+                <button class="btn-ghost" onclick="App.downloadCert()">下载公证书</button>
+                <button class="btn-ghost" onclick="App.downloadVideo()">下载全程录像</button>
+                <button class="btn-primary" onclick="App.endRoom()">返回工作台</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 聊天侧栏 -->
+      <div class="chat-panel" id="chat-panel">
+        <div class="chat-head">
+          <span>实时消息</span>
+          <button class="btn-text" onclick="App.toggleChat()">×</button>
+        </div>
+        <div class="chat-list" id="chat-list"></div>
+        <div class="chat-input-row">
+          <input type="text" id="chat-input" placeholder="输入消息，回车发送" onkeydown="if(event.key==='Enter')App.sendChat()" />
+          <button class="btn-primary small" onclick="App.sendChat()">发送</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============== 创建会议弹窗 ============== -->
+  <div class="modal-mask" id="create-modal">
+    <div class="modal">
+      <div class="modal-head">
+        <h3>创建视频签约会议</h3>
+        <button class="btn-text" onclick="App.closeModal('create-modal')">×</button>
+      </div>
+      <div class="modal-body">
+        <div class="field">
+          <label>签约事项 <span class="req">*</span></label>
+          <select id="cm-topic">
+            <option value="借款合同公证">借款合同公证</option>
+            <option value="房屋买卖合同公证">房屋买卖合同公证</option>
+            <option value="委托书公证">委托书公证</option>
+            <option value="受益人声明书公证">受益人声明书公证（香港版）</option>
+            <option value="遗嘱公证">遗嘱公证</option>
+            <option value="赠与合同公证">赠与合同公证</option>
+            <option value="婚前财产约定公证">婚前财产约定公证</option>
+            <option value="其他">其他</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>签约方姓名 <span class="req">*</span></label>
+          <input type="text" id="cm-signer-name" placeholder="请输入签约方真实姓名" />
+        </div>
+        <div class="field">
+          <label>签约方手机号 <span class="req">*</span></label>
+          <input type="tel" id="cm-signer-phone" placeholder="用于发送会议通知" maxlength="11" />
+        </div>
+        <div class="field">
+          <label>签约方身份证号</label>
+          <input type="text" id="cm-signer-idcard" placeholder="可提前录入便于核验" maxlength="18" />
+        </div>
+        <div class="field">
+          <label>额外签约方（多方签署）</label>
+          <div class="extra-signers" id="extra-signers-list"></div>
+          <button type="button" class="btn-ghost small" id="add-signer-btn" onclick="App.addExtraSigner()" style="margin-top:6px;">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" style="vertical-align:middle;margin-right:4px;"><path d="M12 5v14M5 12h14"/></svg>
+            添加签约方（最多5人）
+          </button>
+        </div>
+        <div class="row-grid-2">
+          <div class="field">
+            <label>预约日期 <span class="req">*</span></label>
+            <input type="date" id="cm-date" />
+          </div>
+          <div class="field">
+            <label>预约时间 <span class="req">*</span></label>
+            <input type="time" id="cm-time" />
+          </div>
+        </div>
+        <div class="field">
+          <label>签约时长预估</label>
+          <select id="cm-duration">
+            <option>15 分钟</option>
+            <option selected>30 分钟</option>
+            <option>45 分钟</option>
+            <option>60 分钟</option>
+            <option>90 分钟</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>上传待签文书</label>
+          <div class="drop-area" id="cm-drop">
+            <input type="file" id="cm-file" accept=".pdf,.doc,.docx,.txt" onchange="App.handleFile(this)" hidden />
+            <div class="drop-inner" onclick="document.getElementById('cm-file').click()">
+              <div class="drop-icon">📁</div>
+              <div>点击或拖拽文件到此处上传</div>
+              <div class="muted small">支持 PDF / Word / TXT，单个文件最大 20MB</div>
+            </div>
+            <div class="file-list" id="cm-file-list"></div>
+          </div>
+        </div>
+        <div class="field">
+          <label>备注说明</label>
+          <textarea id="cm-remark" rows="2" placeholder="可填写签约注意事项或补充说明"></textarea>
+        </div>
+        <!-- 费用预览 -->
+        <div class="field">
+          <label>费用预览</label>
+          <div id="cm-fee-preview" style="background:#f8fafc;border:1px solid var(--border);border-radius:10px;padding:12px 16px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;">
+              <span style="font-size:13px;color:#6b7280;">公证费（基础费）</span>
+              <b id="cm-fee-amount" style="font-size:16px;color:var(--primary);">¥200</b>
+            </div>
+            <div id="cm-fee-detail" style="font-size:11px;color:#9ca3af;margin-top:4px;">依据发改价格[2008]157号 · 声明书公证基础费</div>
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;padding-top:8px;border-top:1px dashed #e5e7eb;">
+              <span style="font-size:13px;font-weight:600;">合计应付</span>
+              <b id="cm-fee-total" style="font-size:20px;color:#991b1b;">¥200</b>
+            </div>
+            <label style="display:flex;align-items:center;gap:6px;margin-top:8px;font-size:12px;cursor:pointer;">
+              <input type="checkbox" id="cm-fee-paid" checked onchange="App.updateCreateBtn()" /> 已确认缴费，签署完成后出具公证书
+            </label>
+          </div>
+        </div>
+      </div>
+      <div class="modal-foot">
+        <button class="btn-ghost" onclick="App.closeModal('create-modal')">取消</button>
+        <button class="btn-primary" id="cm-submit-btn" onclick="App.tryCreate()">创建会议</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============== 缴费弹窗（双通道） ============== -->
+  <div class="modal-mask" id="pay-modal">
+    <div class="modal-box" style="max-width:560px;">
+      <div class="modal-head">
+        <h3>💰 公证费用缴纳 · 756 USDT / 人</h3>
+        <button class="btn-text" onclick="App.closeModal('pay-modal')">×</button>
+      </div>
+      <div class="modal-body" style="padding:20px;">
+        <!-- 费用摘要 -->
+        <div style="background:linear-gradient(135deg,#1e293b,#0f172a);color:#fff;border-radius:12px;padding:16px 20px;margin-bottom:16px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <div>
+              <div style="font-size:12px;opacity:0.7;">每位用户公证费</div>
+              <div style="font-size:28px;font-weight:800;letter-spacing:1px;">756 <span style="font-size:16px;font-weight:400;opacity:0.8;">USDT</span></div>
+            </div>
+            <div style="text-align:right;">
+              <div style="font-size:12px;opacity:0.7;">≈ 港元</div>
+              <div style="font-size:22px;font-weight:700;color:#fbbf24;">HK$ 5,896.80</div>
+              <div style="font-size:10px;opacity:0.5;">参考汇率 1 USDT ≈ HK$ 7.80</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 缴费方式选择 -->
+        <div style="font-size:13px;font-weight:600;margin-bottom:10px;">选择缴费方式</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;">
+          <!-- 方式A：律所对公账户 -->
+          <div class="pay-channel" id="pay-channel-bank" onclick="App.selectPayChannel('bank')" style="border:2px solid var(--primary);border-radius:10px;padding:14px;cursor:pointer;transition:all .2s;">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+              <input type="radio" name="pay-channel" value="bank" checked />
+              <span style="font-size:14px;font-weight:700;">🏦 律所对公账户</span>
+            </div>
+            <div style="font-size:11px;color:#6b7280;line-height:1.6;">
+              <div><b>户名：</b>YIP, TANG &amp; TSE SOLICITORS</div>
+              <div><b>银行：</b>The Hongkong and Shanghai Banking Corp Ltd</div>
+              <div><b>分行：</b>Central (HQ) Branch · 中環總行</div>
+              <div><b>账号：</b>008-123-456-789</div>
+              <div><b>SWIFT：</b>HSBCHKHHXXX</div>
+              <div style="margin-top:4px;color:#059669;">✓ 网上银行自动同步到账确认</div>
+            </div>
+          </div>
+          <!-- 方式B：TRC-20 区块链 -->
+          <div class="pay-channel" id="pay-channel-trc20" onclick="App.selectPayChannel('trc20')" style="border:2px solid #e5e7eb;border-radius:10px;padding:14px;cursor:pointer;transition:all .2s;">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+              <input type="radio" name="pay-channel" value="trc20" />
+              <span style="font-size:14px;font-weight:700;">⛓️ TRC-20 USDT</span>
+            </div>
+            <div style="font-size:11px;color:#6b7280;line-height:1.6;">
+              <div><b>网络：</b>Tron Network (TRC-20)</div>
+              <div><b>合约：</b>TR7NHqjeKQxGTCi8q8fL</div>
+              <div><b>收款地址：</b></div>
+              <div style="font-family:monospace;font-size:10px;background:#f1f5f9;padding:4px 6px;border-radius:4px;word-break:break-all;margin-top:2px;">
+                TYDcY9fWsFm3aTVcQxN6LZxK7u7L5n3pQ8
+              </div>
+              <div style="margin-top:4px;color:#991b1b;">⛓ 信托结算专用存证地址</div>
+              <div style="font-size:10px;color:#6b7280;">全流程文件+工具记录将上链至此地址</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 转账哈希输入 -->
+        <div id="pay-hash-section" style="display:none;">
+          <label style="font-size:13px;font-weight:600;display:block;margin-bottom:8px;">输入转账交易哈希（TX Hash）</label>
+          <input type="text" id="pay-tx-hash" placeholder="粘贴 TRON 网络交易哈希（64位十六进制）"
+            style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-family:monospace;font-size:12px;" />
+          <div id="pay-hash-status" style="font-size:11px;margin-top:6px;"></div>
+          <button class="btn-ghost small" onclick="App.verifyTxHash()" id="pay-verify-btn" style="margin-top:8px;">
+            🔍 验证交易哈希
+          </button>
+        </div>
+
+        <!-- 银行到账确认 -->
+        <div id="pay-bank-section">
+          <div style="font-size:12px;color:#6b7280;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:10px 12px;">
+            ✅ 选择律所对公账户后，系统将通过 HSBC 商业网银 API 自动核对到账状态。<br/>
+            请在转账完成后点击「确认缴费」按钮，系统将自动验证到账记录。
+          </div>
+        </div>
+      </div>
+      <div class="modal-foot">
+        <button class="btn-ghost" onclick="App.closeModal('pay-modal'); App.openModal('create-modal')">返回</button>
+        <button class="btn-primary" id="pay-confirm-btn" onclick="App.confirmPayment()" disabled>确认缴费</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============== 会议详情弹窗 ============== -->
+  <div class="modal-mask" id="detail-modal">
+    <div class="modal wide">
+      <div class="modal-head">
+        <h3>会议详情 · <span id="detail-sid" class="muted">--</span></h3>
+        <button class="btn-text" onclick="App.closeModal('detail-modal')">×</button>
+      </div>
+      <div class="modal-body" id="detail-body"></div>
+      <div class="modal-foot">
+        <button class="btn-ghost" onclick="App.playbackSession()">▶ 查看录像回放</button>
+        <button class="btn-ghost" onclick="App.downloadDetailCert()">📄 下载公证书 PDF</button>
+        <button class="btn-ghost" onclick="App.showSignerLinkFromDetail()">🔗 生成签约人入口</button>
+        <button class="btn-primary" onclick="App.closeModal('detail-modal')">关闭</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============== 录像回放弹窗 ============== -->
+  <div class="modal-mask" id="playback-modal">
+    <div class="modal x-wide">
+      <div class="modal-head">
+        <h3>📼 签约全程录像回放 · <span id="pb-sid" class="muted">--</span></h3>
+        <button class="btn-text" onclick="App.closeModal('playback-modal')">×</button>
+      </div>
+      <div class="modal-body">
+        <div class="pb-stage">
+          <div class="pb-video-main">
+            <div class="pb-step-scene" id="pb-scene">请选择下方步骤或点击播放按钮</div>
+            <div class="pb-pip"></div>
+            <div class="pb-live-tag"><span class="pulse"></span>回放中</div>
+            <div class="pb-time" id="pb-time">00:00 / 15:00</div>
+          </div>
+          <div class="pb-side">
+            <div class="pb-side-title">📋 签约步骤时间轴</div>
+            <div class="pb-timeline" id="pb-timeline"></div>
+            <div class="pb-playhead-wrap">
+              <input type="range" id="pb-seek" min="0" max="100" value="0" step="1" oninput="App.seekPlayback(this.value)" />
+              <div class="pb-ctrls">
+                <button class="btn-ghost small" onclick="App.seekStep(-1)">⏮ 上一步</button>
+                <button class="btn-primary" id="pb-play-btn" onclick="App.togglePlay()">▶ 自动播放</button>
+                <button class="btn-ghost small" onclick="App.seekStep(1)">下一步 ⏭</button>
+              </div>
+              <div class="pb-speed">倍速：
+                <span class="speed-opt" onclick="App.setSpeed(0.5)">0.5x</span>
+                <span class="speed-opt active" onclick="App.setSpeed(1)">1x</span>
+                <span class="speed-opt" onclick="App.setSpeed(2)">2x</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-foot">
+        <button class="btn-ghost" onclick="App.demoAlert('已导出 MP4 到本地（演示）')">下载录像</button>
+        <button class="btn-primary" onclick="App.closeModal('playback-modal')">关闭</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============== 公证收费计算器 ============== -->
+  <div class="modal-mask" id="fee-modal">
+    <div class="modal-box" style="max-width:520px;">
+      <div class="modal-head">
+        <h3>💰 公证收费计算器</h3>
+        <button class="btn-text" onclick="App.closeModal('fee-modal')">×</button>
+      </div>
+      <div class="modal-body" style="padding:20px;">
+        <div style="margin-bottom:16px;">
+          <label style="font-size:13px;font-weight:600;display:block;margin-bottom:8px;">公证事项</label>
+          <select id="fee-type" onchange="App.calcFee()" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:8px;">
+            <option value="declaration">受益人声明书（香港）</option>
+            <option value="poa">授权委托书（香港）</option>
+            <option value="will">遗嘱公证（香港）</option>
+            <option value="affirm">法定声明 / 誓章</option>
+            <option value="copy">副本核证（盖章）</option>
+            <option value="cn_declaration">声明书公证（内地）</option>
+            <option value="cn_poa">委托书公证（内地）</option>
+          </select>
+        </div>
+        <div style="margin-bottom:16px;">
+          <label style="font-size:13px;font-weight:600;display:block;margin-bottom:8px;">涉及金额 / 资产规模</label>
+          <div style="display:flex;gap:8px;align-items:center;">
+            <span id="fee-currency" style="font-size:14px;font-weight:600;">HK$</span>
+            <input type="number" id="fee-amount" value="0" min="0" oninput="App.calcFee()" placeholder="输入金额"
+              style="flex:1;padding:8px;border:1px solid var(--border);border-radius:8px;" />
+          </div>
+        </div>
+        <div id="fee-result" style="background:#f8fafc;border:1px solid var(--border);border-radius:10px;padding:16px;">
+          <!-- JS 填充 -->
+        </div>
+      </div>
+      <div class="modal-foot">
+        <button class="btn-ghost" onclick="App.demoAlert('收费报价单已生成')">导出报价单</button>
+        <button class="btn-primary" onclick="App.closeModal('fee-modal')">关闭</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============== 签约人入口链接弹窗 ============== -->
+  <div class="modal-mask" id="signer-link-modal">
+    <div class="modal-box" style="max-width:560px;">
+      <div class="modal-head">
+        <h3>🔗 签约人入口链接</h3>
+        <button class="btn-text" onclick="App.closeModal('signer-link-modal')">×</button>
+      </div>
+      <div class="modal-body" style="padding:20px;">
+        <div id="signer-link-info" style="background:linear-gradient(135deg,#eff6ff,#fff);border:1px solid #bfdbfe;border-radius:10px;padding:14px 16px;margin-bottom:16px;">
+          <div style="font-size:12px;color:#64748b;">本次签约</div>
+          <div id="signer-link-topic" style="font-size:15px;font-weight:700;color:#1e3a8a;margin-top:2px;">--</div>
+          <div style="display:flex;justify-content:space-between;margin-top:8px;font-size:12px;color:#475569;">
+            <span>会议编号：<code id="signer-link-sid" style="font-family:monospace;">--</code></span>
+            <span id="signer-link-when">--</span>
+          </div>
+          <div style="margin-top:6px;font-size:12px;color:#475569;">签约方：<b id="signer-link-name">--</b> · 公证人：<span id="signer-link-notary">--</span></div>
+        </div>
+
+        <label style="font-size:13px;font-weight:600;display:block;margin-bottom:8px;">📱 签约方专属入口链接</label>
+        <div style="display:flex;gap:8px;align-items:stretch;margin-bottom:6px;">
+          <input type="text" id="signer-link-url" readonly
+            style="flex:1;padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-family:monospace;font-size:11px;background:#f8fafc;color:#1e293b;" />
+          <button class="btn-primary" onclick="App.copySignerLink()" style="white-space:nowrap;">📋 复制</button>
+        </div>
+        <div class="muted small" style="margin-bottom:14px;">💡 签约方点击链接即可免登录直达签约房间（链接含专属令牌，过期时间 7 天）</div>
+
+        <div style="display:grid;grid-template-columns:120px 1fr;gap:16px;align-items:center;">
+          <div id="signer-link-qr" style="background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:8px;display:flex;justify-content:center;"></div>
+          <div style="font-size:12px;color:#475569;line-height:1.7;">
+            <div style="font-weight:600;color:#0f172a;margin-bottom:4px;">📌 链接说明</div>
+            <div>· 含会议令牌，无需账号密码</div>
+            <div>· 自动跳转视频签约房间</div>
+            <div>· 移动端/PC 端通用</div>
+            <div>· 过期后请联系公证人重发</div>
+            <div style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap;">
+              <button class="btn-ghost small" onclick="App.sendSignerLinkSms()">💬 短信发送</button>
+              <button class="btn-ghost small" onclick="App.sendSignerLinkEmail()">📧 邮件发送</button>
+              <button class="btn-ghost small" onclick="App.openSignerLink()">↗ 在新标签打开</button>
+            </div>
+          </div>
+        </div>
+
+        <div style="margin-top:14px;background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:10px 12px;font-size:11px;color:#92400e;">
+          ⚠️ 本链接等同于签约方身份凭证，请勿公开转发；公证人可在「签约会议管理」中吊销/重置链接。
+        </div>
+      </div>
+      <div class="modal-foot">
+        <span class="muted small" id="signer-link-token">--</span>
+        <button class="btn-primary" onclick="App.closeModal('signer-link-modal')">完成</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============== 公证书预览弹窗（页内，不依赖新标签页） ============== -->
+  <div class="modal-mask" id="cert-preview-modal">
+    <div class="modal-box" style="max-width:860px;">
+      <div class="modal-head">
+        <h3>📄 公证书预览</h3>
+        <button class="btn-text" onclick="App.closeModal('cert-preview-modal')">×</button>
+      </div>
+      <div class="modal-body" style="padding:0;">
+        <div id="cert-preview-toolbar" style="display:flex;gap:8px;align-items:center;padding:8px 14px;border-bottom:1px solid var(--border);background:#f8fafc;border-radius:12px 12px 0 0;">
+          <span class="muted small" id="cert-preview-badge">--</span>
+          <div style="flex:1;"></div>
+          <button class="btn-ghost small" onclick="App.previewCertToggleTheme()">🌓 显示模式</button>
+          <button class="btn-ghost small" onclick="App.previewCertZoom(-0.1)">A-</button>
+          <button class="btn-ghost small" onclick="App.previewCertZoom(0)">100%</button>
+          <button class="btn-ghost small" onclick="App.previewCertZoom(0.1)">A+</button>
+          <button class="btn-ghost small" onclick="App.previewCertDownloadHtml()">⬇ 保存 HTML</button>
+          <button class="btn-primary small" onclick="App.previewCertPrint()">🖨️ 打印 / 另存为 PDF</button>
+        </div>
+        <div id="cert-preview-frame" style="max-height:70vh;overflow:auto;padding:20px;background:#e5e7eb;"></div>
+      </div>
+      <div class="modal-foot">
+        <span class="muted small">💡 可直接打印或"另存为 PDF"导出；也可点击「保存 HTML」在本地随时打开查看。</span>
+        <button class="btn-primary" onclick="App.previewCertPrint()">🖨️ 打印 / 另存为 PDF</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============== 通用 Toast ============== -->
+  <div id="toast-container"></div>
+
+  <script src="app.js?v=2026090118j"></script>
+</body>
+</html>

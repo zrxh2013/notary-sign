@@ -1,0 +1,4 @@
+node_modules/
+*.log
+.env
+.trae-html-share-packages/
