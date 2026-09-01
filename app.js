@@ -3118,16 +3118,18 @@ ${bodyFragment}
     App.init();
   });
 
-  // 点击遮罩关闭弹窗
+  // 点击遮罩关闭弹窗（走 closeModal 确保滚动锁释放）
   document.addEventListener('click', (e) => {
-    if (e.target.classList && e.target.classList.contains('modal-mask')) {
-      e.target.classList.remove('show');
+    if (e.target.classList && e.target.classList.contains('modal-mask') && e.target.id) {
+      App.closeModal(e.target.id);
     }
   });
 
-  // ESC 关闭所有弹窗
+  // ESC 关闭所有弹窗（走 closeModal 确保滚动锁释放）
   document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') $$('.modal-mask.show').forEach(m => m.classList.remove('show'));
+    if (e.key === 'Escape') {
+      [...$$('.modal-mask.show')].forEach(m => m && m.id && App.closeModal(m.id));
+    }
   });
 
   // 拖拽文件到上传区
@@ -4334,7 +4336,14 @@ ${bodyFragment}
     this.state.detailSession = s;
     this.openModal('detail-modal');
   };
-  App.openModal = function (id) { this._modalOpen = id; $('#' + id).classList.add('show'); };
+  App.openModal = function (id) {
+    this._modalOpen = id; $('#' + id).classList.add('show');
+    // 弹窗打开时锁定背景滚动
+    const h = document.documentElement, b = document.body;
+    if (!h.style.top) { h.dataset.scrollY = window.scrollY; }
+    Object.assign(h.style, { position: 'fixed', width: '100%', top: -window.scrollY + 'px', overflow: 'hidden' });
+    Object.assign(b.style, { overflow: 'hidden' });
+  };
 
   // ---------- ⑦ 录像回放查看器 ----------
   const STEP_DEFS = [
@@ -4432,11 +4441,19 @@ ${bodyFragment}
     $$('.speed-opt').forEach(el => el.classList.toggle('active', parseFloat(el.textContent) === s));
     if (this.state.pbPlayTimer) { clearInterval(this.state.pbPlayTimer); this.state.pbPlayTimer = null; this.togglePlay(); }
   };
-  // 关闭回放清理定时器
+  // 关闭回放清理定时器 + 解锁背景滚动
   const _origCloseModal = App.closeModal;
   App.closeModal = function (id) {
     this._modalOpen = null;
     _origCloseModal ? _origCloseModal.call(this, id) : $('#' + id).classList.remove('show');
+    // 若已无任何打开的弹窗，恢复背景滚动
+    if (!document.querySelector('.modal-mask.show')) {
+      const h = document.documentElement, b = document.body;
+      const y = parseInt(h.dataset.scrollY || '0', 10);
+      h.style.position = ''; h.style.top = ''; h.style.width = ''; h.style.overflow = ''; delete h.dataset.scrollY;
+      b.style.overflow = '';
+      window.scrollTo(0, y);
+    }
     if (id === 'playback-modal' && this.state.pbPlayTimer) {
       clearInterval(this.state.pbPlayTimer); this.state.pbPlayTimer = null;
       $('#pb-play-btn') && ($('#pb-play-btn').textContent = '▶ 自动播放');

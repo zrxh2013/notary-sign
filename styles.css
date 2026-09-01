@@ -575,19 +575,21 @@ a:hover { color: var(--primary-dark); }
   display: none; align-items: center; justify-content: center; padding: 20px; backdrop-filter: blur(2px);
 }
 .modal-mask.show { display: flex; animation: fadeIn .2s ease; }
-.modal {
-  background: #fff; border-radius: var(--radius-lg); width: 100%; max-width: 560px;
-  max-height: 90vh; overflow: hidden; display: flex; flex-direction: column;
+.modal, .modal-box {
+  background: #fff; border-radius: var(--radius-lg); width: 100%;
+  max-height: calc(100vh - 40px); overflow: hidden; display: flex; flex-direction: column;
   box-shadow: 0 20px 60px rgba(0,0,0,.3);
   animation: modalIn .25s cubic-bezier(.2,.9,.3,1.1);
 }
+.modal { max-width: 560px; }
+.modal-box { /* 内联 style="max-width:xxxpx" 覆盖宽度 */ }
 @keyframes modalIn { from { transform: translateY(20px) scale(.96); opacity: 0;} to { transform: none; opacity: 1;} }
 .modal-head {
   padding: 18px 24px; border-bottom: 1px solid var(--border);
   display: flex; justify-content: space-between; align-items: center;
 }
 .modal-head h3 { font-size: 17px; }
-.modal-body { padding: 20px 24px; overflow-y: auto; }
+.modal-body { padding: 20px 24px; overflow-y: auto; flex: 1 1 auto; min-height: 0; -webkit-overflow-scrolling: touch; }
 .modal-foot {
   padding: 14px 24px; border-top: 1px solid var(--border);
   display: flex; justify-content: flex-end; gap: 10px;
