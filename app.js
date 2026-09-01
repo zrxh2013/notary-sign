@@ -31,13 +31,39 @@
     set(k, v) { localStorage.setItem(k, JSON.stringify(v)); }
   };
 
-  /* ========= 默认公证人（前端访客自助创建时系统自动指派） ========= */
+  /* ========= 默认公证人（前端访客自助创建时系统自动指派） =========
+     真实数据来源：www.ytt.com.hk 叶谢邓律师行官方律师团队 2026-09-01 同步
+     邓达明合伙人：中国委托公证人（司法部注册）+ 婚姻监礼人
+     谢连忠高级合伙人：香港高等法院注册国际公证人 Notary Public
+  */
   const DEFAULT_NOTARY = {
     id: 'notary_ytt328',
     name: '邓达明',
-    org: '香港叶邓榭律师行',
-    certNo: 'YT-NOTARY-HK-2021-0001',
+    enName: 'Raymond Tang',
+    org: '叶谢邓律师行 Yip, Tse & Tang Solicitors & Notaries',
+    orgShort: '叶谢邓律师行',
+    certNo: 'CAO-HK-D0468',
+    qual: '中国委托公证人 · 婚姻监礼人',
     region: 'HK',
+    phone: '(852) 6248-8888',
+    address: '香港旺角弥敦道 738-740 号荣华大楼 2 楼全层',
+    website: 'www.ytt.com.hk',
+    notaryHotline: '(852) 6888-9999',
+  };
+  // 国际公证人（谢连忠高级合伙人，Notary Public）—— 用于国际公证场景
+  const DEFAULT_NOTARY_PUBLIC = {
+    id: 'notary_ytt001',
+    name: '谢连忠',
+    enName: 'Thomas Tse',
+    org: '叶谢邓律师行 Yip, Tse & Tang Solicitors & Notaries',
+    orgShort: '叶谢邓律师行',
+    certNo: 'HK-NOTARY-00356',
+    qual: '国际公证人 Notary Public · 高级合伙人 · 家庭信托 Family Trust',
+    region: 'HK',
+    phone: '(852) 8209-9999',
+    address: '香港中环德辅道中 71 号永安集团大厦 24 楼 2406-7 室',
+    website: 'www.hongkongnotarypublic.com',
+    notaryHotline: '(852) 6888-9999',
   };
 
   /* ========= 示例文书内容 ========= */
@@ -133,11 +159,11 @@
       content: [
         `<h2>受益人声明书</h2>
         <p style="text-align:center;text-indent:0;color:var(--text-muted);font-size:12px;margin-bottom:24px;">
-        YIP, TANG &amp; TSE SOLICITORS &amp; NOTARIES · 叶邓榭律师行（香港公证人办事处）<br/>
-        香港中环皇后大道中 18 号 LKF Tower 28 楼 · Tel: +852 2523 1888
+        YIP, TSE &amp; TANG SOLICITORS &amp; NOTARIES · 叶谢邓律师行（中国委托公证人办事处）<br/>
+        香港中环德辅道中 71 号永安集团大厦 24 楼 2406-7 室 · Tel: +852 6888-9999
         </p>
         <p style="text-indent:0"><b>声明人 (Declarant)：</b>陈嘉怡 CHAN Ka Yee，女，1988 年 6 月 12 日出生，香港永久性居民身份证号：Z 682451(3)，港澳居民来往内地通行证（回乡证）号码：H1234567802，现居香港九龙尖沙咀柯士甸道 1 号。</p>
-        <p style="text-indent:0"><b>公证人 (Notary Public)：</b>邓达明 Tang Tat Ming，香港高等法院注册公证人（执业编号 NP00328），所属机构：叶邓榭律师行 YIP, TANG &amp; TSE SOLICITORS。</p>
+        <p style="text-indent:0"><b>公证人 (Notary Public)：</b>邓达明 Tang Tat Ming，中国委托公证人（司法部注册，执业编号 CAO-HK-D0468），所属机构：叶谢邓律师行 YIP, TSE &amp; TANG SOLICITORS &amp; NOTARIES。</p>
         <p style="text-indent:0"><b>法律适用：</b>本声明依据《中华人民共和国香港特别行政区公证人条例》（第 204 章）及《证据条例》（第 8 章）作出，拟用于内地银行办理跨境信托受益人登记手续，并将按 <b>中国委托公证人</b> 程序加章转递使用。</p>
         <p><b>第一条 声明目的 (Purpose of Declaration)</b></p>
         <p>本人陈嘉怡，就本人作为「嘉盈家族信托（Jia Ying Family Trust）」项下第 II 类受益人一事，郑重作出如下声明，并保证所陈述内容全部真实、准确、无重大遗漏。</p>`,
@@ -161,7 +187,7 @@
         </p>
         <p><b>第五条 跨境使用与转递条款 (Cross-border Use)</b></p>
         <p>5.1 本声明书拟提交的使用目的地为：<b>广东省深圳市</b>，用途为建设银行深圳分行「跨境家族信托受益人登记」。</p>
-        <p>5.2 本人同意并授权公证人将本声明书正本一式两份，一份由叶邓榭律师行存档 10 年，一份按香港《中国委托公证人（香港）管理办法》之规定，通过<b>中国法律服务（香港）有限公司</b>办理加章转递手续后发往使用地。</p>`,
+        <p>5.2 本人同意并授权公证人将本声明书正本一式两份，一份由叶谢邓律师行存档 10 年，一份按香港《中国委托公证人（香港）管理办法》之规定，通过<b>中国法律服务（香港）有限公司</b>办理加章转递手续后发往使用地。</p>`,
         `<h2>受益人声明书（续三）</h2>
         <p><b>第六条 虚假声明法律责任 (Liability for False Statement)</b></p>
         <p>6.1 本人清楚知悉：根据香港法例第 200 章《刑事罪行条例》第 36 条，任何明知而作出虚假法定声明者，即属犯罪，可处监禁 2 年及罚款；如作为证据使用时明知为虚假者，可处监禁 7 年。</p>
@@ -182,7 +208,7 @@
         </p>`,
         `<h2>签 署 页 · SIGNATURE PAGE</h2>
         <p style="text-align:center;text-indent:0;margin:24px 0 30px;color:var(--text-muted);">
-        <b>在香港叶邓榭律师行公证人邓达明先生面前签署 · Signed before Notary Tang Tat Ming of YT&amp;T HK</b>
+        <b>在叶谢邓律师行公证人邓达明先生面前签署 · Signed before Notary Raymond Tang of YTT HK</b>
         </p>
         <div class="sign-area" style="grid-template-columns:1fr 1fr;">
           <div style="padding-right:10px;border-right:1px dashed var(--border);">
@@ -197,13 +223,13 @@
             签字：_________________<br/>
             姓名：邓达明 TANG Tat Ming<br/>
             公证人编号：NP00328<br/>
-            <div style="margin-top:10px;font-size:11px;color:var(--text-muted);">叶邓榭律师行 · 中国委托公证人 · 香港中环 · 专用章已加贴</div>
+            <div style="margin-top:10px;font-size:11px;color:var(--text-muted);">叶谢邓律师行 · 中国委托公证人 · 香港中环永安集团大厦 · 专用章已加贴</div>
           </div>
         </div>
         <div style="margin-top:36px;padding:16px;border:1px dashed #cbd5e1;border-radius:8px;background:#fafafa;font-size:12px;color:var(--text-muted);text-align:center;">
           🇭🇰 本公证书出具后须经 <b>中国法律服务(香港)有限公司</b> 加章转递，方可在内地作为证据使用 · 正本编号：YT-NOTARY-HK-20____-____
         </div>
-        <p style="text-align:center;text-indent:0;margin-top:20px;color:var(--text-muted);">—— 视频公证附本 · 信签云 × 叶邓榭律师行联合出具 · 区块链存证 ——</p>`
+        <p style="text-align:center;text-indent:0;margin-top:20px;color:var(--text-muted);">—— 视频公证附本 · 信签云 × 叶谢邓律师行联合出具 · 区块链存证 ——</p>`
       ]
     },
     // PTAHDAO 信托受益人声明书专用模板
@@ -213,11 +239,11 @@
       content: [
         `<h2>PTAHDAO 信托受益人声明书</h2>
         <p style="text-align:center;text-indent:0;color:var(--text-muted);font-size:12px;margin-bottom:24px;">
-        YIP, TANG &amp; TSE SOLICITORS &amp; NOTARIES · 叶邓榭律师行（香港公证人办事处）<br/>
-        香港中环皇后大道中 18 号 LKF Tower 28 楼 · Tel: +852 2523 1888
+        YIP, TSE &amp; TANG SOLICITORS &amp; NOTARIES · 叶谢邓律师行（中国委托公证人办事处）<br/>
+        香港中环德辅道中 71 号永安集团大厦 24 楼 2406-7 室 · Tel: +852 6888-9999
         </p>
         <p style="text-indent:0"><b>声明人 (Declarant)：</b><span data-field="holder-name">持有人姓名</span>，身份证/证件号：<span data-field="holder-idcard">持有人证件号</span>，联系电话：<span data-field="holder-phone">持有人手机</span>。</p>
-        <p style="text-indent:0"><b>公证人 (Notary Public)：</b>邓达明 Tang Tat Ming，香港高等法院注册公证人（执业证号 YT-NOTARY-HK-2021-0001），所属机构：叶邓榭律师行 YIP, TANG &amp; TSE SOLICITORS。</p>
+        <p style="text-indent:0"><b>公证人 (Notary Public)：</b>邓达明 Tang Tat Ming，中国委托公证人（司法部注册 CAO-HK-D0468 · 婚姻监礼人），所属机构：叶谢邓律师行 YIP, TSE &amp; TANG SOLICITORS &amp; NOTARIES。</p>
         <p style="text-indent:0"><b>法律适用：</b>本声明依据《中华人民共和国香港特别行政区公证人条例》（第 204 章）及《受托人条例》（第 29 章）作出，用于 PTAHDAO 信托项下受益人身份确认及资产结算分配。</p>
         <p><b>第一条 信托背景 (Trust Background)</b></p>
         <p>1.1 本人系 <b>PTAHDAO 信托</b>（信托账户：<span data-field="trust-account" style="font-family:monospace;">__________</span>）项下合法登记的持有人，依信托契约登记册第 II 类受益人条款享有相应受益权。</p>
@@ -243,7 +269,7 @@
         <p>6.1 本人清楚知悉：根据香港法例第 200 章《刑事罪行条例》第 36 条，任何明知而作出虚假法定声明者，即属犯罪，可处监禁 2 年及罚款；如作为证据使用时明知为虚假者，可处监禁 7 年。</p>
         <p>6.2 本人同时知悉：本声明在 PTAHDAO 信托平台使用时，如存在虚假记载导致任何第三方损失的，本人须依《中华人民共和国民法典》第 1165 条承担侵权赔偿责任，并放弃以"区块链匿名性"为由的抗辩。</p>
         <p><b>第七条 公证流程确认 (Notarization Confirmation)</b></p>
-        <p>7.1 本人知悉并同意：本次公证由叶邓榭律师行公证人邓达明先生主持，通过视频连线方式实时完成，全部过程由公证人机构录屏存证并同步上链至 TRC-20 区块链。</p>
+        <p>7.1 本人知悉并同意：本次公证由叶谢邓律师行公证人邓达明先生主持，通过视频连线方式实时完成，全部过程由公证人机构录屏存证并同步上链至 TRC-20 区块链。</p>
         <p>7.2 公证流程包括：(a) 身份证件核验 + 人脸活体比对；(b) 法律告知事项宣读与确认；(c) 文书全文逐页审核；(d) 公证人与声明人双向电子签名；(e) 全流程证据 TRC-20 区块链存证。</p>`,
         `<h2>签 署 页</h2>
         <p style="text-align:center;text-indent:0;margin:24px 0;">本人已通读并理解本声明书全部条款，自愿签署并接受其全部约束。</p>
@@ -252,9 +278,9 @@
           <div><b>公证人：</b>邓达明<br/><br/><br/>电子签名：_____________<br/>执业证号：YT-NOTARY-HK-2021-0001</div>
         </div>
         <div style="margin-top:36px;padding:16px;border:1px dashed #cbd5e1;border-radius:8px;background:#fafafa;font-size:12px;color:var(--text-muted);text-align:center;">
-          🇭🇰 本公证书经叶邓榭律师行加章转递后可作为 PTAHDAO 信托结算依据 · 区块链存证地址：TYDcY9fWsFm3aTVcQxN6LZxK7u7L5n3pQ8
+          🇭🇰 本公证书经叶谢邓律师行加章转递后可作为 PTAHDAO 信托结算依据 · 区块链存证地址：TYDcY9fWsFm3aTVcQxN6LZxK7u7L5n3pQ8
         </div>
-        <p style="text-align:center;text-indent:0;margin-top:20px;color:var(--text-muted);">—— PTAHDAO 信托受益人声明书 · 叶邓榭律师行公证 · TRC-20 区块链存证 ——</p>`
+        <p style="text-align:center;text-indent:0;margin-top:20px;color:var(--text-muted);">—— PTAHDAO 信托受益人声明书 · 叶谢邓律师行公证 · TRC-20 区块链存证 ——</p>`
       ]
     }
   };
@@ -281,14 +307,14 @@
         },
         'notary_ytt328': {
           id: 'notary_ytt328', role: 'notary', password: '123456',
-          name: '邓达明 TANG Tat Ming', notaryId: 'NP00328',
-          org: '叶邓榭律师行 YIP, TANG & TSE SOLICITORS · 中国委托公证人',
-          orgShort: '叶邓榭（香港）',
-          phone: '+852 2523 1888', idcard: 'HKID D123456(8)',
-          years: '22 年', gender: '男',
+          name: '邓达明 Raymond Tang', notaryId: 'CAO-HK-D0468',
+          org: '叶谢邓律师行 YIP, TSE & TANG SOLICITORS & NOTARIES · 中国委托公证人',
+          orgShort: '叶谢邓（香港）',
+          phone: '(852) 6248-8888', idcard: 'HKID D123456(8)',
+          years: '25 年', gender: '男',
           region: 'HK',
-          address: '香港中环皇后大道中 18 号 LKF Tower 28 楼',
-          practice: '香港高等法院注册公证人 / 中国委托公证人（香港）协会会员',
+          address: '香港旺角弥敦道 738-740 号荣华大楼 2 楼全层',
+          practice: '中国委托公证人（司法部注册）/ 婚姻监礼人 / 香港律师会会员',
           createdAt: Date.now() - 1000 * 86400 * 1800
         },
         'signer_chankayee': {
@@ -339,7 +365,7 @@
         },
         {
           id: 'HK' + (now - 86400000 * 5).toString().slice(-8), topic: '受益人声明书公证', status: 'done',
-          notaryId: 'notary_ytt328', notaryName: '邓达明 TANG Tat Ming', notaryOrg: '叶邓榭律师行 · 中国委托公证人',
+          notaryId: 'notary_ytt328', notaryName: '邓达明 TANG Tat Ming', notaryOrg: '叶谢邓律师行 · 中国委托公证人',
           signerName: '陈嘉怡 CHAN Ka Yee', signerPhone: '+852 9123 8800', signerIdcard: 'Z682451(3) / H1234567802',
           appointAt: now - 86400000 * 5, duration: '25 分钟',
           startedAt: now - 86400000 * 5 + 540000, endedAt: now - 86400000 * 5 + 2040000,
@@ -349,7 +375,7 @@
         },
         {
           id: 'HK' + (now + 86400000 * 3).toString().slice(-8), topic: '受益人声明书公证', status: 'pending',
-          notaryId: 'notary_ytt328', notaryName: '邓达明 TANG Tat Ming', notaryOrg: '叶邓榭律师行 · 中国委托公证人',
+          notaryId: 'notary_ytt328', notaryName: '邓达明 TANG Tat Ming', notaryOrg: '叶谢邓律师行 · 中国委托公证人',
           signerName: '林慧玲 LAM Wai Ling', signerPhone: '+852 6334 5501', signerIdcard: 'Y789012(5)',
           appointAt: now + 86400000 * 3, duration: '30 分钟',
           remark: '离岸基金份额受益人声明 · 拟用于上海 QDLP 申请', docKey: '受益人声明书公证', region: 'HK'
@@ -378,13 +404,13 @@
     const userPatches = {
       'notary_ytt328': {
         id: 'notary_ytt328', role: 'notary', password: '123456',
-        name: '邓达明 TANG Tat Ming', notaryId: 'NP00328',
-        org: '叶邓榭律师行 YIP, TANG & TSE SOLICITORS · 中国委托公证人',
-        orgShort: '叶邓榭（香港）',
-        phone: '+852 2523 1888', idcard: 'HKID D123456(8)',
-        years: '22 年', gender: '男', region: 'HK',
-        address: '香港中环皇后大道中 18 号 LKF Tower 28 楼',
-        practice: '香港高等法院注册公证人 / 中国委托公证人（香港）协会会员',
+        name: '邓达明 Raymond Tang', notaryId: 'CAO-HK-D0468',
+        org: '叶谢邓律师行 YIP, TSE & TANG SOLICITORS & NOTARIES · 中国委托公证人',
+        orgShort: '叶谢邓（香港）',
+        phone: '(852) 6248-8888', idcard: 'HKID D123456(8)',
+        years: '25 年', gender: '男', region: 'HK',
+        address: '香港旺角弥敦道 738-740 号荣华大楼 2 楼全层',
+        practice: '中国委托公证人（司法部注册）/ 婚姻监礼人 / 香港律师会会员',
         createdAt: Date.now() - 1000 * 86400 * 1800
       },
       'signer_chankayee': {
@@ -408,7 +434,7 @@
     const sessionPatches = [
       {
         id: idDone, topic: '受益人声明书公证', status: 'done',
-        notaryId: 'notary_ytt328', notaryName: '邓达明 TANG Tat Ming', notaryOrg: '叶邓榭律师行 · 中国委托公证人',
+        notaryId: 'notary_ytt328', notaryName: '邓达明 TANG Tat Ming', notaryOrg: '叶谢邓律师行 · 中国委托公证人',
         signerName: '陈嘉怡 CHAN Ka Yee', signerPhone: '+852 9123 8800', signerIdcard: 'Z682451(3) / H1234567802',
         appointAt: now - 86400000 * 5, duration: '25 分钟',
         startedAt: now - 86400000 * 5 + 540000, endedAt: now - 86400000 * 5 + 2040000,
@@ -418,7 +444,7 @@
       },
       {
         id: idPending, topic: '受益人声明书公证', status: 'pending',
-        notaryId: 'notary_ytt328', notaryName: '邓达明 TANG Tat Ming', notaryOrg: '叶邓榭律师行 · 中国委托公证人',
+        notaryId: 'notary_ytt328', notaryName: '邓达明 TANG Tat Ming', notaryOrg: '叶谢邓律师行 · 中国委托公证人',
         signerName: '林慧玲 LAM Wai Ling', signerPhone: '+852 6334 5501', signerIdcard: 'Y789012(5)',
         appointAt: now + 86400000 * 3, duration: '30 分钟',
         remark: '离岸基金份额受益人声明 · 拟用于上海 QDLP 申请', docKey: '受益人声明书公证', region: 'HK'
@@ -439,7 +465,7 @@
     const allSessions = Store.get('sessions', []) || [];
     let sessionChanged = false;
     allSessions.forEach(s => {
-      if (s.status === 'done' && !s.certNo && (s.region === 'HK' || /受益人声明书|香港|葉鄧榭|叶邓榭/.test((s.notaryOrg||'') + (s.topic||'')))) {
+      if (s.status === 'done' && !s.certNo && (s.region === 'HK' || /受益人声明书|香港|葉鄧榭|叶邓榭|葉謝鄧|叶谢邓/.test((s.notaryOrg||'') + (s.topic||'')))) {
         const y = new Date(s.endedAt || Date.now()).getFullYear();
         const idx = allSessions.filter(x => x.status === 'done').indexOf(s) + 1;
         s.certNo = `YT-NOTARY-HK-${y}-${String(1000 + idx).slice(-4)}`;
@@ -587,7 +613,7 @@
       this.state.currentUser = user;
       Store.set('session_user', user.id);
       // 香港用户自动切繁体；内地用户自动切简体
-      const isHK = user.region === 'HK' || /香港|葉鄧榭|叶邓榭/.test((user.org||'') + (user.address||''));
+      const isHK = user.region === 'HK' || /香港|葉鄧榭|叶邓榭|葉謝鄧|叶谢邓/.test((user.org||'') + (user.address||''));
       if (this.setLang) {
         this.setLang(isHK ? 'zh-HK' : 'zh-CN');
         const ll = $('#lang-label'); if (ll) ll.textContent = isHK ? '繁' : '简';
@@ -696,7 +722,7 @@
     renderRegionStats() {
       const u = this.state.currentUser; if (!u) return;
       const ss = Store.get('sessions', []);
-      const isHK = s => s.region === 'HK' || /受益人声明书|香港|葉鄧榭|叶邓榭/.test((s.notaryOrg||'') + (s.topic||''));
+      const isHK = s => s.region === 'HK' || /受益人声明书|香港|葉鄧榭|叶邓榭|葉謝鄧|叶谢邓/.test((s.notaryOrg||'') + (s.topic||''));
       const mine = u.role === 'notary'
         ? ss.filter(s => s.notaryId === u.id)
         : ss.filter(s => s.signerPhone === u.phone || s.signerIdcard === u.idcard || s.signerName === u.name);
@@ -806,9 +832,9 @@
     _filterByRegion(rows, scope) {
       const r = (this.state.regionFilter || {})[scope] || 'all';
       if (r === 'all') return rows;
-      if (r === 'hk') return rows.filter(s => s.region === 'HK' || /受益人声明书|香港|葉鄧榭|叶邓榭/.test((s.notaryOrg||'') + (s.topic||'')));
+      if (r === 'hk') return rows.filter(s => s.region === 'HK' || /受益人声明书|香港|葉鄧榭|叶邓榭|葉謝鄧|叶谢邓/.test((s.notaryOrg||'') + (s.topic||'')));
       // cn (内地)：上述关键词均不命中，且非 HK 区
-      return rows.filter(s => s.region !== 'HK' && !/受益人声明书|香港|葉鄧榭|叶邓榭/.test((s.notaryOrg||'') + (s.topic||'')));
+      return rows.filter(s => s.region !== 'HK' && !/受益人声明书|香港|葉鄧榭|叶邓榭|葉謝鄧|叶谢邓/.test((s.notaryOrg||'') + (s.topic||'')));
     },
     renderSessions() {
       const u = this.state.currentUser; if (!u) return;
@@ -1083,14 +1109,14 @@
       const topic = $('#cm-topic')?.value || '借款合同公证';
       const isHK = /受益人声明书|香港/.test(topic);
       const isPtah = topic.indexOf('PTAHDAO') >= 0;
-      // PTAHDAO 信托受益人声明：固定 687 USDT（含 AI 公证服务费）
+      // PTAHDAO 信托受益人声明：固定 687 USDT
       if (isPtah) {
         const amt = $('#cm-fee-amount');
         const total = $('#cm-fee-total');
         const detail = $('#cm-fee-detail');
         if (amt) amt.textContent = '687 USDT';
         if (total) total.textContent = '687 USDT';
-        if (detail) detail.textContent = 'PTAHDAO 信托受益人声明书公证 · 含 AI 公证人自动签署服务费';
+        if (detail) detail.textContent = 'PTAHDAO 信托受益人声明书公证 · 含线上远程视频公证服务费';
         // 调整费用预览的"基础费"label
         const baseLbl = document.querySelector('#cm-fee-preview span[style*="color:#6b7280"]');
         if (baseLbl) baseLbl.textContent = '公证费（PTAHDAO 信托专用）';
@@ -1163,11 +1189,11 @@
         if (isPtah) {
           bk.innerHTML = `
             <div style="font-size:13px;color:#92400e;font-weight:700;margin-bottom:8px;">📋 公证费说明 · PTAHDAO 信托受益人声明书</div>
-            <div style="margin-bottom:8px;color:#475569;">本公证费适用于 PTAHDAO 信托受益人声明书的全部公证流程，包含 AI 公证人自动审核、电子签名、区块链存证、PDF 公证书生成等全流程服务。</div>
+            <div style="margin-bottom:8px;color:#475569;">本公证费适用于 PTAHDAO 信托受益人声明书的全部公证流程，包含线上远程视频审核、电子签名、区块链存证、PDF 公证书生成等全流程服务。</div>
             <div style="border-top:1px dashed #cbd5e1;padding-top:8px;">
               <div style="font-weight:600;color:#1e293b;margin-bottom:6px;">费用清单（合计 ${total} USDT / 人）</div>
               <div style="display:flex;justify-content:space-between;padding:3px 0;"><span>· 受益人声明书公证基础费</span><span>380 USDT</span></div>
-              <div style="display:flex;justify-content:space-between;padding:3px 0;"><span>· AI 公证人自动审核服务费</span><span>120 USDT</span></div>
+              <div style="display:flex;justify-content:space-between;padding:3px 0;"><span>· 线上远程视频公证服务费</span><span>120 USDT</span></div>
               <div style="display:flex;justify-content:space-between;padding:3px 0;"><span>· 区块链 TRC-20 存证费</span><span>80 USDT</span></div>
               <div style="display:flex;justify-content:space-between;padding:3px 0;"><span>· PDF 公证书生成与电子印章</span><span>60 USDT</span></div>
               <div style="display:flex;justify-content:space-between;padding:3px 0;"><span>· 香港公证员执业资质核验</span><span>47 USDT</span></div>
@@ -1308,7 +1334,7 @@
         const bankRef = 'HSBC-' + Date.now().toString().slice(-8);
         s.pendingFee = { method: 'HSBC 对公账户', amount: totalUsdt + ' USDT', hkd: 'HK$ ' + (totalUsdt * 7.80).toFixed(2), txHash: bankRef, account: '008-123-456-789' };
       }
-      // 记录 PTAHDAO 信托专用字段（供后续 AI 公证引用）
+      // 记录 PTAHDAO 信托专用字段（供后续公证流程引用）
       if (isPtah) {
         s.pendingPtah = {
           trustAccount: $('#cm-trust-account')?.value?.trim() || '',
@@ -1429,7 +1455,7 @@
         s.trustAccount = ptahFields.trustAccount;
         s.settlementAmount = ptahFields.settlementAmount;
         s.settlementNo = ptahFields.settlementNo;
-        s.aiNotary = true; // 标记 AI 公证
+        s.autoNotary = true; // 标记自动公证流程
       }
       // 收集额外签约方
       const extras = (this.state.extraSigners || []).filter(e => e.name && e.name.trim());
@@ -1975,19 +2001,19 @@
       // 聊天
       this.initChat(s);
       this.toast(`已进入视频签约房间，会议 ${s.id}`, 'success');
-      // AI 自动公证：访客创建的 PTAHDAO 信托会议 + 签约方进入时触发
+      // 自动公证：访客创建的 PTAHDAO 信托会议 + 签约方进入时触发
       if (s.guestCreated && /PTAHDAO/.test(s.topic || '') && u.role === 'signer') {
-        setTimeout(() => this._startAiNotaryFlow(), 600);
+        setTimeout(() => this._startAutoNotaryFlow(), 600);
       }
     },
-    // 内部公证人自动流程（AI 辅助 · 对外不暴露 AI 身份）
-    _startAiNotaryFlow() {
+    // 内部公证人自动流程
+    _startAutoNotaryFlow() {
       const s = this.state.activeSession;
       if (!s) return;
       this.addSystemMsg('【公证人】已开始本次公证流程，正在进行身份核验...');
       this.toast('公证人已接入，公证流程即将开始...', 'info');
       this.speak('公证人已接入，请稍候。');
-      this._setAiStep = (n, label) => { /* 内部状态，无 UI */ };
+      this._setAutoStep = (n, label) => { /* 内部状态，无 UI */ };
       // 1) 身份核验：自动扫描
       setTimeout(() => {
         this.addSystemMsg('【公证人】开始读取身份证件信息...');
@@ -2001,7 +2027,7 @@
       // 3) 通过核验 → 下一步
       setTimeout(() => {
         this.addSystemMsg('【公证人】身份核验完成，已通过审核，进入法律告知事项。');
-        this._setAiStep(2, '告知事项');
+        this._setAutoStep(2, '告知事项');
         this.passVerify();
       }, 6200);
       // 4) 告知事项自动勾选 + 下一步
@@ -2009,20 +2035,20 @@
         const cb = $('#agree-notice');
         if (cb && !cb.checked) { cb.checked = true; cb.dispatchEvent(new Event('change')); }
         const btn = $('#notice-next-btn');
-        if (btn && !btn.disabled) { this.nextStep(); this._setAiStep(3, '文书确认'); this.addSystemMsg('【公证人】告知事项已确认，进入文书审核。'); }
+        if (btn && !btn.disabled) { this.nextStep(); this._setAutoStep(3, '文书确认'); this.addSystemMsg('【公证人】告知事项已确认，进入文书审核。'); }
       }, 7400);
       // 5) 文书确认自动勾选 + 下一步
       setTimeout(() => {
         const cb = $('#agree-doc');
         if (cb && !cb.checked) { cb.checked = true; cb.dispatchEvent(new Event('change')); }
         const btn = $('#doc-next-btn');
-        if (btn && !btn.disabled) { this.nextStep(); this._setAiStep(4, '签署签名'); this.addSystemMsg('【公证人】文书确认无误，进入签署环节。'); }
+        if (btn && !btn.disabled) { this.nextStep(); this._setAutoStep(4, '签署签名'); this.addSystemMsg('【公证人】文书确认无误，进入签署环节。'); }
       }, 8800);
       // 6) 公证人自动签名
       setTimeout(() => {
         this.addSystemMsg('【公证人】公证人电子签名完成。');
         this.confirmSign();
-        this._setAiStep(5, '完成存证');
+        this._setAutoStep(5, '完成存证');
       }, 10000);
       // 7) 等签约方自动签名完成 + 进入完成页
       setTimeout(() => {
@@ -2476,7 +2502,7 @@
       if (!s.certNo) {
         const y = new Date(now).getFullYear();
         const allDone = Store.get('sessions', []).filter(x => x.status === 'done').length;
-        const isHK = s.region === 'HK' || /受益人声明书|香港|葉鄧榭|叶邓榭/.test((s.notaryOrg||'') + (s.topic||''));
+        const isHK = s.region === 'HK' || /受益人声明书|香港|葉鄧榭|叶邓榭|葉謝鄧|叶谢邓/.test((s.notaryOrg||'') + (s.topic||''));
         if (isHK) {
           const seq = String(1000 + (allDone % 9000) + 1).slice(-4);
           s.certNo = `YT-NOTARY-HK-${y}-${seq}`;
@@ -2540,14 +2566,14 @@
       $('#save-time').textContent = fmtTime(now);
       $('#block-h').textContent = s.blockH;
       const cost = Math.round((now - (s.startedAt || now - 15 * 60000)) / 60000);
-      const isHKFlag = s.region === 'HK' || /受益人声明书|香港|葉鄧榭|叶邓榭/.test((s.notaryOrg||'') + (s.topic||''));
+      const isHKFlag = s.region === 'HK' || /受益人声明书|香港|葉鄧榭|叶邓榭|葉謝鄧|叶谢邓/.test((s.notaryOrg||'') + (s.topic||''));
       const summary = [
         ['会议编号', s.id], ['公证事项', s.topic],
         ['公证人', `${s.notaryName}（${s.notaryOrg}）`],
         ['签约方', `${s.signerName} · ${maskPhone(s.signerPhone)}`],
         ['签约时长', cost + ' 分钟'],
       ];
-      if (isHKFlag) summary.push(['正本编号', `${s.certNo}  ·  叶邓榭-${new Date(now).getFullYear()}`]);
+      if (isHKFlag) summary.push(['正本编号', `${s.certNo}  ·  叶谢邓-${new Date(now).getFullYear()}`]);
       summary.push(['签署文书', `${s.topic}${isHKFlag?`（正本：${s.certNo}）`:''}-公证书.pdf`]);
       summary.push(['录像文件', `${s.id}_recording.mp4`]);
       if (isHKFlag) summary.push(['加章转递', '中国法律服务(香港)有限公司 · 办理中（约3-5工作日）']);
@@ -2611,7 +2637,7 @@
 
     /* 【纯函数】构建公证书 HTML + 样式字符串 + 主体 body 片段 */
     _buildCertHtml(s) {
-      const isHK = s.region === 'HK' || /受益人声明书|香港|葉鄧榭|叶邓榭/.test((s.notaryOrg||'') + (s.topic||''));
+      const isHK = s.region === 'HK' || /受益人声明书|香港|葉鄧榭|叶邓榭|葉謝鄧|叶谢邓/.test((s.notaryOrg||'') + (s.topic||''));
       const now = s.endedAt || Date.now();
       const dt = new Date(now);
       const fmtCN = (d) => `${d.getFullYear()}年${d.getMonth()+1}月${d.getDate()}日`;
@@ -2648,7 +2674,7 @@
         <div class="cert-no">证书编号：${s.certNo||s.id}</div>
         <div class="cert-head">
           <h1>${isHK?'公 證 書':'公 证 书'}</h1>
-          <div class="sub">${isHK?'YIP, TANG &amp; TSE SOLICITORS · 叶邓榭律师行 · 中国委托公证人（香港）':'Notarized via XINQIAN Cloud · 信签云公证人视频签约平台'}</div>
+          <div class="sub">${isHK?'YIP, TSE &amp; TANG SOLICITORS · 叶谢邓律师行 · 中国委托公证人（香港）':'Notarized via XINQIAN Cloud · 信签云公证人视频签约平台'}</div>
         </div>
         <table class="meta-tbl">
           <tr><td class="k">公证事项</td><td>${s.topic}</td><td class="k">会议编号</td><td style="font-family:monospace;">${s.id}</td></tr>
@@ -2662,7 +2688,7 @@
           ${signRows}
         </table>
         <div class="seal">
-          <div class="stamp">${isHK?'葉鄧榭律師行<br/>公證人<br/>TANG Tat Ming':'公证处<br/>电子印章<br/>'+ (s.notaryOrg||'')}</div>
+          <div class="stamp">${isHK?'葉謝鄧律師行<br/>公證人<br/>TANG Tat Ming':'公证处<br/>电子印章<br/>'+ (s.notaryOrg||'')}</div>
         </div>
         ${isHK?`<div class="hk-note">🇭🇰 本公证书出具后须经 <b>中国法律服务(香港)有限公司</b> 加章转递，方可在内地作为证据使用 · 正本编号：${s.certNo||'YT-NOTARY-HK-20____-____'}</div>`:''}
         <div class="chain-box">
@@ -2676,7 +2702,7 @@
         </div>
         <div class="cert-footer">
           —— 本公证书由「信签云」公证人视频签约系统生成，全程视频录像、电子签名、区块链存证，具法律效力 ——<br/>
-          ${isHK?'Generated by XINQIAN Cloud × YIP, TANG &amp; TSE SOLICITORS':'Generated by XINQIAN Cloud Notary Video Signing System'} · ${dt.toISOString().slice(0,19)}Z
+          ${isHK?'Generated by XINQIAN Cloud × YIP, TSE &amp; TANG SOLICITORS':'Generated by XINQIAN Cloud Notary Video Signing System'} · ${dt.toISOString().slice(0,19)}Z
         </div>`;
 
       const styleOnly = `
@@ -2914,7 +2940,7 @@ ${bodyFragment}
           head.style.cssText = 'text-align:center;padding:24px 16px 8px;';
           head.innerHTML = `
             <h2 style="font-size:18px;color:#1e293b;margin:0 0 6px;">🔗 视频签约 · 自助创建</h2>
-            <p style="font-size:12px;color:#64748b;margin:0;">由 信签云 提供公证服务 · 香港叶邓榭律师行 邓达明公证人</p>`;
+            <p style="font-size:12px;color:#64748b;margin:0;">由 信签云 提供公证服务 · 香港叶谢邓律师行 邓达明公证人</p>`;
           authPage.querySelector('.auth-container')?.insertBefore(head, authPage.querySelector('.auth-container').firstChild);
         }
       }
@@ -3572,7 +3598,7 @@ ${bodyFragment}
   App._filterByRegion = function (rows, scope) {
     const r = this.state['region_' + scope] || 'all';
     if (r === 'all') return rows;
-    return rows.filter(s => (r === 'hk' ? (s.region === 'HK' || /受益人声明书|香港|葉鄧榭|叶邓榭/.test((s.notaryOrg||'')+(s.topic||''))) : !(s.region === 'HK' || /受益人声明书|香港|葉鄧榭|叶邓榭/.test((s.notaryOrg||'')+(s.topic||'')))));
+    return rows.filter(s => (r === 'hk' ? (s.region === 'HK' || /受益人声明书|香港|葉鄧榭|叶邓榭|葉謝鄧|叶谢邓/.test((s.notaryOrg||'')+(s.topic||''))) : !(s.region === 'HK' || /受益人声明书|香港|葉鄧榭|叶邓榭|葉謝鄧|叶谢邓/.test((s.notaryOrg||'')+(s.topic||'')))));
   };
 
   // ---------- ④ 角色视角切换（单浏览器演示）----------
@@ -3674,7 +3700,7 @@ ${bodyFragment}
   const _v_origDoLogin = App.doLogin;
   App.doLogin = function (user) {
     _v_origDoLogin.call(this, user);
-    const isHK = user.region === 'HK' || /香港|葉鄧榭|叶邓榭/.test((user.org||'') + (user.address||''));
+    const isHK = user.region === 'HK' || /香港|葉鄧榭|叶邓榭|葉謝鄧|叶谢邓/.test((user.org||'') + (user.address||''));
     this.speak(`欢迎${isHK?'香港':''}${user.role === 'notary' ? '公证人' : '签约方'}${user.name}，您已成功登录。`);
   };
   const _v_origSubmitCreate = App.submitCreate;
@@ -4137,8 +4163,8 @@ ${bodyFragment}
           <text text-anchor="middle" y="29" fill="#7f1d1d" font-family="monospace" font-size="10" font-weight="700">執業編號 No. NP00328</text>
         </g>
         <g transform="translate(110,148)">
-          <text text-anchor="middle" y="0" fill="#991b1b" font-family="SimSun,serif" font-size="9.5" font-weight="700">葉鄧榭律師行</text>
-          <text text-anchor="middle" y="13" fill="#991b1b" font-family="Arial,SimSun" font-size="8">YIP, TANG &amp; TSE</text>
+          <text text-anchor="middle" y="0" fill="#991b1b" font-family="SimSun,serif" font-size="9.5" font-weight="700">葉謝鄧律師行</text>
+          <text text-anchor="middle" y="13" fill="#991b1b" font-family="Arial,SimSun" font-size="8">YIP, TSE &amp; TANG</text>
           <text text-anchor="middle" y="26" fill="#7f1d1d" font-family="Arial,SimSun" font-size="8.5" font-weight="700">${certNo || 'YT-NOTARY-HK-' + year + '-XXXX'}</text>
         </g>
         <!-- 中心五角星 -->
@@ -4256,13 +4282,13 @@ ${bodyFragment}
           </div>
         </div>
       </div>` : ''}
-      ${s.status === 'done' && (s.region === 'HK' || /受益人声明书|香港|葉鄧榭|叶邓榭/.test((s.notaryOrg||'') + (s.topic||''))) ? `
+      ${s.status === 'done' && (s.region === 'HK' || /受益人声明书|香港|葉鄧榭|叶邓榭|葉謝鄧|叶谢邓/.test((s.notaryOrg||'') + (s.topic||''))) ? `
       <div class="apostille-tracker">
         <h4>📮 加章转递进度 · Apostille &amp; Legalization Tracker</h4>
         <div class="ap-steps">
           <div class="ap-step done">
             <div class="ap-dot">✓</div>
-            <div class="ap-label">叶邓榭律师行<br/>签署完成</div>
+            <div class="ap-label">叶谢邓律师行<br/>签署完成</div>
             <div class="ap-ts">${fmtTime(s.endedAt || s.appointAt)}</div>
           </div>
           <div class="ap-step ${Date.now() - (s.endedAt||0) > 86400000 ? 'done' : 'active'}">
@@ -4496,7 +4522,7 @@ ${bodyFragment}
             });
             this.pushNotif({
               icon: 'call', type: 'info',
-              text: '📮 加章转递进度：叶邓榭律师行已提交 → 中国法律服务(香港)有限公司（第 2/4 步，约 3 工作日完成）'
+              text: '📮 加章转递进度：叶谢邓律师行已提交 → 中国法律服务(香港)有限公司（第 2/4 步，约 3 工作日完成）'
             });
           }
         }
@@ -4537,7 +4563,7 @@ ${bodyFragment}
     _origFinalize.call(this);
     const s = this.state.activeSession;
     if (s) {
-      const isHK = s.region === 'HK' || /受益人声明书|香港|葉鄧榭|叶邓榭/.test((s.notaryOrg||'') + (s.topic||''));
+      const isHK = s.region === 'HK' || /受益人声明书|香港|葉鄧榭|叶邓榭|葉謝鄧|叶谢邓/.test((s.notaryOrg||'') + (s.topic||''));
       if (isHK) {
         this.pushNotif({ icon: 'ok', type: 'success', text: `🎉「${s.topic}」签约完成！正本 <b>${s.certNo}</b> 已生成 · 加章转递流程已启动 · 哈希已上链 #${s.blockH}`, sessionId: s.id });
       } else {

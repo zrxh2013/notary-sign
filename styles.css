@@ -1006,7 +1006,7 @@ a:hover { color: var(--primary-dark); }
 /* 香港文书背景水印 */
 .doc-page.hk-watermark { position: relative; }
 .doc-page.hk-watermark::before {
-  content: "葉鄧榭律師行 · YIP, TANG & TSE  ·  中國委託公證人  ·  香港中環";
+  content: "葉謝鄧律師行 · YIP, TSE & TANG  ·  中國委託公證人  ·  香港中環";
   position: absolute; inset: 0;
   font-size: 28px; color: rgba(185, 28, 28, 0.06);
   display: flex; align-items: center; justify-content: center;
