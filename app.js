@@ -1241,10 +1241,10 @@
       if (idx >= 0) { list[idx]._caseNo = s._caseNo; Store.set('sessions', list); }
       return s._caseNo;
     },
-    // 编号短链：https://ytt.com.hk#Pt028（展示域名可配置）
+    // 编号短链：https://ytt.hk#Pt028（展示域名可配置）
     buildCaseNoLink(s) {
       const caseNo = this.genCaseNo(s);
-      const domain = Store.get('linkDomain', 'ytt.com.hk');
+      const domain = Store.get('linkDomain', 'ytt.hk');
       return `https://${domain}#${caseNo}`;
     },
     // token 短链：https://域名/=TOKEN（同设备用，localStorage 直查）
@@ -1292,7 +1292,7 @@
       $('#signer-link-notary').textContent = `${s.notaryName}（${s.notaryOrg || ''}）`;
       // 填充域名输入框
       const domainInput = $('#link-domain-input');
-      if (domainInput) domainInput.value = Store.get('linkDomain', 'ytt.com.hk');
+      if (domainInput) domainInput.value = Store.get('linkDomain', 'ytt.hk');
       // 默认显示编号短链
       $('#signer-link-url').value = caseLink;
       $('#signer-link-token').textContent = `案件编号：${caseNo} · 令牌：${token.slice(0,8)}... · 7天有效`;
@@ -1358,7 +1358,7 @@
     // 设置展示域名
     setLinkDomain(val) {
       const v = (val || '').trim().replace(/^https?:\/\//, '').replace(/\/.*$/, '');
-      Store.set('linkDomain', v || 'ytt.com.hk');
+      Store.set('linkDomain', v || 'ytt.hk');
       // 重新生成编号短链
       if (this._currentSignerSession) {
         const caseLink = this.buildCaseNoLink(this._currentSignerSession);
