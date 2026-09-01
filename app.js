@@ -262,7 +262,7 @@
         <p>4.2 本人确认：近 5 年内未被任何司法管辖区宣告破产、未涉及任何与信托财产有关的诉讼、未受任何税务机关关于海外资产申报的调查或处罚。</p>
         <p>4.3 本人确认：所持 PTAHDAO 信托受益权未向任何第三方提供质押、担保或其他处分安排。</p>
         <p><b>第五条 跨境使用与区块链存证 (Cross-border Use &amp; Blockchain Settlement)</b></p>
-        <p>5.1 本声明书拟提交的使用目的地为：<b>PTAHDAO 信托结算平台</b>，用途为持有人身份核验、受益权登记与 USDT 资产分配。</p>
+        <p>5.1 本声明书拟提交的使用目的地为：<b>PTAHDAO 信托结算平台</b>，用途为持有人实人核验、受益权登记与 USDT 资产分配。</p>
         <p>5.2 本人同意并授权公证人将本声明书全文及电子签名、签署时间戳、IP 信息、视频连线证据一并上链至 TRC-20 网络，存证地址：<code style="font-family:monospace;">TYDcY9fWsFm3aTVcQxN6LZxK7u7L5n3pQ8</code>。</p>`,
         `<h2>PTAHDAO 信托受益人声明书（续三）</h2>
         <p><b>第六条 虚假声明法律责任 (Liability for False Statement)</b></p>
@@ -270,7 +270,7 @@
         <p>6.2 本人同时知悉：本声明在 PTAHDAO 信托平台使用时，如存在虚假记载导致任何第三方损失的，本人须依《中华人民共和国民法典》第 1165 条承担侵权赔偿责任，并放弃以"区块链匿名性"为由的抗辩。</p>
         <p><b>第七条 公证流程确认 (Notarization Confirmation)</b></p>
         <p>7.1 本人知悉并同意：本次公证由叶谢邓律师行公证人邓达明先生主持，通过视频连线方式实时完成，全部过程由公证人机构录屏存证并同步上链至 TRC-20 区块链。</p>
-        <p>7.2 公证流程包括：(a) 身份证件核验 + 人脸活体比对；(b) 法律告知事项宣读与确认；(c) 文书全文逐页审核；(d) 公证人与声明人双向电子签名；(e) 全流程证据 TRC-20 区块链存证。</p>`,
+        <p>7.2 公证流程包括：(a) 身份证件核验 + 人脸活体比对（实人核验）；(b) 法律告知事项宣读与声明意愿确认；(c) 文书真实性与合法性核查（依《宣誓及声明条例》第11章）；(d) 声明人签署 + 公证人签署出证并加盖专用章，同步上传律政司/司法部双平台电子备案；(e) 送交中国法律服务（香港）有限公司加章转递 + 全流程证据 TRC-20 区块链存证。</p>`,
         `<h2>签 署 页</h2>
         <p style="text-align:center;text-indent:0;margin:24px 0;">本人已通读并理解本声明书全部条款，自愿签署并接受其全部约束。</p>
         <div class="sign-area">
@@ -1187,30 +1187,34 @@
       const bk = $('#pay-fee-breakdown');
       if (bk) {
         if (isPtah) {
+          const hkd = n => 'HK$ ' + (n * 7.80).toLocaleString('zh-HK',{minimumFractionDigits:2,maximumFractionDigits:2});
           bk.innerHTML = `
-            <div style="font-size:13px;color:#92400e;font-weight:700;margin-bottom:8px;">📋 公证费说明 · PTAHDAO 信托受益人声明书</div>
-            <div style="margin-bottom:8px;color:#475569;">本公证费适用于 PTAHDAO 信托受益人声明书的全部公证流程，包含线上远程视频审核、电子签名、区块链存证、PDF 公证书生成等全流程服务。</div>
+            <div style="font-size:13px;color:#92400e;font-weight:700;margin-bottom:8px;">📋 公证费说明 · PTAHDAO 信托受益人声明书（中国委托公证人 · 叶谢邓律师行）</div>
+            <div style="margin-bottom:8px;color:#475569;">适用于香港文件用于内地（PTAHDAO 信托受益人登记与 USDT 资产分配），严格遵循《委托公证人(香港)条例》及司法部涉港公证核验管理办法，全程视频见证、电子签名、中法服加章转递、区块链存证。</div>
             <div style="border-top:1px dashed #cbd5e1;padding-top:8px;">
-              <div style="font-weight:600;color:#1e293b;margin-bottom:6px;">费用清单（合计 ${total} USDT / 人）</div>
-              <div style="display:flex;justify-content:space-between;padding:3px 0;"><span>· 受益人声明书公证基础费</span><span>380 USDT</span></div>
-              <div style="display:flex;justify-content:space-between;padding:3px 0;"><span>· 线上远程视频公证服务费</span><span>120 USDT</span></div>
-              <div style="display:flex;justify-content:space-between;padding:3px 0;"><span>· 区块链 TRC-20 存证费</span><span>80 USDT</span></div>
-              <div style="display:flex;justify-content:space-between;padding:3px 0;"><span>· PDF 公证书生成与电子印章</span><span>60 USDT</span></div>
-              <div style="display:flex;justify-content:space-between;padding:3px 0;"><span>· 香港公证员执业资质核验</span><span>47 USDT</span></div>
-              <div style="display:flex;justify-content:space-between;padding:5px 0 0;border-top:1px solid #cbd5e1;margin-top:5px;font-weight:700;color:#991b1b;"><span>合计</span><span>${total} USDT</span></div>
-            </div>`;
+              <div style="font-weight:600;color:#1e293b;margin-bottom:6px;">费用清单（合计 ${total} USDT / 人，1 USDT ≈ 7.80 HKD）</div>
+              <div style="display:grid;grid-template-columns:1fr auto auto;gap:4px 12px;padding:3px 0;"><span>· 受益人声明书公证基础费（家庭成员声明书标准）<sup><a href="https://www.ytt.com.hk/zh-hans/practice-areas/china-notary/" target="_blank" style="color:#64748b;">[1]</a></sup></span><span style="color:#64748b;font-size:11px;">${hkd(380)}</span><span>380 USDT</span></div>
+              <div style="display:grid;grid-template-columns:1fr auto auto;gap:4px 12px;padding:3px 0;"><span>· 远程视频公证 + 强制实人核验（律政司2024.11修订）<sup><a href="https://www.gangtonghk.com/a/115270.html" target="_blank" style="color:#64748b;">[2]</a></sup></span><span style="color:#64748b;font-size:11px;">${hkd(120)}</span><span>120 USDT</span></div>
+              <div style="display:grid;grid-template-columns:1fr auto auto;gap:4px 12px;padding:3px 0;"><span>· 中法服加章转递费（基础费×1/3）+ 协会印花税 HK$100<sup><a href="http://www.caao.org.hk/big5/Fee_Charge.pdf" target="_blank" style="color:#64748b;">[3]</a></sup></span><span style="color:#64748b;font-size:11px;">${hkd(80)}</span><span>80 USDT</span></div>
+              <div style="display:grid;grid-template-columns:1fr auto auto;gap:4px 12px;padding:3px 0;"><span>· 电子公证书（正本×2/副本×2/专用印章/双平台备案）<sup><a href="https://www.gangtonghk.com/a/115270.html" target="_blank" style="color:#64748b;">[2]</a></sup></span><span style="color:#64748b;font-size:11px;">${hkd(60)}</span><span>60 USDT</span></div>
+              <div style="display:grid;grid-template-columns:1fr auto auto;gap:4px 12px;padding:3px 0;"><span>· 跨境信托背景核查 + USDT 资产哈希核验<sup><a href="https://www.gangtonghk.com/a/116955.html" target="_blank" style="color:#64748b;">[4]</a></sup></span><span style="color:#64748b;font-size:11px;">${hkd(47)}</span><span>47 USDT</span></div>
+              <div style="display:grid;grid-template-columns:1fr auto auto;gap:4px 12px;padding:5px 0 0;border-top:1px solid #cbd5e1;margin-top:5px;font-weight:700;color:#991b1b;"><span>合计（含中法服转递，内地直接生效）</span><span style="font-size:11px;">${hkd(687)}</span><span>${total} USDT</span></div>
+            </div>
+            <div style="margin-top:6px;font-size:10px;color:#94a3b8;">来源：[1]www.ytt.com.hk（叶谢邓官网个人声明书HK$2,000基准，涉跨境资产按规例上浮）；[2]律政司2024.11《委托公证人管理规则（修订版）》；[3]caao.org.hk收费下限（附件HK$200/印花费HK$100/转递章=公证费×1/3）；[4]律政司2026《公证人收费规例》财产权属类4,500-28,000港元</div>`;
         } else {
+          const hkd = n => 'HK$ ' + (n * 7.80).toLocaleString('zh-HK',{minimumFractionDigits:2,maximumFractionDigits:2});
           bk.innerHTML = `
-            <div style="font-size:13px;color:#1e40af;font-weight:700;margin-bottom:8px;">📋 公证费说明</div>
-            <div style="color:#475569;margin-bottom:8px;">公证费用于支付公证人执业服务、视频签约平台、区块链存证、PDF 公证书生成等全流程成本。</div>
+            <div style="font-size:13px;color:#1e40af;font-weight:700;margin-bottom:8px;">📋 公证费说明（中国委托公证人标准服务）</div>
+            <div style="color:#475569;margin-bottom:8px;">公证费覆盖：委托公证人执业服务、视频见证签署、中法服加章转递、电子公证书出具等全流程。参考来源：香港律师会2025《公证服务收费指导区间》自然人常规公证事项 3,000-8,000 港元/份。</div>
             <div style="border-top:1px dashed #cbd5e1;padding-top:8px;">
-              <div style="font-weight:600;color:#1e293b;margin-bottom:6px;">费用清单（${total} USDT / 人）</div>
-              <div style="display:flex;justify-content:space-between;padding:3px 0;"><span>· 公证事项基础费</span><span>450 USDT</span></div>
-              <div style="display:flex;justify-content:space-between;padding:3px 0;"><span>· 视频连线签约服务</span><span>150 USDT</span></div>
-              <div style="display:flex;justify-content:space-between;padding:3px 0;"><span>· 区块链 TRC-20 存证</span><span>80 USDT</span></div>
-              <div style="display:flex;justify-content:space-between;padding:3px 0;"><span>· PDF 公证书生成</span><span>76 USDT</span></div>
-              <div style="display:flex;justify-content:space-between;padding:5px 0 0;border-top:1px solid #cbd5e1;margin-top:5px;font-weight:700;color:#991b1b;"><span>合计</span><span>${total} USDT</span></div>
-            </div>`;
+              <div style="font-weight:600;color:#1e293b;margin-bottom:6px;">费用清单（${total} USDT / 人，1 USDT ≈ 7.80 HKD）</div>
+              <div style="display:grid;grid-template-columns:1fr auto auto;gap:4px 12px;padding:3px 0;"><span>· 公证事项基础费（声明书/委托书/合同等常规项）<sup><a href="https://www.gangtonghk.com/a/115270.html" target="_blank" style="color:#64748b;">[1]</a></sup></span><span style="color:#64748b;font-size:11px;">${hkd(450)}</span><span>450 USDT</span></div>
+              <div style="display:grid;grid-template-columns:1fr auto auto;gap:4px 12px;padding:3px 0;"><span>· 远程视频签约 + 实人核验（面见/视频见证）</span><span style="color:#64748b;font-size:11px;">${hkd(150)}</span><span>150 USDT</span></div>
+              <div style="display:grid;grid-template-columns:1fr auto auto;gap:4px 12px;padding:3px 0;"><span>· 中法服加章转递 + 协会附件印花税/印花费<sup><a href="http://www.caao.org.hk/big5/Fee_Charge.pdf" target="_blank" style="color:#64748b;">[2]</a></sup></span><span style="color:#64748b;font-size:11px;">${hkd(80)}</span><span>80 USDT</span></div>
+              <div style="display:grid;grid-template-columns:1fr auto auto;gap:4px 12px;padding:3px 0;"><span>· PDF 公证书（正副本+电子印章+双平台备案）</span><span style="color:#64748b;font-size:11px;">${hkd(76)}</span><span>76 USDT</span></div>
+              <div style="display:grid;grid-template-columns:1fr auto auto;gap:4px 12px;padding:5px 0 0;border-top:1px solid #cbd5e1;margin-top:5px;font-weight:700;color:#991b1b;"><span>合计（含中法服转递）</span><span style="font-size:11px;">${hkd(756)}</span><span>${total} USDT</span></div>
+            </div>
+            <div style="margin-top:6px;font-size:10px;color:#94a3b8;">来源：[1]香港律师会2025《公证服务收费指导区间》自然人3,000-8,000港元/份；[2]中国委托公证人协会 caao.org.hk 收费下限表（中法服转递章 = 公证费 × 1/3）</div>`;
         }
       }
       // 默认选中银行通道
@@ -2010,13 +2014,13 @@
     _startAutoNotaryFlow() {
       const s = this.state.activeSession;
       if (!s) return;
-      this.addSystemMsg('【公证人】已开始本次公证流程，正在进行身份核验...');
-      this.toast('公证人已接入，公证流程即将开始...', 'info');
+      this.addSystemMsg('【公证人】已开始本次公证流程，正在进行材料初审与实人核验...');
+      this.toast('公证人已接入，将按中国委托公证人法定流程办理...', 'info');
       this.speak('公证人已接入，请稍候。');
       this._setAutoStep = (n, label) => { /* 内部状态，无 UI */ };
-      // 1) 身份核验：自动扫描
+      // 1) 材料初审 + 实人核验：自动扫描身份证 + 人脸比对
       setTimeout(() => {
-        this.addSystemMsg('【公证人】开始读取身份证件信息...');
+        this.addSystemMsg('【公证人】读取身份证件信息，核验申请人主体资格...');
         this.startIDScan();
       }, 800);
       // 2) 人脸比对
@@ -2026,8 +2030,8 @@
       }, 3200);
       // 3) 通过核验 → 下一步
       setTimeout(() => {
-        this.addSystemMsg('【公证人】身份核验完成，已通过审核，进入法律告知事项。');
-        this._setAutoStep(2, '告知事项');
+        this.addSystemMsg('【公证人】实人核验通过（身份证读卡+人脸比对），进入法律告知与声明意愿确认环节。');
+        this._setAutoStep(2, '法律告知与声明意愿确认');
         this.passVerify();
       }, 6200);
       // 4) 告知事项自动勾选 + 下一步
@@ -2035,20 +2039,20 @@
         const cb = $('#agree-notice');
         if (cb && !cb.checked) { cb.checked = true; cb.dispatchEvent(new Event('change')); }
         const btn = $('#notice-next-btn');
-        if (btn && !btn.disabled) { this.nextStep(); this._setAutoStep(3, '文书确认'); this.addSystemMsg('【公证人】告知事项已确认，进入文书审核。'); }
+        if (btn && !btn.disabled) { this.nextStep(); this._setAutoStep(3, '文书真实性合法性核查'); this.addSystemMsg('【公证人】法律告知事项已确认，进入文书真实性核查环节（依《宣誓及声明条例》）。'); }
       }, 7400);
-      // 5) 文书确认自动勾选 + 下一步
+      // 5) 文书核查自动勾选 + 下一步
       setTimeout(() => {
         const cb = $('#agree-doc');
         if (cb && !cb.checked) { cb.checked = true; cb.dispatchEvent(new Event('change')); }
         const btn = $('#doc-next-btn');
-        if (btn && !btn.disabled) { this.nextStep(); this._setAutoStep(4, '签署签名'); this.addSystemMsg('【公证人】文书确认无误，进入签署环节。'); }
+        if (btn && !btn.disabled) { this.nextStep(); this._setAutoStep(4, '公证人出证与电子签署'); this.addSystemMsg('【公证人】文书核查无误，进入公证人出证与双方签署环节。'); }
       }, 8800);
       // 6) 公证人自动签名
       setTimeout(() => {
-        this.addSystemMsg('【公证人】公证人电子签名完成。');
+        this.addSystemMsg('【公证人】公证人签署出证，已加盖委托公证人专用印章，电子副本同步上传至律政司与司法部双平台备案。');
         this.confirmSign();
-        this._setAutoStep(5, '完成存证');
+        this._setAutoStep(5, '加章转递与区块链存证');
       }, 10000);
       // 7) 等签约方自动签名完成 + 进入完成页
       setTimeout(() => {
@@ -2101,7 +2105,7 @@
       }
     },
 
-    /* --- 步骤1：身份核验 --- */
+    /* --- 步骤1：实人核验 --- */
     renderStep1() {
       const s = this.state.activeSession; if (!s) return;
       $('#v-signer-name').textContent = s.signerName;
@@ -2151,18 +2155,18 @@
       }
     },
     passVerify() {
-      this.addSystemMsg('【系统】签约方身份核验已通过');
+      this.addSystemMsg('【系统】签约方实人核验已通过');
       this.nextStep();
     },
 
-    /* --- 步骤2：告知事项 --- */
+    /* --- 步骤2：法律告知 --- */
     initStep2() {
       $('#agree-notice').checked = false;
       $('#notice-next-btn').disabled = true;
       $('#agree-notice').onchange = (e) => { $('#notice-next-btn').disabled = !e.target.checked; };
     },
 
-    /* --- 步骤3：文书确认 --- */
+    /* --- 步骤3：文书核查 --- */
     renderDocReview() {
       const s = this.state.activeSession;
       const doc = SAMPLE_DOCS[s.docKey] || SAMPLE_DOCS['借款合同公证'];
@@ -2533,7 +2537,7 @@
         ],
         // 工具使用记录
         toolRecords: [
-          { tool: '身份核验系统', action: 'OCR身份证+人脸比对', result: '通过', ts: s.startedAt },
+          { tool: '实人核验系统', action: 'OCR身份证+人脸比对', result: '通过', ts: s.startedAt },
           { tool: '电子签名平台', action: 'CA证书签名', result: '双方/多方签名完成', ts: now },
           { tool: '公证文书模板引擎', action: '生成'+s.topic+'公证书', result: 'PDF已封装', ts: now },
           { tool: '视频录制系统', action: '全程录像', result: 'MP4已存储', ts: now },
@@ -3711,19 +3715,19 @@ ${bodyFragment}
   const _v_origJoinRoom = App.joinRoom;
   App.joinRoom = function (sid) {
     _v_origJoinRoom.call(this, sid);
-    this.speak('已进入视频签约房间。请先进行身份核验。');
+    this.speak('已进入视频签约房间。请先进行实人核验。');
   };
   const _v_origNextStep = App.nextStep;
   App.nextStep = function () {
     _v_origNextStep.call(this);
     const step = this.state.roomStep;
-    const stepNames = ['', '身份核验步骤，请扫描身份证并完成人脸比对', '公证告知步骤，请阅读公证告知书并确认', '文书确认步骤，请逐页阅读文书内容', '电子签名步骤，请在签名板上手写签名', '完成存证步骤，文书已上传区块链存证'];
+    const stepNames = ['', '实人核验步骤，请扫描身份证并完成人脸比对', '法律告知步骤，请阅读法律告知书并确认声明意愿', '文书核查步骤，请核查文书真实性与合法性', '出证签署步骤，请在签名板上手写签名', '加章存证步骤，文书已送交中法服加章转递并完成区块链存证'];
     if (stepNames[step]) this.speak(stepNames[step]);
   };
   const _v_origPassVerify = App.passVerify;
   App.passVerify = function () {
     _v_origPassVerify.call(this);
-    this.speak('身份核验通过，即将进入下一步。');
+    this.speak('实人核验通过，即将进入下一步。');
   };
   const _v_origConfirmSign = App.confirmSign;
   App.confirmSign = function () {
@@ -3795,11 +3799,11 @@ ${bodyFragment}
     '我的文书': '我的文書',
     '实名状态': '實名狀態',
     '已认证': '已認證',
-    '身份核验': '身份核驗',
-    '公证告知': '公證告知',
-    '文书确认': '文書確認',
-    '电子签名': '電子簽名',
-    '完成存证': '完成存證',
+    '实人核验': '實人核驗',
+    '法律告知': '法律告知',
+    '文书核查': '文書核查',
+    '出证签署': '出證簽署',
+    '加章存证': '加章存證',
     '上一步': '上一步',
     '下一步': '下一步',
     '开始签约': '開始簽約',
@@ -3869,11 +3873,11 @@ ${bodyFragment}
     '即将开始': 'Upcoming',
     '实名状态': 'KYC Status',
     '已认证': 'Verified',
-    '身份核验': 'ID Verify',
-    '公证告知': 'Disclosure',
-    '文书确认': 'Doc Confirm',
-    '电子签名': 'E-Signature',
-    '完成存证': 'Finalize',
+    '实人核验': 'Real-person Verification',
+    '法律告知': 'Legal Disclosure',
+    '文书核查': 'Document Review',
+    '出证签署': 'Certification & Signing',
+    '加章存证': 'Seal & Chain Evidence',
     '上一步': 'Previous',
     '下一步': 'Next',
     '开始签约': 'Start',
@@ -4203,11 +4207,11 @@ ${bodyFragment}
     const end = s.endedAt || start + 15 * 60000;
     const range = (end - start) / 5;
     const steps = [
-      { step: 1, title: '① 身份核验通过', desc: `${s.signerName} 身份证读卡+人脸比对均通过，相似度 ${(97 + Math.random()*2).toFixed(1)}%` },
-      { step: 2, title: '② 公证告知确认', desc: '告知事项朗读完成，签约方勾选"已阅读并理解全部内容"' },
-      { step: 3, title: '③ 文书内容确认', desc: `${s.topic} 全文共 ${(SAMPLE_DOCS[s.docKey]?.pages)||5} 页，签约方翻页确认完毕` },
-      { step: 4, title: '④ 双方电子签名完成', desc: `公证人 ${s.notaryName} → 签约方 ${s.signerName}，CA：信鉴数字认证中心` },
-      { step: 5, title: '⑤ 区块链存证提交', desc: `Tx: ${s.txHash || '0x' + randHex(24)} · 区块 #${s.blockH || '--'}` }
+      { step: 1, title: '① 实人核验通过', desc: `${s.signerName} 身份证读卡+人脸活体比对均通过，相似度 ${(97 + Math.random()*2).toFixed(1)}%` },
+      { step: 2, title: '② 法律告知确认', desc: '法律告知书宣读完成，签约方确认声明意愿并勾选"已阅读并理解全部内容"' },
+      { step: 3, title: '③ 文书核查确认', desc: `${s.topic} 全文共 ${(SAMPLE_DOCS[s.docKey]?.pages)||5} 页，依《宣誓及声明条例》核查真实性与合法性完毕` },
+      { step: 4, title: '④ 公证人出证与签署完成', desc: `公证人 ${s.notaryName} 出证加盖专用章 → 签约方 ${s.signerName} 签署，CA：信鉴数字认证中心` },
+      { step: 5, title: '⑤ 加章转递与区块链存证完成', desc: `送交中法服加章转递 · Tx: ${s.txHash || '0x' + randHex(24)} · 区块 #${s.blockH || '--'}` }
     ];
     return steps.map((x, i) => ({
       ...x, ts: new Date(start + range * (i + 0.3) + Math.random() * range * 0.4).getTime(), done: s.status === 'done'
@@ -4334,21 +4338,21 @@ ${bodyFragment}
 
   // ---------- ⑦ 录像回放查看器 ----------
   const STEP_DEFS = [
-    { step: 1, title: '① 身份核验', desc: '读取身份证信息 · 人脸活体比对',
+    { step: 1, title: '① 实人核验', desc: '读取身份证信息 · 人脸活体比对',
       render: (s) => `<div class="avatar-huge" style="background:linear-gradient(135deg,#f59e0b,#d97706)">🪪</div>
-        <h4>身份核验环节</h4><p>签约方 ${s.signerName} 正在接受身份证读卡与活体人脸识别</p>` },
-    { step: 2, title: '② 公证告知', desc: '宣读权利义务与法律提示',
+        <h4>实人核验环节</h4><p>签约方 ${s.signerName} 正在接受身份证读卡与活体人脸识别</p>` },
+    { step: 2, title: '② 法律告知', desc: '宣读权利义务与法律提示，确认声明意愿',
       render: () => `<div class="avatar-huge" style="background:linear-gradient(135deg,#6366f1,#4338ca)">📋</div>
-        <h4>公证告知事项宣读</h4><p>公证员正在宣读《公证法》规定的权利义务与效力说明</p>` },
-    { step: 3, title: '③ 文书确认', desc: '多页文书翻页浏览确认',
+        <h4>法律告知事项宣读</h4><p>公证员正在宣读《公证法》与《宣誓及声明条例》规定的权利义务与效力说明</p>` },
+    { step: 3, title: '③ 文书核查', desc: '依《宣誓及声明条例》核查文书真实性与合法性',
       render: (s) => `<div class="avatar-huge" style="background:linear-gradient(135deg,#3b82f6,#2563eb)">📄</div>
-        <h4>${s.topic} 确认中</h4><p>签约双方同步浏览文书内容，确认条款无异议</p>` },
-    { step: 4, title: '④ 电子签名', desc: '公证人先签 → 签约方跟进',
+        <h4>${s.topic} 核查中</h4><p>依《宣誓及声明条例》第11章核查文书内容的真实性与合法性</p>` },
+    { step: 4, title: '④ 出证签署', desc: '公证人出证加盖专用章 → 签约方跟进签署',
       render: (s) => `<div class="avatar-huge" style="background:linear-gradient(135deg,#ef4444,#b91c1c)">✍️</div>
-        <h4>正在进行电子签名</h4><p>${s.notaryName} 与 ${s.signerName} 先后完成手写电子签名，CA 同步加签</p>` },
-    { step: 5, title: '⑤ 区块链存证', desc: '全程录像+文书哈希上链',
+        <h4>正在进行出证与电子签名</h4><p>公证人 ${s.notaryName} 先出证加盖专用章，签约方 ${s.signerName} 跟进完成手写电子签名，CA 同步加签</p>` },
+    { step: 5, title: '⑤ 加章存证', desc: '中法服加章转递+区块链哈希上链',
       render: (s) => `<div class="avatar-huge" style="background:linear-gradient(135deg,#10b981,#047857)">⛓️</div>
-        <h4>签约完成 · 上链成功</h4><p>Tx: ${s.txHash || '--'}<br/>全部档案已写入区块链存证节点</p>` }
+        <h4>加章转递 · 上链成功</h4><p>已送交中国法律服务（香港）有限公司加章转递<br/>Tx: ${s.txHash || '--'} · 全部档案已写入区块链存证节点</p>` }
   ];
   App.state.pbStep = 0; App.state.pbPlayTimer = null; App.state.pbSpeed = 1;
   App.playbackSession = function () {

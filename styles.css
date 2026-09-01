@@ -414,7 +414,7 @@ a:hover { color: var(--primary-dark); }
 .step-content { display: none; animation: fadeIn .3s ease; }
 .step-content.active { display: block; }
 
-/* --- 身份核验 --- */
+/* --- 实人核验 --- */
 .verify-card { }
 .verify-icon { font-size: 44px; text-align: center; margin-bottom: 12px; }
 .verify-card h3 { text-align: center; margin-bottom: 4px; }
@@ -470,7 +470,7 @@ a:hover { color: var(--primary-dark); }
 
 .step-actions { display: flex; gap: 10px; justify-content: flex-end; }
 
-/* --- 文书确认 --- */
+/* --- 文书核查 --- */
 .doc-review { }
 .doc-review-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
 .doc-review-head h3 { font-size: 16px; }

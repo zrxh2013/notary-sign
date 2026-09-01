@@ -66,7 +66,7 @@
         <p class="tagline">远程公证 · 视频签约 · 全程留痕 · 合法合规</p>
         <ul class="brand-points">
           <li><span class="dot ok"></span>双向高清视频连线</li>
-          <li><span class="dot ok"></span>人脸身份核验</li>
+          <li><span class="dot ok"></span>人脸实人核验</li>
           <li><span class="dot ok"></span>电子签名法律效力</li>
           <li><span class="dot ok"></span>区块链存证可追溯</li>
         </ul>
@@ -659,38 +659,38 @@
         <div class="stepper">
           <div class="step active" data-step="1">
             <div class="step-circle">1</div>
-            <div class="step-label">身份核验</div>
+            <div class="step-label">实人核验</div>
           </div>
           <div class="step-line"></div>
           <div class="step" data-step="2">
             <div class="step-circle">2</div>
-            <div class="step-label">告知事项</div>
+            <div class="step-label">法律告知</div>
           </div>
           <div class="step-line"></div>
           <div class="step" data-step="3">
             <div class="step-circle">3</div>
-            <div class="step-label">文书确认</div>
+            <div class="step-label">文书核查</div>
           </div>
           <div class="step-line"></div>
           <div class="step" data-step="4">
             <div class="step-circle">4</div>
-            <div class="step-label">签署文件</div>
+            <div class="step-label">出证签署</div>
           </div>
           <div class="step-line"></div>
           <div class="step" data-step="5">
             <div class="step-circle">5</div>
-            <div class="step-label">存档完成</div>
+            <div class="step-label">加章存证</div>
           </div>
         </div>
 
         <!-- 步骤内容 -->
         <div class="step-content-wrapper">
-          <!-- 步骤1：身份核验 -->
+          <!-- 步骤1：实人核验 -->
           <div class="step-content active" data-step-c="1">
             <div class="verify-card">
               <div class="verify-icon">🪪</div>
-              <h3>身份核验环节</h3>
-              <p class="muted">公证人将核验您的身份信息，请按照提示操作</p>
+              <h3>实人核验环节</h3>
+              <p class="muted">公证人将对您进行身份证件核验与人脸活体比对，请按照提示操作</p>
 
               <div class="verify-box" id="verify-signer">
                 <h4>签约方身份信息</h4>
@@ -720,10 +720,10 @@
             </div>
           </div>
 
-          <!-- 步骤2：告知事项 -->
+          <!-- 步骤2：法律告知 -->
           <div class="step-content" data-step-c="2">
             <div class="notice-card">
-              <h3>📋 公证告知事项</h3>
+              <h3>📋 法律告知事项</h3>
               <div class="notice-text" id="notice-text">
                 <p><b>一、公证的法律效力</b></p>
                 <p>根据《中华人民共和国公证法》，经公证的民事法律行为、有法律意义的事实和文书，应当作为认定事实的根据，但有相反证据足以推翻该项公证的除外。</p>
@@ -748,11 +748,11 @@
             </div>
           </div>
 
-          <!-- 步骤3：文书确认 -->
+          <!-- 步骤3：文书核查 -->
           <div class="step-content" data-step-c="3">
             <div class="doc-review">
               <div class="doc-review-head">
-                <h3>📄 待确认文书</h3>
+                <h3>📄 文书核查（依《宣誓及声明条例》第11章）</h3>
                 <div class="doc-meta">
                   <span class="tag" id="doc-type-tag">借款合同</span>
                   <span class="muted" id="doc-page-count">共 5 页</span>
@@ -772,16 +772,16 @@
 
               <label class="check-row">
                 <input type="checkbox" id="agree-doc" />
-                我已完整阅读并确认文书内容，同意按照该文本进行签署
+                我已完整阅读并核查文书内容的真实性与合法性，同意按照该文本进行公证签署
               </label>
               <div class="step-actions">
                 <button class="btn-ghost" onclick="App.prevStep()">← 上一步</button>
-                <button class="btn-primary" id="doc-next-btn" onclick="App.nextStep()" disabled>文书确认无误 →</button>
+                <button class="btn-primary" id="doc-next-btn" onclick="App.nextStep()" disabled>文书核查无误 →</button>
               </div>
             </div>
           </div>
 
-          <!-- 步骤4：签署文件 -->
+          <!-- 步骤4：出证签署 -->
           <div class="step-content" data-step-c="4">
             <div class="sign-panel">
               <div class="sign-head">
@@ -828,7 +828,7 @@
             </div>
           </div>
 
-          <!-- 步骤5：存档完成 -->
+          <!-- 步骤5：加章存证 -->
           <div class="step-content" data-step-c="5">
             <div class="done-card">
               <div class="done-check">✓</div>

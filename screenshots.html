@@ -28,8 +28,8 @@
 <p class="sub">访客创建 PTAHDAO 信托会议 → 缴费 687 USDT → 签约人链接跳转 → 公证人自动完成全流程</p>
 
 <div class="summary">
-  ✅ <b>核心功能全部 PASS</b> — 表单字段升级 + 687 USDT 缴费 + 5 项费用明细 + 公证人自动完成身份核验/告知/文书/签署/存证全流程闭环<br>
-  公证流程自动完成：身份证 OCR + 人脸比对 + 告知事项 + 文书确认 + 公证人签名 + 持有人签名 + TRC-20 区块链存证
+  ✅ <b>核心功能全部 PASS</b> — 表单字段升级 + 687 USDT 缴费 + 5 项费用明细 + 公证人自动完成实人核验/法律告知/文书核查/出证签署/加章存证全流程闭环<br>
+  公证流程自动完成（符合香港委托公证人法定流程）：身份证 OCR + 人脸活体比对 + 法律告知 + 文书真实性合法性核查 + 公证人出证签署 + 持有人签名 + 中法服加章转递 + TRC-20 区块链存证
 </div>
 
 <div class="section">
@@ -82,23 +82,23 @@
   <h2><span class="badge pass">PASS</span> Step 5 · 通过签约人链接跳转 → 公证人自动接入</h2>
   <p class="desc">在 console 执行 <code>window.location.href = link</code> 跳转到签约人短链（<code>#Pt0XX&amp;d=BASE64DATA</code>），约 1 秒后自动进入视频签约房间。<br>
   进入房间约 0.6 秒后：<br>
-  - 公证人流程状态条显示："公证流程自动执行中 · 步骤 1/5 · 身份核验"<br>
-  - 系统消息区显示："【公证人】已开始本次公证流程，将自动执行身份核验→告知→文书→签署→存证全流程"<br>
+  - 公证人流程状态条显示："公证流程自动执行中 · 步骤 1/5 · 实人核验"<br>
+  - 系统消息区显示："【公证人】已开始本次公证流程，将自动执行实人核验→法律告知→文书核查→出证签署→加章存证全流程"<br>
   - 身份证扫描自动启动（scan-frame 显示 scanning 动画）</p>
   <img src="screenshots/q5_ai_started.png" alt="公证人自动上线">
   <p class="meta">q5_ai_started.png · 公证流程状态条 + 自动开始身份证扫描</p>
 </div>
 
 <div class="section">
-  <h2><span class="badge pass">PASS</span> Step 6-9 · 公证流程自动推进身份核验 → 人脸比对 → 告知 → 文书 → 签署 → 完成</h2>
+  <h2><span class="badge pass">PASS</span> Step 6-9 · 公证流程自动推进实人核验 → 人脸比对 → 法律告知 → 文书核查 → 出证签署 → 加章存证完成</h2>
   <p class="desc">公证流程按以下时间线自动推进（无需任何用户操作）：<br>
   - <code>0.8s</code> 自动 startIDScan() 身份证 OCR<br>
   - <code>3.2s</code> 自动 startFaceVerify() 人脸比对（相似度 98.6%）<br>
-  - <code>6.2s</code> 自动 passVerify() 通过核验 → 进入步骤 2 告知事项<br>
-  - <code>7.4s</code> 自动勾选"已阅读告知事项"+ 进入步骤 3 文书确认<br>
-  - <code>8.8s</code> 自动勾选"已阅读文书"+ 进入步骤 4 签署签名<br>
-  - <code>10s</code> 公证人自动 confirmSign() 签名<br>
-  - <code>13s</code> 持有人自动签名 + 进入步骤 5 完成 + TRC-20 区块链存证</p>
+  - <code>6.2s</code> 自动 passVerify() 通过核验 → 进入步骤 2 法律告知<br>
+  - <code>7.4s</code> 自动勾选"已阅读法律告知事项并确认声明意愿"+ 进入步骤 3 文书核查<br>
+  - <code>8.8s</code> 自动勾选"已阅读并核查文书"+ 进入步骤 4 出证签署<br>
+  - <code>10s</code> 公证人自动出证加盖专用章 + confirmSign() 签名<br>
+  - <code>13s</code> 持有人自动签名 + 进入步骤 5 加章转递 + TRC-20 区块链存证</p>
   <div class="grid2">
     <img src="screenshots/q6_face_verify.png" alt="人脸比对">
     <img src="screenshots/q4_link_in_console.png" alt="链接跳转 console">
