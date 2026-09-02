@@ -697,6 +697,16 @@
           <div class="step-content" data-step-c="2">
             <div class="notice-card">
               <h3>📋 法律告知事项</h3>
+              <div style="display:flex;align-items:center;gap:8px;margin:0 0 14px;">
+                <div style="font-size:14px;font-weight:700;">📋 法律告知事项（受益人声明书公证专用 · Cap.11 s.11）</div>
+                <div style="flex:1 1 auto;"></div>
+                <span id="notice-view-decl-btn-wrap" style="display:none;">
+                  <button class="btn-ghost small" onclick="App.openDeclarationDocModal()"
+                    style="padding:5px 11px;border-radius:7px;background:#fff7ed;border:1px dashed #b91c1c;color:#7f1d1d;font-weight:700;">
+                    📖 查阅《受益人声明书》正式全文
+                  </button>
+                </span>
+              </div>
               <div class="notice-text" id="notice-text">
                 <p><b>一、公证的法律效力</b></p>
                 <p>根据《中华人民共和国公证法》，经公证的民事法律行为、有法律意义的事实和文书，应当作为认定事实的根据，但有相反证据足以推翻该项公证的除外。</p>
@@ -729,6 +739,12 @@
                 <div class="doc-meta">
                   <span class="tag" id="doc-type-tag">借款合同</span>
                   <span class="muted" id="doc-page-count">共 5 页</span>
+                  <span id="doc-view-decl-room-btn-wrap" style="display:none;">
+                    <button class="btn-ghost small" onclick="App.openDeclarationDocModal()"
+                      style="padding:5px 10px;border-radius:7px;background:#fff7ed;border:1px dashed #b91c1c;color:#7f1d1d;font-weight:700;">
+                      📖 查阅《受益人声明书》正式模板
+                    </button>
+                  </span>
                 </div>
               </div>
 
@@ -1020,6 +1036,13 @@
         <div class="field">
           <label>备注说明</label>
           <textarea id="cm-remark" rows="2" placeholder="可填写签约注意事项或补充说明"></textarea>
+        </div>
+        <!-- =============== 📖 当主题为「受益人声明书公证（香港版）/ PTAHDAO信托受益人声明」时显示：查阅正式声明全文按钮 =============== -->
+        <div id="cm-view-decl-wrap" style="display:none;margin:8px 0 12px;">
+          <button type="button" class="btn-ghost" style="width:100%;padding:11px;border-radius:11px;background:linear-gradient(135deg,#fff7ed,#fee2e2);border:1.5px dashed #b91c1c;color:#7f1d1d;font-weight:700;font-size:13px;box-shadow:0 4px 12px rgba(185,28,28,.12);"
+            onclick="App.openDeclarationDocModal()">
+            📖 查阅《受益人声明书》正式全文（A4 制式 · 叶谢邓律师行 CAO-HK-D0468 委托公证人正式模板 · 可打印 PDF）
+          </button>
         </div>
         <!-- 申请资料填写页已去除「费用展示」，仅保留缴费确认复选框（用于按钮分支控制） -->
         <div class="field" style="padding:0 4px;">
@@ -1330,7 +1353,32 @@
     </div>
   </div>
 
-  <!-- ============== 公证书预览弹窗（页内，不依赖新标签页） ============== -->
+  <!-- ============== 正式受益人声明书查阅 Modal（iframe 内嵌 beneficiary-declaration-official.html，A4 制式可直接打印） ============== -->
+  <div class="modal-mask" id="declaration-doc-modal">
+    <div class="modal-box" style="max-width:920px;">
+      <div class="modal-head">
+        <h3>📖 《受益人声明书》正式文本 · 叶谢邓律师行（CAO-HK-D0468）正式制式</h3>
+        <button class="btn-text" onclick="App.closeModal('declaration-doc-modal')">×</button>
+      </div>
+      <div class="modal-body" style="padding:0;display:flex;flex-direction:column;max-height:calc(100vh - 40px);">
+        <div style="display:flex;gap:8px;align-items:center;padding:8px 14px;border-bottom:1px solid var(--border);background:#fff7ed;border-radius:12px 12px 0 0;">
+          <span class="muted small">💡 声明书下方已自动填充 5 条官方防伪通道（司法部/12348/CAAO/律所直查/TRONSCAN-ETH）</span>
+          <div style="flex:1;"></div>
+          <button class="btn-ghost small" onclick="var f=document.getElementById('declaration-iframe'); if(f){f.contentWindow && f.contentWindow.print && f.contentWindow.print();}">🖨 直接打印声明书</button>
+          <button class="btn-primary small" onclick="App.closeModal('declaration-doc-modal');var s=App && App.state && App.state.activeSession; if(s && s.meetingNo){ App.copyText && App.copyText(s.meetingNo); App.toast('会议号已复制，可返回首页凭号进入签署','success'); } else { App.toast('请回到创建表单填写信息，完成缴费生成会议号后进入视频签署','info'); }">📋 回到填写 / 进入视频签署</button>
+        </div>
+        <div style="flex:1 1 auto;min-height:420px;background:#e5e7eb;overflow:hidden;border-radius:0 0 12px 12px;">
+          <iframe id="declaration-iframe" src="beneficiary-declaration-official.html" title="受益人声明书正式文本"
+            style="width:100%;height:72vh;border:0;background:#fff;display:block;"></iframe>
+        </div>
+      </div>
+      <div class="modal-foot">
+        <span class="muted small">⚠️ 本正式文本仅供签署前查阅参考；最终 PDF 公证书需在完成页点击「下载公证书 PDF」生成（含您的真实姓名/证件号/信托账户/手写签名/承诺录音指纹）。</span>
+        <button class="btn-primary" onclick="App.closeModal('declaration-doc-modal')">✓ 我已查阅</button>
+      </div>
+    </div>
+  </div>
+
   <div class="modal-mask" id="cert-preview-modal">
     <div class="modal-box" style="max-width:860px;">
       <div class="modal-head">

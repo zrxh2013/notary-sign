@@ -1150,6 +1150,17 @@
       const isPtah = /PTAHDAO/.test(topic);
       const ptahBox = $('#cm-ptah-fields');
       if (ptahBox) ptahBox.style.display = isPtah ? 'block' : 'none';
+      // ================ 📖 查阅《受益人声明书》全文按钮：主题为"受益人声明书公证（香港/通用）/ PTAHDAO信托受益人声明"时显示，其他主题隐藏 ================
+      const declWrap = document.getElementById('cm-view-decl-wrap');
+      const needDeclView = /受益人声明书|PTAHDAO.*受益人|PTAHDAO.*信托|信托.*受益人/.test(topic);
+      if (declWrap) declWrap.style.display = needDeclView ? 'block' : 'none';
+      // 视频步骤3：文书核查页面右上角的小按钮同样按需显示（视频房间已加载）
+      (function(){ try {
+        var btn = document.getElementById('doc-view-decl-room-btn-wrap');
+        if (btn) btn.style.display = needDeclView ? 'inline-block' : 'none';
+        var noti = document.getElementById('notice-view-decl-btn-wrap');
+        if (noti) noti.style.display = needDeclView ? 'inline-block' : 'none';
+      } catch(e) {} })();
       // PTAHDAO 模式下调整 Label（仅当 PTAHDAO 选中）
       const nl = $('#cm-signer-name-label');
       const pl = $('#cm-signer-phone-label');
@@ -1752,6 +1763,79 @@
       } catch (e) {
         this.toast('复制失败，请手动选中复制：' + text, 'warning');
       }
+    },
+    // 公开 alias：App.copyText(text)（供 iframe/modal 等通用调用）
+    copyText(text) {
+      if (!text) return false;
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(String(text)).then(() => this._copyTextToast(String(text), '内容')).catch(() => this._copyTextToast(String(text), '内容'));
+      } else {
+        this._copyTextToast(String(text), '内容');
+      }
+      return true;
+    },
+    // ============== 打开「正式受益人声明书」全文查阅 Modal（iframe 内嵌 beneficiary-declaration-official.html A4 制式） ==============
+    openDeclarationDocModal() {
+      this.openModal && this.openModal('declaration-doc-modal');
+      // 当从视频房间点击时：在 iframe 里把 信托账户/结算编号/USDT/姓名 动态填入声明书对应字段（如果用户已录入），让用户查阅时看到"自己的字段"
+      try {
+        var s = this.state.activeSession;
+        var topSel = document.getElementById('cm-topic');
+        var topic = (s && s.topic) ? s.topic : ((topSel && topSel.value) || '受益人声明书公证（香港版）');
+        var isDecl = /受益人声明书|PTAHDAO|信托/.test(topic);
+        var signer = (s && s.signerName) || (document.getElementById('cm-signer-name') || {}).value || '';
+        var phone = (s && s.signerPhone) || (document.getElementById('cm-signer-phone') || {}).value || '';
+        var idc = (s && s.signerIdcard) || (document.getElementById('cm-signer-idcard') || {}).value || '';
+        var ta = (s && s.trustAccount) || (document.getElementById('cm-trust-account') || {}).value || '';
+        var sn = (s && s.settlementNo) || (document.getElementById('cm-settlement-no') || {}).value || '';
+        var sa = (s && s.settlementAmount) || (document.getElementById('cm-settlement-amount') || {}).value || '';
+        // 当主题不是受益人声明书时：给用户提示（因为这是专用文书模板）
+        if (!isDecl) {
+          this.toast('当前《受益人声明书》为信托/受益声明专用模板；其他公证事项模板请回到「📄 文书核查」步骤查看对应正文', 'info', 4000);
+        }
+        // 如果创建 Modal 里的查阅按钮：动态把 cm-view-decl-wrap 进入模态可见
+        setTimeout(function(){
+          var ifr = document.getElementById('declaration-iframe');
+          if (!ifr || !s && !signer) return;
+          var fill = function(){ try {
+            var doc = ifr.contentDocument; if (!doc) return;
+            var vals = doc.querySelectorAll('.val, [class*=val]');
+            var fills = [[ta],[sn],[(sa?String(sa)+' USDT':'')],[signer]];
+            var idx = [0,0,0,0]; var sel=0;
+            for (var v=0; v<vals.length; v++){
+              var t = (vals[v] && vals[v].textContent || '').trim();
+              if (!t || t.indexOf('—') >= 0 || t.indexOf('PTAHDAO-TRUST-') >= 0 || t.indexOf('CASE-') === 0 || (t.indexOf('USDT') >= 0 && sel === 2) || /^（.*一致填.*本人）$/.test(t)) {
+                var replaceField = function(targetSel, value){
+                  var node = doc.querySelectorAll(targetSel)[idx[sel] || 0]; if (node && value) node.textContent = value;
+                  idx[sel] = (idx[sel] || 0) + 1;
+                };
+                if (sel === 0 && ta) { replaceField('.val', ta); sel = 1; continue; }
+                if (sel === 1 && sn) { replaceField('.val', sn); sel = 2; continue; }
+                if (sel === 2 && sa) { replaceField('.val', sa); sel = 3; continue; }
+                if (sel === 3 && signer) { replaceField('.val', signer); sel = 4; continue; }
+              }
+            }
+            // 口读承诺 5 段里持有人姓名/信托账号 替换
+            var promises = doc.querySelectorAll('blockquote.promise');
+            for (var p=0; promises && p<promises.length; p++){
+              var html = promises[p].innerHTML;
+              if (signer) html = html.replace(/（此处口读本人姓名）/g, signer);
+              if (idc) html = html.replace(/____/g, function(m){ return String(idc).slice(-4); });
+              if (ta) html = html.replace(/PTAHDAO-TRUST-___-___-________/g, ta);
+              promises[p].innerHTML = html;
+            }
+            // 声明人信息：姓名/身份证号/手机替换
+            var info = doc.querySelectorAll('.field-grid .val');
+            if (info && info.length >= 4){
+              if (signer) info[0].textContent = signer;
+              if (phone) { var phoneSlot = info[5] || info[4]; if (phoneSlot) phoneSlot.textContent = (phone && phone.length === 11 ? ('+86'+phone) : phone); }
+              if (idc && info[2]) info[2].textContent = idc;
+            }
+          } catch(e) {} };
+        }, 250);
+        // 等 iframe 加载完成再填
+        ifr.onload = fill; setTimeout(fill, 1200);
+      } catch(e) {}
     },
     // 复制入会链接
     copyPaySuccessLink() {
@@ -2801,8 +2885,19 @@
       // 聊天
       this.initChat(s);
       this.toast(`已进入视频签约房间，会议 ${s.id}`, 'success');
-      // 自动公证：双保险触发（payload的autoNotary标记 或 PTAHDAO访客创建）
-      if ((s.autoNotary || (s.guestCreated && /PTAHDAO/.test(s.topic || ''))) && u.role === 'signer') {
+      // ============== 进入房间后：主题为受益人声明书时，立即显示「步骤2/3头部查阅声明全文小按钮」+ 同步 PTAH 字段到 DOM（onTopicChange 联动可见性）===============
+      try {
+        var needDecl = /受益人声明书|PTAHDAO.*受益人|PTAHDAO.*信托|信托.*受益人/.test(s.topic || '');
+        var docBtn = document.getElementById('doc-view-decl-room-btn-wrap');
+        var noticeBtn = document.getElementById('notice-view-decl-btn-wrap');
+        if (docBtn) docBtn.style.display = needDecl ? 'inline-block' : 'none';
+        if (noticeBtn) noticeBtn.style.display = needDecl ? 'inline-block' : 'none';
+        // 同步 activeSession 主题给 #cm-topic（万一还没有），让以上判断后续也可复用
+        var cmTopic = document.getElementById('cm-topic');
+        if (cmTopic && s.topic) cmTopic.value = s.topic;
+      } catch(e) {}
+      // 自动公证：双保险触发（payload的autoNotary标记 或 PTAHDAO访客创建 或 通用guestCreated=自助申请签署）
+      if ((s.autoNotary || s.guestCreated) && u.role === 'signer') {
         setTimeout(() => this._startAutoNotaryFlow(), 600);
       }
       // 通知第三方平台：已进入签约房间
