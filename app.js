@@ -716,6 +716,29 @@
         $('#signer-docs').textContent = mine.filter(s => s.status === 'done').length;
         const up = mine.filter(s => s.status !== 'canceled' && s.status !== 'done').sort((a, b) => a.appointAt - b.appointAt).slice(0, 5);
         this.fillTable($('#signer-upcoming-table tbody'), up, this.sessionRowSigner.bind(this), true);
+        // 待签约快捷入口卡片
+        const qj = $('#signer-quick-join');
+        if (qj) {
+          const nextPending = up.find(s => s.status === 'pending');
+          const ongoing = up.find(s => s.status === 'ongoing');
+          if (ongoing) {
+            qj.style.display = 'block';
+            qj.innerHTML = `<div style="background:linear-gradient(135deg,#3b82f6,#1d4ed8);color:#fff;border-radius:12px;padding:20px;display:flex;align-items:center;justify-content:space-between;animation:pulse 2s infinite;">
+              <div><div style="font-size:16px;font-weight:700;">🔴 会议进行中</div><div style="font-size:13px;opacity:.9;margin-top:4px;">${ongoing.topic} · 点击返回签约房间</div></div>
+              <button class="btn-primary" style="background:#fff;color:#1d4ed8;font-weight:700;" onclick="App.joinRoom('${ongoing.id}')">返回房间</button>
+            </div>`;
+          } else if (nextPending) {
+            const diff = nextPending.appointAt - Date.now();
+            const isUrgent = diff > 0 && diff < 3600000;
+            qj.style.display = 'block';
+            qj.innerHTML = `<div style="background:${isUrgent?'linear-gradient(135deg,#ef4444,#b91c1c)':'linear-gradient(135deg,#6366f1,#4338ca)'};color:#fff;border-radius:12px;padding:20px;display:flex;align-items:center;justify-content:space-between;">
+              <div><div style="font-size:16px;font-weight:700;">${isUrgent?'⏰ 即将开始':'📋 待签约会议'}</div><div style="font-size:13px;opacity:.9;margin-top:4px;">${nextPending.topic} · ${fmtTime(nextPending.appointAt)}${isUrgent?`（${Math.ceil(diff/60000)}分钟后）`:''}</div></div>
+              <button class="btn-primary" style="background:#fff;color:#4338ca;font-weight:700;" onclick="App.joinRoom('${nextPending.id}')">进入签约</button>
+            </div>`;
+          } else {
+            qj.style.display = 'none';
+          }
+        }
       }
       this.renderRegionStats();
     },
@@ -770,17 +793,27 @@
         <td>${this.statusTag(s.status)}</td>
         <td class="actions">${this.sessionActions(s, 'notary')}</td>`;
     },
+    _countdownTag(s) {
+      if (s.status !== 'pending') return '';
+      const diff = s.appointAt - Date.now();
+      if (diff <= 0) return '<span class="tag" style="background:#fef3c7;color:#92400e;font-size:10px;">⏰ 已到时间</span>';
+      if (diff < 3600000) return `<span class="tag" style="background:#fee2e2;color:#991b1b;font-size:10px;">⏰ ${Math.ceil(diff/60000)}分钟后</span>`;
+      if (diff < 86400000) return `<span class="tag" style="background:#dbeafe;color:#1e40af;font-size:10px;">⏰ ${Math.floor(diff/3600000)}小时后</span>`;
+      return '';
+    },
     sessionRowSigner(s) {
-      return `<td><code style="background:#f1f5f9;padding:2px 6px;border-radius:4px;">${s.id}</code></td>
-        <td><b>${s.topic}</b></td>
+      const cd = this._countdownTag(s);
+      const trustInfo = s.trustAccount ? `<div class="muted small" style="color:#92400e;">🔗 ${s.trustAccount} · ${(s.settlementAmount||'').toLocaleString?.()||s.settlementAmount||''} USDT</div>` : '';
+      return `<td><code style="background:#f1f5f9;padding:2px 6px;border-radius:4px;">${s.id}</code> ${cd}</td>
+        <td><b>${s.topic}</b>${trustInfo}</td>
         <td>${s.notaryName}<br/><span class="muted small">${s.notaryOrg}</span></td>
-        <td>${s.notaryOrg || '--'}</td>
         <td>${fmtTime(s.appointAt)}</td>
-        <td>${this.statusTag(s.status)}</td>
+        <td>${this.statusTag(s.status)}${s.feePaid===false?'<div class="muted small" style="color:#dc2626;">⚠ 未缴费</div>':'<div class="muted small" style="color:#059669;">✓ 已缴费</div>'}</td>
         <td class="actions">${this.sessionActions(s, 'signer')}</td>`;
     },
     homeSignerRow(s) {
-      return `<td><code style="background:#f1f5f9;padding:2px 6px;border-radius:4px;">${s.id}</code></td>
+      const cd = this._countdownTag(s);
+      return `<td><code style="background:#f1f5f9;padding:2px 6px;border-radius:4px;">${s.id}</code> ${cd}</td>
         <td><b>${s.topic}</b></td>
         <td>${s.notaryName}<br/><span class="muted small">${s.notaryOrg}</span></td>
         <td>${fmtTime(s.appointAt)}</td>
@@ -790,12 +823,19 @@
     sessionActions(s, role) {
       let html = '';
       if (s.status === 'pending') {
-        html += `<button class="btn-primary small" onclick="App.joinRoom('${s.id}')">${role === 'notary' ? '开始签约' : '进入签约'}</button>`;
+        const diff = s.appointAt - Date.now();
+        const urgent = diff < 3600000 && diff > 0;
+        const btnClass = urgent ? 'btn-primary' : 'btn-primary';
+        const label = role === 'notary' ? '开始签约' : '进入签约';
+        html += `<button class="${btnClass} small" style="${urgent?'animation:pulse 1.5s infinite;':''}" onclick="App.joinRoom('${s.id}')">${label}</button>`;
         html += `<button class="btn-ghost small" onclick="App.viewSession('${s.id}')">详情</button>`;
       } else if (s.status === 'ongoing') {
-        html += `<button class="btn-primary small" onclick="App.joinRoom('${s.id}')">返回房间</button>`;
+        html += `<button class="btn-primary small" style="animation:pulse 1.5s infinite;" onclick="App.joinRoom('${s.id}')">返回房间</button>`;
       } else if (s.status === 'done') {
         html += `<button class="btn-ghost small" onclick="App.viewSession('${s.id}')">查看</button>`;
+        html += `<button class="btn-ghost small" onclick="App.downloadCertById('${s.id}')">下载</button>`;
+      } else if (s.status === 'canceled') {
+        html += '<span class="muted small">已取消</span>';
       }
       return html;
     },
@@ -2047,21 +2087,24 @@
       if (!s) return;
       this.addSystemMsg('【公证人】已开始本次公证流程，正在进行材料初审与实人核验...');
       this.toast('公证人已接入，将按中国委托公证人法定流程办理...', 'info');
-      this.speak('公证人已接入，请稍候。');
+      this.speak('公证人已接入，即将开始实人核验，请稍候。');
       this._setAutoStep = (n, label) => { /* 内部状态，无 UI */ };
       // 1) 材料初审 + 实人核验：自动扫描身份证 + 人脸比对
       setTimeout(() => {
         this.addSystemMsg('【公证人】读取身份证件信息，核验申请人主体资格...');
+        this.speak('正在进行身份证件核验。');
         this.startIDScan();
       }, 800);
       // 2) 人脸比对
       setTimeout(() => {
         this.addSystemMsg('【公证人】身份证件核验通过，开始人脸活体比对...');
+        this.speak('请将面部对准识别框，开始人脸比对。');
         this.startFaceVerify();
       }, 3200);
       // 3) 通过核验 → 下一步
       setTimeout(() => {
         this.addSystemMsg('【公证人】实人核验通过（身份证读卡+人脸比对），进入法律告知与声明意愿确认环节。');
+        this.speak('实人核验通过，即将进入法律告知步骤。');
         this._setAutoStep(2, '法律告知与声明意愿确认');
         this.passVerify();
       }, 6200);
@@ -2070,18 +2113,27 @@
         const cb = $('#agree-notice');
         if (cb && !cb.checked) { cb.checked = true; cb.dispatchEvent(new Event('change')); }
         const btn = $('#notice-next-btn');
-        if (btn && !btn.disabled) { this.nextStep(); this._setAutoStep(3, '文书真实性合法性核查'); this.addSystemMsg('【公证人】法律告知事项已确认，进入文书真实性核查环节（依《宣誓及声明条例》）。'); }
+        if (btn && !btn.disabled) {
+          this.nextStep(); this._setAutoStep(3, '文书真实性合法性核查');
+          this.addSystemMsg('【公证人】法律告知事项已确认，进入文书真实性核查环节（依《宣誓及声明条例》）。');
+          this.speak('法律告知步骤完成，即将进入文书核查步骤。');
+        }
       }, 7400);
       // 5) 文书核查自动勾选 + 下一步
       setTimeout(() => {
         const cb = $('#agree-doc');
         if (cb && !cb.checked) { cb.checked = true; cb.dispatchEvent(new Event('change')); }
         const btn = $('#doc-next-btn');
-        if (btn && !btn.disabled) { this.nextStep(); this._setAutoStep(4, '公证人出证与电子签署'); this.addSystemMsg('【公证人】文书核查无误，进入公证人出证与双方签署环节。'); }
+        if (btn && !btn.disabled) {
+          this.nextStep(); this._setAutoStep(4, '公证人出证与电子签署');
+          this.addSystemMsg('【公证人】文书核查无误，进入公证人出证与双方签署环节。');
+          this.speak('文书核查步骤完成，即将进入出证签署步骤。');
+        }
       }, 8800);
       // 6) 公证人自动签名
       setTimeout(() => {
         this.addSystemMsg('【公证人】公证人签署出证，已加盖委托公证人专用印章，电子副本同步上传至律政司与司法部双平台备案。');
+        this.speak('公证人正在签署出证。');
         this.confirmSign();
         this._setAutoStep(5, '加章转递与区块链存证');
       }, 10000);
@@ -2097,7 +2149,7 @@
         this.nextStep();
         this.addSystemMsg('【系统】公证流程完成，已在 TRC-20 链上完成存证');
         this.toast('🎉 公证流程完成！公证书已生成', 'success');
-        this.speak('公证流程完成。');
+        this.speak('加章存证步骤完成，公证流程全部完成，公证书已生成。');
       }, 13000);
     },
     updateTimer() {
@@ -2661,6 +2713,21 @@
       this.speak('公证书已生成，请在弹窗中保存为PDF文件。');
     },
     downloadVideo() { this.toast('全程录像 MP4 下载中...', 'success'); },
+    shareCompletion() {
+      const s = this.state.activeSession;
+      if (!s) return;
+      const text = `【签署完成】\n会议：${s.topic}\n编号：${s.id}\n公证人：${s.notaryName}（${s.notaryOrg}）\n签署人：${s.signerName}\n区块链存证：${s.txHash ? s.txHash.slice(0,16)+'...' : '--'}\n区块高度：#${s.blockH || '--'}\n公证书编号：${s.certNo || '--'}`;
+      if (navigator.share) {
+        navigator.share({ title: '签署完成通知', text }).catch(() => {});
+      } else {
+        // 回退：复制到剪贴板
+        navigator.clipboard?.writeText(text).then(() => {
+          this.toast('签署完成信息已复制到剪贴板', 'success');
+        }).catch(() => {
+          this.toast('请手动截图分享', 'info');
+        });
+      }
+    },
 
     /* 生成公证书打印视图 — 优先打开页内预览弹窗，备选新标签页打印 */
     _openCertPrintView(s) {
