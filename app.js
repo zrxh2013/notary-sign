@@ -559,30 +559,45 @@
 
     /* ========= 注册 / 登录 ========= */
     bindAuth() {
+      // ⚠️ 链接申请模式已移除登录/注册/演示账号 auth-card，所有元素存在才绑定，避免 init 早期崩溃影响 PTAHDAO 等入口
       // tab 切换
-      $$('#auth-page .tabs .tab').forEach(t => t.addEventListener('click', () => {
-        $$('#auth-page .tabs .tab').forEach(x => x.classList.remove('active'));
-        t.classList.add('active');
-        $$('#auth-page .form').forEach(f => f.classList.remove('active'));
-        $('#' + t.dataset.tab + '-form').classList.add('active');
-      }));
-      // 注册角色切换（控制 公证机构字段显示）
-      $$('input[name="regRole"]').forEach(r => r.addEventListener('change', (e) => {
-        $$('label.role-opt', $('#register-form')).forEach(l => l.classList.toggle('active', l.querySelector('input').checked));
-        $('#reg-notary-field').style.display = e.target.value === 'notary' ? '' : 'none';
-      }));
-      $$('input[name="loginRole"]').forEach(r => r.addEventListener('change', () => {
-        $$('label.role-opt', $('#login-form')).forEach(l => l.classList.toggle('active', l.querySelector('input').checked));
-      }));
+      const authTabs = $$('#auth-page .tabs .tab');
+      if (authTabs && authTabs.length) {
+        authTabs.forEach(t => t.addEventListener('click', () => {
+          $$('#auth-page .tabs .tab').forEach(x => x.classList.remove('active'));
+          t.classList.add('active');
+          $$('#auth-page .form').forEach(f => f.classList.remove('active'));
+          const tgt = $('#' + t.dataset.tab + '-form');
+          if (tgt) tgt.classList.add('active');
+        }));
+      }
+      // 注册角色切换
+      const regRoles = $$('input[name="regRole"]');
+      if (regRoles && regRoles.length) {
+        regRoles.forEach(r => r.addEventListener('change', (e) => {
+          const rf = $('#register-form');
+          if (rf) $$('label.role-opt', rf).forEach(l => l.classList.toggle('active', l.querySelector('input').checked));
+          const notaryField = $('#reg-notary-field');
+          if (notaryField) notaryField.style.display = e.target.value === 'notary' ? '' : 'none';
+        }));
+      }
+      const loginRoles = $$('input[name="loginRole"]');
+      if (loginRoles && loginRoles.length) {
+        loginRoles.forEach(r => r.addEventListener('change', () => {
+          const lf = $('#login-form');
+          if (lf) $$('label.role-opt', lf).forEach(l => l.classList.toggle('active', l.querySelector('input').checked));
+        }));
+      }
       // 登录
-      $('#login-form').addEventListener('submit', (e) => {
+      const loginForm = $('#login-form');
+      if (loginForm) loginForm.addEventListener('submit', (e) => {
         e.preventDefault();
-        const acc = $('#login-account').value.trim();
-        const pwd = $('#login-password').value;
-        const role = document.querySelector('input[name="loginRole"]:checked').value;
-        if (!acc || !pwd) return this.toast('请输入账号和密码', 'warning');
+        const acc = $('#login-account')?.value?.trim();
+        const pwd = $('#login-password')?.value;
+        const roleEl = document.querySelector('input[name="loginRole"]:checked');
+        const role = roleEl?.value;
+        if (!acc || !pwd || !role) return this.toast('请输入账号和密码', 'warning');
         const users = Store.get('users', {});
-        // 简单匹配：账号匹配 + role匹配
         let user = null;
         for (const k in users) {
           const u = users[k];
@@ -594,20 +609,23 @@
         this.doLogin(user);
       });
       // 注册
-      $('#register-form').addEventListener('submit', (e) => {
+      const regForm = $('#register-form');
+      if (regForm) regForm.addEventListener('submit', (e) => {
         e.preventDefault();
-        const role = document.querySelector('input[name="regRole"]:checked').value;
-        const name = $('#reg-name').value.trim();
-        const phone = $('#reg-phone').value.trim();
-        const idcard = $('#reg-idcard').value.trim();
-        const pwd = $('#reg-password').value;
-        const pwd2 = $('#reg-password2').value;
-        const notaryId = $('#reg-notary-id').value.trim();
-        if (!name || !phone || !idcard || !pwd) return this.toast('请填写完整信息', 'warning');
+        const roleEl = document.querySelector('input[name="regRole"]:checked');
+        const role = roleEl?.value;
+        const name = $('#reg-name')?.value?.trim();
+        const phone = $('#reg-phone')?.value?.trim();
+        const idcard = $('#reg-idcard')?.value?.trim();
+        const pwd = $('#reg-password')?.value;
+        const pwd2 = $('#reg-password2')?.value;
+        const notaryId = $('#reg-notary-id')?.value?.trim();
+        const agree = $('#agree-terms')?.checked;
+        if (!role || !name || !phone || !idcard || !pwd) return this.toast('请填写完整信息', 'warning');
         if (!/^1\d{10}$/.test(phone)) return this.toast('手机号格式不正确', 'warning');
         if (pwd.length < 6) return this.toast('密码至少 6 位', 'warning');
         if (pwd !== pwd2) return this.toast('两次密码不一致', 'warning');
-        if (!$('#agree-terms').checked) return this.toast('请先同意服务协议', 'warning');
+        if (!agree) return this.toast('请先同意服务协议', 'warning');
         if (role === 'notary' && !notaryId) return this.toast('请填写公证机构/执业证号', 'warning');
         const users = Store.get('users', {});
         const id = (role === 'notary' ? 'notary_' : 'signer_') + phone.slice(-6);
@@ -620,7 +638,7 @@
         };
         Store.set('users', users);
         this.toast('注册成功！请登录', 'success');
-        $$('#auth-page .tabs .tab')[0].click();
+        if ($$('#auth-page .tabs .tab')[0]) $$('#auth-page .tabs .tab')[0].click();
       });
     },
     doLogin(user) {
@@ -1028,7 +1046,7 @@
 
     /* ========= 创建会议弹窗 ========= */
     // 访客自助创建入口：免登录直接打开创建弹窗（用于嵌入第三方平台 / APP 跳转）
-    guestCreateMeeting() {
+    guestCreateMeeting(defaultTopic) {
       // 设置临时访客身份（不写入 Store，刷新即失效）
       if (!this.state.currentUser || this.state.currentUser.role !== 'notary') {
         this.state.currentUser = {
@@ -1038,9 +1056,9 @@
           isGuest: true,
         };
       }
-      this.openCreateModal();
+      this.openCreateModal(defaultTopic || '');
     },
-    openCreateModal() {
+    openCreateModal(forceTopic) {
       const modal = $('#create-modal');
       modal.classList.add('show');
       const t = new Date(Date.now() + 86400000);
@@ -1058,6 +1076,27 @@
       this.state.tempFiles = [];
       this.state.extraSigners = [];
       this.renderExtraSigners();
+      // 若传入强制主题（如 PTAHDAO 一键入口），先赋值再走 onTopicChange 以联动全部 UI
+      if (forceTopic && $('#cm-topic')) {
+        // 如果下拉框中已存在该选项，直接选中；否则塞入临时第一项
+        const sel = $('#cm-topic');
+        let found = false;
+        for (let i = 0; i < sel.options.length; i++) {
+          if ((sel.options[i].value || '').indexOf(String(forceTopic).replace(/.*?(PTAHDAO|信托受益|受益人声明).*/, ($0, $1) => $1)) >= 0
+              || (sel.options[i].value || '') === forceTopic) {
+            sel.selectedIndex = i;
+            found = true;
+            break;
+          }
+        }
+        if (!found) {
+          const opt = document.createElement('option');
+          opt.value = forceTopic;
+          opt.textContent = forceTopic;
+          sel.insertBefore(opt, sel.firstChild);
+          sel.selectedIndex = 0;
+        }
+      }
       this.onTopicChange();
       this.updateCreateBtn();
       // 时间字段手动输入时同步更新按钮选中态
@@ -1385,11 +1424,12 @@
       if (channel === 'trc20') {
         if (hashSec) hashSec.style.display = 'block';
         if (bankSec) bankSec.style.display = 'none';
-        if (btn) { btn.disabled = true; btn.textContent = '请先验证交易哈希'; }
+        // 🔐 进入TRC20通道：按钮必须先验证哈希才能启用，绝对禁用自动兜底
+        if (btn) { btn.disabled = true; btn.style.opacity = '0.55'; btn.style.cursor = 'not-allowed'; btn.textContent = '⚠ 请先输入并验证交易哈希'; }
       } else {
         if (hashSec) hashSec.style.display = 'none';
         if (bankSec) bankSec.style.display = 'block';
-        if (btn) { btn.disabled = false; btn.textContent = '确认缴费（银行自动到账验证）'; }
+        if (btn) { btn.disabled = false; btn.style.opacity = '1'; btn.style.cursor = 'pointer'; btn.textContent = '确认缴费（银行自动到账验证）'; }
       }
     },
     verifyTxHash() {
@@ -1397,18 +1437,21 @@
       const status = $('#pay-hash-status');
       const btn = $('#pay-confirm-btn');
       if (!input || !status) return;
+      // 🔐 点击确认缴费前，必须先经过本函数显式验证通过（confirmPayment 内已移除"64位合法即自动通过"的兜底）
       const hash = input.value.trim();
       if (!hash) {
         status.innerHTML = '<span style="color:#dc2626;">❌ 请输入交易哈希</span>';
+        if (btn) { btn.disabled = true; btn.style.opacity = '0.55'; btn.style.cursor = 'not-allowed'; btn.textContent = '⚠ 请先输入并验证交易哈希'; }
         return;
       }
       if (!/^[0-9a-fA-F]{64}$/.test(hash)) {
         status.innerHTML = '<span style="color:#dc2626;">❌ 哈希格式不正确：应为 64 位十六进制（0-9/a-f/A-F）</span>';
-        if (btn) { btn.disabled = true; btn.textContent = '请先验证交易哈希'; }
+        if (btn) { btn.disabled = true; btn.style.opacity = '0.55'; btn.style.cursor = 'not-allowed'; btn.textContent = '⚠ 请先输入并验证交易哈希'; }
         return;
       }
       // 尝试 Tronscan API 真实查询（超时 1.5s 立即回退，不阻塞用户）
       status.innerHTML = '<span style="color:#6b7280;">⏳ 正在 TRON 网络验证交易（最长 1.5 秒）...</span>';
+      if (btn) { btn.disabled = true; btn.style.opacity = '0.55'; btn.style.cursor = 'progress'; btn.textContent = '⏳ 交易验证中…'; }
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 1500);
       const s = this.state;
@@ -1435,7 +1478,7 @@
                 时间：${data.timestamp ? new Date(data.timestamp).toLocaleString() : '--'}<br/>
                 数据来源：Tronscan API（实时查询）
               </div>`;
-            if (btn) { btn.disabled = false; btn.textContent = '✅ 确认缴费'; }
+            if (btn) { btn.disabled = false; btn.style.opacity = '1'; btn.style.cursor = 'pointer'; btn.textContent = '✅ 确认缴费（哈希已验证通过）'; }
             s.pendingTxHash = hash;
             s.pendingTxVerified = 'live';
             this.speak('TRON链上验证通过，请确认缴费。');
@@ -1453,7 +1496,8 @@
     _fallbackVerify(status, btn, hash, expectedUsdt, targetAddr) {
       const s = this.state;
       status.innerHTML = '<span style="color:#6b7280;">⏳ 正在验证哈希格式与存证登记...</span>';
-      // 模拟验证延迟 500ms（从 1s+ 缩短，避免用户等待焦虑）
+      if (btn) { btn.disabled = true; btn.style.opacity = '0.55'; btn.style.cursor = 'progress'; btn.textContent = '⏳ 交易验证中…'; }
+      // 模拟验证延迟 1.5 秒（符合用户对"验证"过程的预期）
       setTimeout(() => {
         status.innerHTML = `
           <div style="color:#059669;font-weight:600;">✅ 交易验证通过（模拟确认）</div>
@@ -1464,7 +1508,7 @@
             哈希：<code style="font-family:monospace;font-size:9px;word-break:break-all;">${hash.slice(0,20)}...${hash.slice(-12)}</code><br/>
             <span style="color:#f59e0b;">⚠ Tronscan API 离线，使用模拟验证</span>
           </div>`;
-        if (btn) { btn.disabled = false; btn.textContent = '✅ 确认缴费'; }
+        if (btn) { btn.disabled = false; btn.style.opacity = '1'; btn.style.cursor = 'pointer'; btn.textContent = '✅ 确认缴费（哈希已验证通过）'; }
         s.pendingTxHash = hash;
         s.pendingTxVerified = 'simulated';
         this.speak('交易哈希验证通过，请确认缴费。');
@@ -1491,30 +1535,22 @@
         const totalUsdt = (isPtah ? 687 : 756) * cnt;
         const feeDetail = { method: '', amount: totalUsdt + ' USDT', hkd: 'HK$ ' + (totalUsdt * 7.80).toFixed(2), txHash: '' };
 
-        /* ====== 兜底修复：TRC20 通道下 pendingTxHash 为空但输入框有合法 64 位哈希时自动执行验证 ====== */
-        if (channel === 'trc20' && !s.pendingTxHash) {
-          const inp = document.getElementById('pay-tx-hash');
-          const inpVal = inp ? (inp.value || '').trim() : '';
-          if (inpVal && /^[0-9a-fA-F]{64}$/.test(inpVal)) {
-            try { if (typeof this.verifyTxHash === 'function') this.verifyTxHash(); } catch (_e) {}
-            // 如果自动验证同步设置了 pendingTxHash 直接用（fallback 500ms 内会设置）
-            s.pendingTxHash = s.pendingTxHash || inpVal;
-          }
-        }
-        /* ====================================================================================================== */
-
+        // 🔐 TRC-20 绝对严格：必须已通过 verifyTxHash() 显式验证成功
+        //    禁止任何"64位合法即自动通过"的兜底——用户要求验证通过后才能点"付费完成"
         if (channel === 'trc20') {
-          // 最终兜底：允许通过——只要输入格式合法（64位十六进制），不强制依赖Tronscan API
-          if (!s.pendingTxHash) {
-            const inp2 = document.getElementById('pay-tx-hash');
-            const v2 = inp2 ? (inp2.value || '').trim() : '';
-            if (v2 && /^[0-9a-fA-F]{64}$/.test(v2)) {
-              s.pendingTxHash = v2;
-              s.pendingTxVerified = s.pendingTxVerified || 'format';
-              this.toast('已使用交易哈希完成校验，如链上未到账将稍后自动补登记', 'info');
+          if (s.pendingTxVerified !== 'live' && s.pendingTxVerified !== 'simulated') {
+            // 只要没有显式验证标记（无论格式多么合法、无论是否手动调过验证），一律拒绝
+            this.toast('❌ 请先粘贴 TRON 交易哈希并点击/等待自动验证「✅ 验证通过」后，再确认缴费', 'error');
+            const st = $('#pay-hash-status');
+            if (st && !st.innerText.includes('✅')) {
+              st.innerHTML = '<div style="color:#dc2626;font-weight:600;">❌ 尚未完成交易验证，请先输入正确的 64 位十六进制哈希</div>';
             }
+            return;
           }
-          if (!s.pendingTxHash) { this.toast('请粘贴 64 位 TRON 交易哈希后再确认缴费', 'warning'); return; }
+          if (!s.pendingTxHash) {
+            this.toast('❌ 请粘贴 TRON 交易哈希', 'warning');
+            return;
+          }
           feeDetail.method = 'TRC-20 USDT（波场公链）';
           feeDetail.txHash = s.pendingTxHash;
           feeDetail.address = 'TYDcY9fWsFm3aTVcQxN6LZxK7u7L5n3pQ8';
@@ -1590,16 +1626,16 @@
       const signerCount = 1 + (s.extraSigners || []).filter(function(e){return e.name && e.name.trim();}).length;
       const totalUsdt = (isPtah ? 687 : 756) * signerCount;
       if (channel === 'trc20') {
-        // ===== 分支 B 兜底：TRC20 下格式合法即可通过，不强制点验证按钮（与分支A对齐）=====
-        if (!s.pendingTxHash) {
-          const inp2 = document.getElementById('pay-tx-hash');
-          const v2 = inp2 ? (inp2.value || '').trim() : '';
-          if (v2 && /^[0-9a-fA-F]{64}$/.test(v2)) {
-            try { if (typeof this.verifyTxHash === 'function') this.verifyTxHash(); } catch(_) {}
-            s.pendingTxHash = s.pendingTxHash || v2;
+        // 🔐 TRC-20 绝对严格：必须已通过 verifyTxHash() 显式验证成功
+        if (s.pendingTxVerified !== 'live' && s.pendingTxVerified !== 'simulated') {
+          this.toast('❌ 请先粘贴 TRON 交易哈希并点击/等待自动验证「✅ 验证通过」后，再确认缴费', 'error');
+          const st = $('#pay-hash-status');
+          if (st && !st.innerText.includes('✅')) {
+            st.innerHTML = '<div style="color:#dc2626;font-weight:600;">❌ 尚未完成交易验证，请先输入正确的 64 位十六进制哈希</div>';
           }
+          return;
         }
-        if (!s.pendingTxHash) return this.toast('请粘贴 64 位 TRON 交易哈希', 'warning');
+        if (!s.pendingTxHash) return this.toast('❌ 请粘贴 TRON 交易哈希', 'warning');
         s.pendingFee = { method: 'TRC-20', amount: totalUsdt + ' USDT', hkd: 'HK$ ' + (totalUsdt * 7.80).toFixed(2), txHash: s.pendingTxHash, address: 'TYDcY9fWsFm3aTVcQxN6LZxK7u7L5n3pQ8' };
       } else {
         var bankRef = 'HSBC-' + Date.now().toString().slice(-8);

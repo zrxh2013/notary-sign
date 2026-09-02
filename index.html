@@ -60,7 +60,8 @@
       <div class="bg-shape s3"></div>
     </div>
     <div class="auth-container">
-      <div class="auth-brand">
+      <!-- 链接申请模式：无登录注册，直接显示创建会议 + 凭号加入 -->
+      <div class="auth-brand" style="max-width:460px;margin:0 auto;display:block;float:none;">
         <div class="big-logo">
           <svg viewBox="0 0 24 24" width="56" height="56" fill="none" stroke="#3b82f6" stroke-width="1.8">
             <path d="M9 12l2 2 4-4M12 2l9 4v6c0 5-4 9-9 10-5-1-9-5-9-10V6l9-4z"/>
@@ -75,112 +76,35 @@
           <li><span class="dot ok"></span>区块链存证可追溯</li>
         </ul>
         <button type="button" id="guest-create-btn" onclick="App.guestCreateMeeting()"
-          style="width:100%;margin-top:18px;padding:12px 16px;border:none;border-radius:10px;background:linear-gradient(135deg,#3b82f6,#1e40af);color:#fff;font-size:14px;font-weight:600;cursor:pointer;box-shadow:0 4px 12px rgba(59,130,246,.3);transition:all .2s;"
-          onmouseover="this.style.transform='translateY(-1px)';this.style.boxShadow='0 6px 16px rgba(59,130,246,.4)';"
-          onmouseout="this.style.transform='translateY(0)';this.style.boxShadow='0 4px 12px rgba(59,130,246,.3)';">
-          ⚡ 立即创建会议（免登录）
+          style="width:100%;margin-top:18px;padding:14px 16px;border:none;border-radius:12px;background:linear-gradient(135deg,#3b82f6,#1e40af);color:#fff;font-size:16px;font-weight:700;cursor:pointer;box-shadow:0 6px 18px rgba(59,130,246,.35);transition:all .2s;letter-spacing:0.5px;"
+          onmouseover="this.style.transform='translateY(-1px)';this.style.boxShadow='0 8px 22px rgba(59,130,246,.45)';"
+          onmouseout="this.style.transform='translateY(0)';this.style.boxShadow='0 6px 18px rgba(59,130,246,.35)';">
+          ⚡ 立即发起公证签约申请
         </button>
-        <p style="text-align:center;font-size:11px;color:#94a3b8;margin-top:8px;">访客可直接选时间 + 付费 + 生成会议号</p>
+        <p style="text-align:center;font-size:12px;color:#64748b;margin-top:10px;">选择时间 → 在线缴费 → 自动生成会议号 → 进入视频房间签约</p>
         <!-- 凭会议号加入 -->
-        <div style="margin-top:14px;padding:12px;border:1px dashed #cbd5e1;border-radius:10px;background:#f8fafc;">
-          <div style="font-size:12px;color:#64748b;margin-bottom:8px;">📋 已有会议号，直接加入</div>
+        <div style="margin-top:18px;padding:16px;border:1px dashed #cbd5e1;border-radius:12px;background:#f8fafc;">
+          <div style="font-size:13px;color:#475569;margin-bottom:10px;font-weight:600;">📋 已有会议号，直接加入</div>
           <div style="display:flex;gap:6px;">
             <input type="text" id="home-join-sid" placeholder="输入会议号（如 GZ54114024）"
-              style="flex:1;padding:8px 10px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;outline:none;"
+              style="flex:1;padding:10px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:14px;outline:none;"
               onkeydown="if(event.key==='Enter') App.joinById(document.getElementById('home-join-sid').value, document.getElementById('home-join-name').value, document.getElementById('home-join-phone').value)" />
           </div>
-          <div style="display:flex;gap:6px;margin-top:6px;">
-            <input type="text" id="home-join-name" placeholder="您的姓名（签署人）" style="flex:1;padding:7px 10px;border:1px solid #e2e8f0;border-radius:8px;font-size:12px;outline:none;" />
-            <input type="text" id="home-join-phone" placeholder="手机号" style="flex:1;padding:7px 10px;border:1px solid #e2e8f0;border-radius:8px;font-size:12px;outline:none;" />
+          <div style="display:flex;gap:6px;margin-top:8px;">
+            <input type="text" id="home-join-name" placeholder="您的姓名（签署人）" style="flex:1;padding:9px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;outline:none;" />
+            <input type="text" id="home-join-phone" placeholder="手机号" style="flex:1;padding:9px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;outline:none;" />
           </div>
-          <button class="btn-primary small" style="width:100%;margin-top:8px;padding:8px;"
-            onclick="App.joinById(document.getElementById('home-join-sid').value, document.getElementById('home-join-name').value, document.getElementById('home-join-phone').value)">进入视频签约</button>
+          <button class="btn-primary small" style="width:100%;margin-top:10px;padding:10px;font-size:14px;font-weight:600;"
+            onclick="App.joinById(document.getElementById('home-join-sid').value, document.getElementById('home-join-name').value, document.getElementById('home-join-phone').value)">▶ 进入视频签约房间</button>
         </div>
-      </div>
-      <div class="auth-card">
-        <div class="tabs">
-          <button class="tab active" data-tab="login">登录</button>
-          <button class="tab" data-tab="register">注册</button>
+        <!-- PTAHDAO 信托声明专用入口 -->
+        <div style="margin-top:16px;padding:16px;border-radius:12px;background:linear-gradient(135deg,#4c1d95 0%,#7c3aed 60%,#a78bfa 100%);color:#fff;box-shadow:0 6px 20px rgba(124,58,237,.35);">
+          <div style="font-size:15px;font-weight:700;margin-bottom:4px;">🏦 PTAHDAO 信托受益人声明</div>
+          <div style="font-size:12px;color:#e9d5ff;margin-bottom:12px;">香港叶谢邓律师行 · 邓达明 CAO-HK-D0468 · 687 USDT 一站式</div>
+          <button onclick="App.guestCreateMeeting('PTAHDAO 信托受益人声明书签署公证')" style="width:100%;padding:11px;border:none;border-radius:8px;background:#fff;color:#5b21b6;font-size:14px;font-weight:700;cursor:pointer;">
+            🚀 一键发起信托受益声明公证
+          </button>
         </div>
-
-        <!-- 登录表单 -->
-        <form id="login-form" class="form active">
-          <div class="role-switch">
-            <label class="role-opt active">
-              <input type="radio" name="loginRole" value="notary" checked />
-              <span>公证人</span>
-            </label>
-            <label class="role-opt">
-              <input type="radio" name="loginRole" value="signer" />
-              <span>签约方</span>
-            </label>
-          </div>
-          <div class="field">
-            <label>账号</label>
-            <input type="text" id="login-account" placeholder="手机号 / 工号" autocomplete="username" />
-          </div>
-          <div class="field">
-            <label>密码</label>
-            <input type="password" id="login-password" placeholder="请输入密码" autocomplete="current-password" />
-          </div>
-          <div class="form-hint">
-            <label><input type="checkbox" id="remember-me" /> 记住我</label>
-            <a href="#">忘记密码？</a>
-          </div>
-          <button type="submit" class="btn-primary btn-block">登 录</button>
-          <div class="divider"><span>快速体验</span></div>
-          <div class="demo-row" style="flex-wrap:wrap;">
-            <button type="button" class="btn-ghost" onclick="App.demoLogin('notary')">公证人 · 陈正义（北京中信）</button>
-            <button type="button" class="btn-ghost" onclick="App.demoLogin('signer')">签约方 · 李华</button>
-          </div>
-          <div class="demo-row" style="flex-wrap:wrap;margin-top:8px;">
-            <button type="button" class="btn-ghost" style="border-color:#b91c1c;color:#991b1b;background:#fff1f2;" onclick="App.demoLogin('notary_hk')">🇭🇰 香港公证人 · 邓达明（叶谢邓律师行）</button>
-            <button type="button" class="btn-ghost" style="border-color:#b91c1c;color:#991b1b;background:#fff1f2;" onclick="App.demoLogin('signer_hk')">🇭🇰 声明人 · 陈嘉怡</button>
-          </div>
-          <p class="form-hint" style="text-align:center;margin-top:10px;">所有演示账号统一密码：<code>123456</code></p>
-        </form>
-
-        <!-- 注册表单 -->
-        <form id="register-form" class="form">
-          <div class="role-switch">
-            <label class="role-opt active">
-              <input type="radio" name="regRole" value="notary" checked />
-              <span>我是公证人</span>
-            </label>
-            <label class="role-opt">
-              <input type="radio" name="regRole" value="signer" />
-              <span>我是签约方</span>
-            </label>
-          </div>
-          <div class="field">
-            <label>真实姓名</label>
-            <input type="text" id="reg-name" placeholder="请输入真实姓名" />
-          </div>
-          <div class="field" id="reg-notary-field">
-            <label>公证机构 / 执业证号</label>
-            <input type="text" id="reg-notary-id" placeholder="如：XX公证处 110101XXXX" />
-          </div>
-          <div class="field">
-            <label>手机号</label>
-            <input type="tel" id="reg-phone" placeholder="请输入手机号" maxlength="11" />
-          </div>
-          <div class="field">
-            <label>身份证号</label>
-            <input type="text" id="reg-idcard" placeholder="用于实名认证" maxlength="18" />
-          </div>
-          <div class="field">
-            <label>设置密码</label>
-            <input type="password" id="reg-password" placeholder="至少 6 位" />
-          </div>
-          <div class="field">
-            <label>确认密码</label>
-            <input type="password" id="reg-password2" placeholder="再次输入密码" />
-          </div>
-          <div class="form-hint">
-            <label><input type="checkbox" id="agree-terms" checked /> 我已阅读并同意<a href="#">《服务协议》</a>与<a href="#">《隐私政策》</a></label>
-          </div>
-          <button type="submit" class="btn-primary btn-block">注 册 账 号</button>
-        </form>
       </div>
     </div>
   </section>
