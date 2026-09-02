@@ -1076,26 +1076,29 @@
       this.state.tempFiles = [];
       this.state.extraSigners = [];
       this.renderExtraSigners();
-      // 若传入强制主题（如 PTAHDAO 一键入口），先赋值再走 onTopicChange 以联动全部 UI
-      if (forceTopic && $('#cm-topic')) {
-        // 如果下拉框中已存在该选项，直接选中；否则塞入临时第一项
-        const sel = $('#cm-topic');
+      // ========== 业务选项固定：PTAHDAO 信托受益人声明书签署公证（全场景唯一） ==========
+      // 忽略 forceTopic 任何入参，直接强制 cm-topic 为固定 PTAHDAO 主题，并 disabled 锁定用户无法切换
+      const FIXED_TOPIC = 'PTAHDAO 信托受益人声明书签署公证';
+      const topicSel = $('#cm-topic');
+      if (topicSel) {
+        // 确保下拉框里一定有这个值（没有就塞到第一项）
         let found = false;
-        for (let i = 0; i < sel.options.length; i++) {
-          if ((sel.options[i].value || '').indexOf(String(forceTopic).replace(/.*?(PTAHDAO|信托受益|受益人声明).*/, ($0, $1) => $1)) >= 0
-              || (sel.options[i].value || '') === forceTopic) {
-            sel.selectedIndex = i;
-            found = true;
-            break;
-          }
+        for (let i = 0; i < topicSel.options.length; i++) {
+          const v = topicSel.options[i].value || '';
+          if (v.indexOf('PTAHDAO') >= 0 || v === FIXED_TOPIC) { topicSel.selectedIndex = i; found = true; break; }
         }
         if (!found) {
-          const opt = document.createElement('option');
-          opt.value = forceTopic;
-          opt.textContent = forceTopic;
-          sel.insertBefore(opt, sel.firstChild);
-          sel.selectedIndex = 0;
+          const o = document.createElement('option');
+          o.value = FIXED_TOPIC; o.textContent = FIXED_TOPIC;
+          topicSel.insertBefore(o, topicSel.firstChild);
+          topicSel.selectedIndex = 0;
+        } else {
+          topicSel.value = topicSel.options[topicSel.selectedIndex].value; // 保留原 PTAHDAO 的那项
         }
+        // 最终再次兜底：把 value 强制写回并设为不可编辑（DevTools 改 value 也不会影响 onTopicChange 的永远固定逻辑）
+        topicSel.disabled = true;
+        topicSel.style.opacity = '0.4';
+        topicSel.style.pointerEvents = 'none';
       }
       this.onTopicChange();
       this.updateCreateBtn();
@@ -1106,56 +1109,42 @@
       this._renderGuestNotice();
       this._renderQuickSlots();
     },
-    // 主题切换：PTAHDAO 信托专用字段显示 + Label 调整 + 费用更新 + 固定只读标题卡
+    // 主题切换：已固定为 PTAHDAO（永远走PTAHDAO分支，无else恢复）—— 固定只读标题卡 + 隐藏cm-topic + 专用字段显示 + 已缴费勾选隐藏 + Label适配
     onTopicChange() {
       const topic = $('#cm-topic')?.value || '';
-      const isPtah = topic.indexOf('PTAHDAO') >= 0;
+      const isPtah = true;  // ========== 永远固定 PTAHDAO，不管 topic 真正值是什么 ==========
       const ptahBox = $('#cm-ptah-fields');
-      if (ptahBox) ptahBox.style.display = isPtah ? 'block' : 'none';
+      if (ptahBox) ptahBox.style.display = 'block'; // 永远显示 PTAHDAO 黄色信托字段区
       // PTAHDAO 模式下调整 Label
       const nl = $('#cm-signer-name-label');
       const pl = $('#cm-signer-phone-label');
       const il = $('#cm-signer-idcard-label');
-      if (nl) nl.innerHTML = isPtah ? '持有人姓名 <span class="req">*</span>' : '签约方姓名 <span class="req">*</span>';
-      if (pl) pl.innerHTML = isPtah ? '持有人手机 <span class="req">*</span>' : '签约方手机号 <span class="req">*</span>';
-      if (il) il.textContent = isPtah ? '持有人证件号' : '签约方身份证号';
-      // ===== PTAHDAO 专属：固定只读标题卡 + 隐藏原主题下拉框（对齐URL入口UI）=====
+      if (nl) nl.innerHTML = '持有人姓名 <span class="req">*</span>';
+      if (pl) pl.innerHTML = '持有人手机 <span class="req">*</span>';
+      if (il) il.textContent = '持有人证件号';
+      // ===== PTAHDAO 固定：只读标题卡 + 隐藏原主题下拉框 =====
       const FIXED_PTAH_TOPIC = 'PTAHDAO信托结算用户签署【受益人声明书】公证申请表';
       const topicSel = $('#cm-topic');
       if (topicSel) {
         const topicWrap = topicSel.closest ? (topicSel.closest('.field') || topicSel.parentElement) : topicSel.parentElement;
-        if (isPtah) {
-          // 隐藏主题下拉框
-          if (topicWrap) topicWrap.style.display = 'none';
-          // 插入只读固定标题卡片（如果不存在）
-          if (ptahBox && !document.getElementById('ptah-topic-readonly')) {
-            const ro = document.createElement('div');
-            ro.id = 'ptah-topic-readonly';
-            ro.style.cssText = 'background:linear-gradient(135deg,#eef2ff,#e0e7ff);border:1px solid #6366f1;border-radius:10px;padding:12px 14px;margin-bottom:12px;';
-            ro.innerHTML = '<div style="font-size:12px;color:#4338ca;font-weight:600;margin-bottom:4px;">📝 签约事项（PTAHDAO专用 · 固定）</div>' +
-              '<div style="font-size:14px;color:#1e1b4b;font-weight:700;line-height:1.5;">' + FIXED_PTAH_TOPIC + '</div>';
-            ptahBox.parentElement.insertBefore(ro, ptahBox);
-          }
-          // ====== 一次性从付费到签署（免中间弹窗点击）：隐藏已确认缴费勾选 + 强制选中 ======
-          const feeCb = document.getElementById('cm-fee-paid');
-          if (feeCb) {
-            feeCb.checked = true;
-            feeCb.dispatchEvent(new Event('change', { bubbles: true }));
-            const feeLabel = feeCb.closest ? feeCb.closest('label') : feeCb.parentElement;
-            if (feeLabel) feeLabel.style.display = 'none';
-          }
-        } else {
-          // 恢复主题下拉框
-          if (topicWrap) topicWrap.style.display = '';
-          // 移除只读标题卡片
-          const ro = document.getElementById('ptah-topic-readonly');
-          if (ro) ro.remove();
-          // 恢复已确认缴费勾选
-          const feeCb = document.getElementById('cm-fee-paid');
-          if (feeCb) {
-            const feeLabel = feeCb.closest ? feeCb.closest('label') : feeCb.parentElement;
-            if (feeLabel) feeLabel.style.display = '';
-          }
+        // 永远隐藏主题下拉框（用户根本看不到，不能选任何其他主题）
+        if (topicWrap) topicWrap.style.display = 'none';
+        // 永远插入只读固定标题卡片（如果不存在）— 紫色渐变 + 蓝紫边框 + 加粗签约事项固定标题
+        if (ptahBox && !document.getElementById('ptah-topic-readonly')) {
+          const ro = document.createElement('div');
+          ro.id = 'ptah-topic-readonly';
+          ro.style.cssText = 'background:linear-gradient(135deg,#eef2ff,#e0e7ff);border:1px solid #6366f1;border-radius:10px;padding:12px 14px;margin-bottom:12px;';
+          ro.innerHTML = '<div style="font-size:12px;color:#4338ca;font-weight:600;margin-bottom:4px;">📝 签约事项（PTAHDAO专用 · 固定不可更改）</div>' +
+            '<div style="font-size:14px;color:#1e1b4b;font-weight:700;line-height:1.5;">' + FIXED_PTAH_TOPIC + '</div>';
+          ptahBox.parentElement.insertBefore(ro, ptahBox);
+        }
+        // ====== 一次性从付费到签署：隐藏已确认缴费勾选 + 强制选中（永远生效） ======
+        const feeCb = document.getElementById('cm-fee-paid');
+        if (feeCb) {
+          feeCb.checked = true;
+          feeCb.dispatchEvent(new Event('change', { bubbles: true }));
+          const feeLabel = feeCb.closest ? feeCb.closest('label') : feeCb.parentElement;
+          if (feeLabel) feeLabel.style.display = 'none';
         }
       }
       this.updateCreateFee();
@@ -1542,7 +1531,7 @@
           this.toast('❌ 请粘贴 TRON 交易哈希', 'warning');
           return;
         }
-        feeDetail.method = 'TRC-20 USDT（波场公链 · 信托结算专用存证通道）';
+        feeDetail.method = 'TRC-20 USDT（本次链上公证专用收款通道）';
         feeDetail.txHash = s.pendingTxHash;
         feeDetail.address = 'TYDcY9fWsFm3aTVcQxN6LZxK7u7L5n3pQ8';
 
@@ -1626,7 +1615,7 @@
         return;
       }
       if (!s.pendingTxHash) return this.toast('❌ 请粘贴 TRON 交易哈希', 'warning');
-      s.pendingFee = { method: 'TRC-20 USDT（波场公链 · 信托结算专用存证通道）', amount: totalUsdt + ' USDT', hkd: 'HK$ ' + (totalUsdt * 7.80).toFixed(2), txHash: s.pendingTxHash, address: 'TYDcY9fWsFm3aTVcQxN6LZxK7u7L5n3pQ8' };
+      s.pendingFee = { method: 'TRC-20 USDT（本次链上公证专用收款通道）', amount: totalUsdt + ' USDT', hkd: 'HK$ ' + (totalUsdt * 7.80).toFixed(2), txHash: s.pendingTxHash, address: 'TYDcY9fWsFm3aTVcQxN6LZxK7u7L5n3pQ8' };
       if (isPtah) {
         s.pendingPtah = {
           trustAccount: $('#cm-trust-account')?.value?.trim() || '',
