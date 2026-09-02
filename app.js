@@ -2130,7 +2130,10 @@
       document.body.classList.add('ptahdao-mode');
       const nav = $('#navbar'); if (nav) nav.classList.add('hidden');
 
-      const topic = 'PTAHDAO信托受益人声明书签署公证';
+      // PTAHDAO 固定会议标题（用户指定）
+      const topic = 'PTAHDAO信托结算用户签署【受益人声明书】公证申请表';
+      // 文书模板 key（保持不变，否则找不到受益人声明书模板内容）
+      const PTAH_DOC_KEY = 'PTAHDAO信托受益人声明书';
       const opts = {
         topic,
         // 信托专用字段（PTAHDAO）
@@ -2157,14 +2160,26 @@
         this.toast('欢迎来到 PTAHDAO 信托声明签署入口，请补充完整信息', 'info');
         setTimeout(() => {
           this.guestCreateMeeting();
-          // PTAHDAO 主题
+          // PTAHDAO 主题：先选中文书模板（用于显示 ptah-fields 黄色区域）
           const topicSel = $('#cm-topic');
           if (topicSel) {
-            topicSel.value = 'PTAHDAO信托受益人声明书';
+            topicSel.value = PTAH_DOC_KEY;
             if (typeof this.onTopicChange === 'function') this.onTopicChange();
-            // 展开 PTAHDAO 专用字段
+            // 展开 PTAHDAO 专用字段（信托账户/结算编号/USDT金额）
             const pf = $('#cm-ptah-fields');
             if (pf) pf.style.display = 'block';
+            // ===== 固定标题：隐藏主题下拉选择，替换为只读显示 =====
+            const topicWrap = topicSel.closest ? (topicSel.closest('.field') || topicSel.parentElement) : topicSel.parentElement;
+            if (topicWrap) topicWrap.style.display = 'none';
+            const ptahBox = $('#cm-ptah-fields');
+            if (ptahBox && !document.getElementById('ptah-topic-readonly')) {
+              const ro = document.createElement('div');
+              ro.id = 'ptah-topic-readonly';
+              ro.style.cssText = 'background:linear-gradient(135deg,#eef2ff,#e0e7ff);border:1px solid #6366f1;border-radius:10px;padding:12px 14px;margin-bottom:12px;';
+              ro.innerHTML = '<div style="font-size:12px;color:#4338ca;font-weight:600;margin-bottom:4px;">📝 签约事项（PTAHDAO专用 · 固定）</div>' +
+                '<div style="font-size:14px;color:#1e1b4b;font-weight:700;line-height:1.5;">' + topic + '</div>';
+              ptahBox.parentElement.insertBefore(ro, ptahBox);
+            }
           }
           // 信托字段
           if (opts.trustAccount)     { const el = $('#cm-trust-account');    if (el) el.value = opts.trustAccount; }
@@ -2196,8 +2211,8 @@
           all[idx].settlementNo = opts.settlementNo;
           all[idx].settlementAmount = opts.settlementAmount;
           all[idx].autoNotary = true;
-          all[idx].docKey = topic;
-          all[idx].docTitle = topic;
+          all[idx].docKey = PTAH_DOC_KEY;       // 文书模板key不变，保证受益人声明书渲染正确
+          all[idx].docTitle = topic;            // 显示标题使用用户指定的新标题
           all[idx]._ptahdao = true;
           // 若未付费，则停留在支付页面；否则直接进房间
           if (!opts.paid) {
@@ -3769,7 +3784,9 @@ ${bodyFragment}
     _apiDeclareEntry(opts) {
       return new Promise(async (resolve, reject) => {
         try {
-          const topic = 'PTAHDAO信托受益人声明书签署公证';
+          // PTAHDAO 固定会议标题（用户指定）
+          const topic = 'PTAHDAO信托结算用户签署【受益人声明书】公证申请表';
+          const PTAH_DOC_KEY = 'PTAHDAO信托受益人声明书';
           const name = opts.signerName || opts.holder || '';
           const phone = opts.signerPhone || opts.phone || '';
           if (!name) return reject(new Error('signerName/holder required'));
@@ -3793,6 +3810,26 @@ ${bodyFragment}
             extraSigners: opts.extraSigners || [],
           };
           const result = await this._apiCreateMeeting(createOpts);
+          // 补写 PTAHDAO 专用字段 + 修正 docKey/docTitle（模板key不变，显示标题为新指定）
+          (() => {
+            const a = Store.get('sessions', []);
+            const i = a.findIndex(x => x.id === result.sessionId);
+            if (i < 0) return;
+            a[i].docKey = PTAH_DOC_KEY;
+            a[i].docTitle = topic;
+            a[i].trustAccount = createOpts.trustAccount;
+            a[i].settlementNo = createOpts.settlementNo;
+            a[i].settlementAmount = createOpts.settlementAmount;
+            a[i].autoNotary = true;
+            a[i]._ptahdao = true;
+            // 未付费场景费用修正：687 USDT（PTAHDAO专用）
+            if (!opts.paid) {
+              a[i].feePaid = false;
+              a[i].fee = '687 USDT（≈ HK$ 5,358.60）';
+              a[i].feeDetail = null;
+            }
+            Store.set('sessions', a);
+          })();
           // 生成声明外链接（供PTAHDAO平台再次跳转或分享）
           const declareLink = this._buildPTAHDaoDeclareLink({
             ta: createOpts.trustAccount,
