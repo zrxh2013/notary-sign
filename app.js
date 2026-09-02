@@ -1271,13 +1271,52 @@
             <div style="margin-top:6px;font-size:10px;color:#94a3b8;">来源：[1]香港律师会2025《公证服务收费指导区间》自然人3,000-8,000港元/份；[2]中国委托公证人协会 caao.org.hk 收费下限表（中法服转递章 = 公证费 × 1/3）</div>`;
         }
       }
-      // 默认选中银行通道
-      this.selectPayChannel('bank');
-      // 重置哈希输入
-      const hashInput = $('#pay-tx-hash');
-      if (hashInput) hashInput.value = '';
-      const btn = $('#pay-confirm-btn');
-      if (btn) { btn.disabled = false; btn.textContent = '确认缴费'; }
+      // 填充案件信息（表单创建入口 → 从 cm-* 输入框取数对齐 PTAHDAO URL 入口 UI）
+      (() => {
+        const info = $('#pay-case-info');
+        if (!info) return;
+        const sn = $('#cm-signer-name')?.value?.trim() || '';
+        const sp = $('#cm-signer-phone')?.value?.trim() || '';
+        const ta = $('#cm-trust-account')?.value?.trim() || '';
+        const sn2 = $('#cm-settlement-no')?.value?.trim() || '';
+        const sa = $('#cm-settlement-amount')?.value?.trim() || '';
+        if (!sn && !ta) { info.innerHTML = ''; return; }
+        info.innerHTML = `<div style="font-size:13px;background:linear-gradient(135deg,#dbeafe,#eff6ff);border:1px solid #bfdbfe;border-radius:8px;padding:8px 10px;line-height:1.7;"><b>${topic || '签约事项'}</b>${sn ? '<br>签约人：' + sn + (sp ? ' (' + sp + ')' : '') : ''}${ta ? '<br>信托账户：' + ta : ''}${sn2 ? (ta ? ' · 结算编号：' + sn2 : '<br>结算编号：' + sn2) : ''}${sa ? '<br>结算资产：' + sa + ' USDT' : ''}</div>`;
+      })();
+      // PTAHDAO 表单创建入口：默认 TRC-20 + 绑定哈希输入自动校验 + 填充案件信息
+      const self2 = this;
+      function bindPtahPayUI() {
+        // 选通道：PTAHDAO 默认 TRC-20；否则默认银行
+        const channel = isPtah ? 'trc20' : 'bank';
+        const trcRadio = document.querySelector('input[name="pay-channel"][value="trc20"]');
+        const bankRadio = document.querySelector('input[name="pay-channel"][value="bank"]');
+        if (channel === 'trc20' && trcRadio) trcRadio.checked = true;
+        if (channel === 'bank' && bankRadio) bankRadio.checked = true;
+        if (typeof self2.selectPayChannel === 'function') self2.selectPayChannel(channel);
+        // 重置输入
+        const txInp = document.getElementById('pay-tx-hash');
+        if (txInp) txInp.value = '';
+        const st = document.getElementById('pay-hash-status');
+        if (st) st.textContent = '';
+        // 绑定自动校验（仅 TRC-20 场景才有必要；但 PTAHDAO 默认走 TRC-20）
+        if (!txInp || txInp.__formBound) return;
+        txInp.__formBound = true;
+        let t = null;
+        const handler = function () {
+          clearTimeout(t);
+          const v = (txInp.value || '').trim();
+          const s2 = $('#pay-hash-status');
+          const b = $('#pay-confirm-btn');
+          if (!v) { if (s2) s2.innerHTML = ''; if (b) { b.disabled = true; b.textContent = '请先输入交易哈希'; } return; }
+          if (!/^[0-9a-fA-F]{64}$/.test(v)) { if (s2) s2.innerHTML = '<span style="color:#dc2626;">❌ 应为 64 位十六进制（0-9/a-f/A-F）</span>'; if (b) { b.disabled = true; b.textContent = '请先验证交易哈希'; } return; }
+          t = setTimeout(() => { if (typeof self2.verifyTxHash === 'function') self2.verifyTxHash(); }, 400);
+        };
+        txInp.addEventListener('input', handler);
+        txInp.addEventListener('paste', () => setTimeout(handler, 20));
+        txInp.addEventListener('change', handler);
+      }
+      if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', bindPtahPayUI, { once: true });
+      else bindPtahPayUI();
     },
     selectPayChannel(channel) {
       // UI 高亮
@@ -1501,7 +1540,16 @@
       const signerCount = 1 + (s.extraSigners || []).filter(function(e){return e.name && e.name.trim();}).length;
       const totalUsdt = (isPtah ? 687 : 756) * signerCount;
       if (channel === 'trc20') {
-        if (!s.pendingTxHash) return this.toast('请先验证交易哈希', 'warning');
+        // ===== 分支 B 兜底：TRC20 下格式合法即可通过，不强制点验证按钮（与分支A对齐）=====
+        if (!s.pendingTxHash) {
+          const inp2 = document.getElementById('pay-tx-hash');
+          const v2 = inp2 ? (inp2.value || '').trim() : '';
+          if (v2 && /^[0-9a-fA-F]{64}$/.test(v2)) {
+            try { if (typeof this.verifyTxHash === 'function') this.verifyTxHash(); } catch(_) {}
+            s.pendingTxHash = s.pendingTxHash || v2;
+          }
+        }
+        if (!s.pendingTxHash) return this.toast('请粘贴 64 位 TRON 交易哈希', 'warning');
         s.pendingFee = { method: 'TRC-20', amount: totalUsdt + ' USDT', hkd: 'HK$ ' + (totalUsdt * 7.80).toFixed(2), txHash: s.pendingTxHash, address: 'TYDcY9fWsFm3aTVcQxN6LZxK7u7L5n3pQ8' };
       } else {
         var bankRef = 'HSBC-' + Date.now().toString().slice(-8);
@@ -1710,15 +1758,41 @@
       } else {
         this.toast(`申请成功！未缴费（待补缴），通知已发送至 ${maskPhone(phone)}`, 'success');
       }
-      // 清除 pendingFee
+      // 清除 pendingFee 并登录签约方
       this.state.pendingFee = null;
       this.state.pendingTxHash = null;
-      // 访客模式：不渲染 dashboard（无登录态），仅展示签约链接弹窗
-      if (!isGuest) {
+      // ===== PTAHDAO 表单创建路径 & 普通访客路径：缴费成功后自动签约人登录 + showPaySuccessLink（24小时有效）=====
+      const isPtahPaid = s.feeDetail && s.feePaid && (ptahFields || !!s.trustAccount);
+      if (s.feeDetail && s.feePaid && (isPtahPaid || !isGuest)) {
+        // 24 小时有效
+        s.joinTokenExp = Date.now() + 24 * 60 * 60 * 1000;
+        const ssRe = Store.get('sessions', []);
+        const idxRe = ssRe.findIndex(x => x.id === s.id);
+        if (idxRe >= 0) { ssRe[idxRe].joinTokenExp = s.joinTokenExp; Store.set('sessions', ssRe); }
+        // 自动登录签约人（与 PTAHDAO URL 入口一致）
+        if (!this.state.currentUser || this.state.currentUser.role !== 'signer') {
+          this.state.currentUser = {
+            id: 'signer_' + s.id,
+            name: s.signerName,
+            phone: s.signerPhone,
+            idcard: s.signerIdcard || '',
+            role: 'signer',
+            org: ptahFields ? 'PTAHDAO信托' : '',
+            guest: true,
+          };
+          Store.set('currentUser', this.state.currentUser);
+        }
+        const nav = document.getElementById('navbar'); if (nav) nav.classList.remove('hidden');
+        if (typeof this.updateNavUser === 'function') { try { this.updateNavUser(); } catch(_) {} }
+        // 弹出缴费成功 + 入会链接（代替原 showSignerLinkModal）
+        this.showPaySuccessLink(s);
+      } else if (!isGuest) {
         this.renderSessions(); this.renderHome(); this.updatePendingBadge();
+      } else {
+        // 访客未缴费路径：保持原 showSignerLinkModal（兼容）
+        this.showSignerLinkModal(s);
       }
-      // 弹出签约人入口链接（含专属令牌 + 二维码）
-      this.showSignerLinkModal(s);
+      // 结束分支 B
       // 通知第三方平台：创建会议成功
       this._emitSdkEvent('create', {
         sessionId: s.id, caseNo: s._caseNo || this.genCaseNo(s),
