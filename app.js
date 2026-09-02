@@ -1062,10 +1062,15 @@
     openCreateModal(forceTopic) {
       const modal = $('#create-modal');
       modal.classList.add('show');
-      // 预约默认：当前日期 + 1 小时的整点/半点（给用户准备时间，避免约最近）
-      const nowPlus = new Date(Date.now() + 60 * 60 * 1000);
-      $('#cm-date').value = fmtDateOnly(nowPlus.getTime());
-      $('#cm-time').value = String(nowPlus.getHours()).padStart(2,'0') + ':' + (nowPlus.getMinutes() >= 30 ? '30' : '00');
+      // 申请页时间选项已移除：不再展示 cm-date/cm-time/cm-duration
+      // 内部仍自动默认预约时间为 "now + 2小时 的下一个整点" 用于 session.appointAt 兜底展示
+      const cmDate = $('#cm-date');
+      const cmTime = $('#cm-time');
+      if (cmDate || cmTime) {
+        const nowPlus = new Date(Date.now() + 120 * 60 * 1000);
+        if (cmDate) cmDate.value = fmtDateOnly(nowPlus.getTime());
+        if (cmTime) cmTime.value = String(nowPlus.getHours()).padStart(2,'0') + ':' + (nowPlus.getMinutes() >= 30 ? '30' : '00');
+      }
       $('#cm-signer-name').value = '';
       $('#cm-signer-phone').value = '';
       $('#cm-signer-idcard').value = '';
@@ -1109,12 +1114,14 @@
 
       this.onTopicChange();
       this.updateCreateBtn();
-      // 时间字段手动输入时同步快捷时段选择器
-      $('#cm-time').oninput = () => this._renderQuickSlots();
-      $('#cm-time').onchange = () => this._renderQuickSlots();
-      // 访客模式：显示系统指派公证人提示 + 渲染快捷时段
+      // 申请页时间选项已移除（cm-time 不存在），跳过快捷时段 input 绑定
+      const cmTimeEl = $('#cm-time');
+      if (cmTimeEl) {
+        cmTimeEl.oninput = () => this._renderQuickSlots();
+        cmTimeEl.onchange = () => this._renderQuickSlots();
+      }
+      // 访客模式：显示系统指派公证人提示（不再渲染快捷时段）
       this._renderGuestNotice();
-      this._renderQuickSlots();
     },
     // 主题切换：通用实现 —— 用户自由选 → PTAHDAO 时显示信托字段，其他主题显示正常
     onTopicChange() {
@@ -1179,8 +1186,9 @@
         <span style="color:#475569;">${DEFAULT_NOTARY.name}（${DEFAULT_NOTARY.org}）· 执业证号 ${DEFAULT_NOTARY.certNo}</span><br/>
         <span style="color:#64748b;font-size:11px;">访客模式：付费后立即生成会议号与签约链接，无需注册登录</span>`;
     },
-    // 快捷时段选择（早晨/上午/下午/晚上）
+    // 快捷时段选择（申请页时间选项已移除，保留代码作兼容性兜底：如果 cm-time 不存在则不再渲染）
     _renderQuickSlots() {
+      if (!$('#cm-time')) return;
       let box = $('#cm-quick-slots');
       if (!box) {
         box = document.createElement('div');
@@ -1834,16 +1842,26 @@
       const name = $('#cm-signer-name').value.trim();
       const phone = $('#cm-signer-phone').value.trim();
       const idcard = $('#cm-signer-idcard').value.trim();
-      const date = $('#cm-date').value;
-      const time = $('#cm-time').value;
-      const duration = $('#cm-duration').value;
+      const date = $('#cm-date')?.value;
+      const time = $('#cm-time')?.value;
+      const duration = ($('#cm-duration')?.value || '30 分钟');
       const remark = $('#cm-remark').value.trim();
       const isPtah = topic.indexOf('PTAHDAO') >= 0;
       if (!name) return this.toast(isPtah ? '请填写持有人姓名' : '请填写签约方姓名', 'warning');
       // 支持内地手机号（1 开头 11 位）与香港号码（+852 加 8 位，或 8 位数字）
       const phoneOk = /^1\d{10}$/.test(phone) || /^\+?852\s?\d{4}\s?\d{4}$/.test(phone) || /^\d{8}$/.test(phone);
       if (!phoneOk) return this.toast('请输入正确的手机号（内地 11 位 / 香港 8 位或 +852 开头）', 'warning');
-      if (!date || !time) return this.toast('请选择预约日期时间', 'warning');
+      // 申请页时间选项已去除：无需用户手选 date/time，系统自动兜底为 "当前时间 + 2 小时" 作为 appointAt
+      let appointAtMs;
+      if (date && time) {
+        appointAtMs = new Date(date + 'T' + time + ':00').getTime();
+      } else {
+        const def = new Date(Date.now() + 120 * 60 * 1000);
+        def.setMinutes(def.getMinutes() >= 30 ? 30 : 0, 0, 0);
+        appointAtMs = def.getTime();
+      }
+      const durMatch = /(\d+)/.exec(String(duration || ''));
+      const durationMin = Math.max(15, Number(durMatch?.[1] || 30));
       // PTAHDAO 信托专用字段校验
       let ptahFields = null;
       if (isPtah) {
@@ -1859,8 +1877,8 @@
       // 访客自助模式：未登录或非公证人角色 → 系统自动指派默认公证人
       const isGuest = !u || u.role !== 'notary';
       const notary = isGuest ? DEFAULT_NOTARY : u;
-      const appointAt = new Date(date + 'T' + time + ':00').getTime();
-      if (isNaN(appointAt)) return this.toast('预约时间无效', 'warning');
+      const appointAt = appointAtMs;
+      if (isNaN(appointAt) || appointAt < 1e12) return this.toast('预约时间无效', 'warning');
       const allSessions = Store.get('sessions', []);
       const conflict = allSessions.some(x =>
         x.notaryId === notary.id && x.status !== 'canceled' && x.status !== 'done' &&

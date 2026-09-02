@@ -87,7 +87,6 @@
             <div style="font-size:17px;font-weight:800;color:#1e3a8a;margin-top:6px;letter-spacing:0.2px;">申请创建视频签约会议</div>
             <div style="font-size:12.5px;color:#475569;margin-top:8px;line-height:1.7;">
               · 自由选择签约事项与参会人员<br/>
-              · 选定签约时间（最短可约 30 分钟后）<br/>
               · 在线缴费后 <b style="color:#1d4ed8;">自动生成 YT 格式会议号</b><br/>
               · 复制会议号给签署方凭号直接进入
             </div>
@@ -95,7 +94,6 @@
             <button type="button" style="margin-top:16px;padding:13px 16px;border:none;border-radius:12px;background:linear-gradient(135deg,#3b82f6,#1e40af);color:#fff;font-size:14.5px;font-weight:700;cursor:pointer;box-shadow:0 6px 18px rgba(30,64,175,.45);letter-spacing:0.3px;">
               ⚡ 开始申请（自动生成会议号）
             </button>
-            <div style="text-align:center;font-size:11.5px;color:#64748b;margin-top:8px;">⏰ 请提前 10 分钟进入会议室（预留实人核验+设备调试）</div>
           </div>
 
           <!-- 右卡：🎬 凭会议号进入视频签约会议室 -->
@@ -121,7 +119,6 @@
                 onclick="App.joinById(document.getElementById('home-join-sid').value, document.getElementById('home-join-name').value, document.getElementById('home-join-phone').value)">
                 ▶ 立即进入会议室
               </button>
-              <div style="text-align:center;font-size:11.5px;color:#047857;margin-top:2px;">⏰ 温馨提示：请提前 10 分钟进入会议室（预留实人核验+设备调试时间）</div>
             </div>
           </div>
         </div>
@@ -964,26 +961,7 @@
             添加签约方（最多5人）
           </button>
         </div>
-        <div class="row-grid-2">
-          <div class="field">
-            <label>预约日期 <span class="req">*</span></label>
-            <input type="date" id="cm-date" />
-          </div>
-          <div class="field">
-            <label>预约时间 <span class="req">*</span></label>
-            <input type="time" id="cm-time" />
-          </div>
-        </div>
-        <div class="field">
-          <label>签约时长预估</label>
-          <select id="cm-duration">
-            <option>15 分钟</option>
-            <option selected>30 分钟</option>
-            <option>45 分钟</option>
-            <option>60 分钟</option>
-            <option>90 分钟</option>
-          </select>
-        </div>
+        <!-- 申请页去除：预约日期 / 预约时间 / 签约时长预估 三项时间类选项，申请后立即生效，无需用户手选时间 -->
         <div class="field">
           <label>上传待签文书</label>
           <div class="drop-area" id="cm-drop">
