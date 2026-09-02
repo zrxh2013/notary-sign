@@ -505,10 +505,9 @@
 
     /* ========= 页面/视图切换 ========= */
     showPage(p) {
-      // ====== 用户不可进入工作台：所有 notary-dashboard / signer-dashboard 访问全部拦截 → 强制走首页并一键启动 PTAHDAO 信托声明公证 ======
+      // ====== 用户不可进入工作台：dashboard 路由统一改为首页 ======
       if (p === 'notary-dashboard' || p === 'signer-dashboard' || p === 'dashboard') {
         p = 'home-page';
-        setTimeout(() => { try { App.guestCreateMeeting && App.guestCreateMeeting('PTAHDAO 信托受益人声明书签署公证'); } catch(e){} }, 250);
       }
       $$('.page').forEach(el => el.classList.remove('active'));
       const pg = $('#' + p);
@@ -677,15 +676,13 @@
       this.toast('已安全退出登录');
     },
     enterDashboard() {
-      // ====== 用户不可进入工作台：enterDashboard 改为直接启动 PTAHDAO 信托受益人声明书公证申请 ======
+      // ====== 用户不可进入工作台：统一回到首页（显示两张大卡：申请 / 凭号进入） ======
       const u = this.state.currentUser;
       if (!u) return;
       $('#nav-role-label').textContent = u?.org ? (u.org + ' · 信签云 · 视频公证签署') : '信签云 · 公证人视频签约平台';
       $('#nav-user').textContent = u.name + '（' + (u.role === 'notary' ? '公证员' : '签约方') + '）';
       this.showPage('home-page');
       this.toast('欢迎回来，' + u.name, 'success');
-      // ====== 用户不可进入工作台，登录后自动开启申请流程 ======
-      setTimeout(() => { try { App.guestCreateMeeting && App.guestCreateMeeting('PTAHDAO 信托受益人声明书签署公证'); } catch(e){} }, 280);
     },
     updatePendingBadge() {
       const u = this.state.currentUser; if (!u) return;
@@ -1065,90 +1062,102 @@
     openCreateModal(forceTopic) {
       const modal = $('#create-modal');
       modal.classList.add('show');
-      const t = new Date(Date.now() + 86400000);
-      $('#cm-date').value = fmtDateOnly(t.getTime());
-      $('#cm-time').value = '10:00';
+      // 预约默认：当前日期 + 1 小时的整点/半点（给用户准备时间，避免约最近）
+      const nowPlus = new Date(Date.now() + 60 * 60 * 1000);
+      $('#cm-date').value = fmtDateOnly(nowPlus.getTime());
+      $('#cm-time').value = String(nowPlus.getHours()).padStart(2,'0') + ':' + (nowPlus.getMinutes() >= 30 ? '30' : '00');
       $('#cm-signer-name').value = '';
       $('#cm-signer-phone').value = '';
       $('#cm-signer-idcard').value = '';
       $('#cm-remark').value = '';
       $('#cm-file-list').innerHTML = '';
-      // PTAHDAO 专用字段清空
+      // PTAHDAO 信托专用字段清空（用户选该主题时才显示）
       const ta = $('#cm-trust-account'); if (ta) ta.value = '';
       const sa = $('#cm-settlement-amount'); if (sa) sa.value = '';
       const sn = $('#cm-settlement-no'); if (sn) sn.value = '';
+      // 清除旧的只读 PTAHDAO 紫色标题卡（如有）
+      const oldRo = document.getElementById('ptah-topic-readonly'); if (oldRo) oldRo.remove();
       this.state.tempFiles = [];
       this.state.extraSigners = [];
       this.renderExtraSigners();
-      // ========== 业务选项固定：PTAHDAO 信托受益人声明书签署公证（全场景唯一） ==========
-      // 忽略 forceTopic 任何入参，直接强制 cm-topic 为固定 PTAHDAO 主题，并 disabled 锁定用户无法切换
-      const FIXED_TOPIC = 'PTAHDAO 信托受益人声明书签署公证';
+      // ====== 通用：主题下拉框可编辑，默认借款合同（如果 forceTopic 指定则用 forceTopic） ======
       const topicSel = $('#cm-topic');
       if (topicSel) {
-        // 确保下拉框里一定有这个值（没有就塞到第一项）
-        let found = false;
-        for (let i = 0; i < topicSel.options.length; i++) {
-          const v = topicSel.options[i].value || '';
-          if (v.indexOf('PTAHDAO') >= 0 || v === FIXED_TOPIC) { topicSel.selectedIndex = i; found = true; break; }
+        topicSel.disabled = false;
+        topicSel.style.opacity = '1';
+        topicSel.style.pointerEvents = 'auto';
+        const wrap = topicSel.closest ? (topicSel.closest('.field') || topicSel.parentElement) : topicSel.parentElement;
+        if (wrap) wrap.style.display = 'block';
+        if (forceTopic) {
+          for (let i = 0; i < topicSel.options.length; i++) {
+            if (topicSel.options[i].value === forceTopic) { topicSel.selectedIndex = i; break; }
+          }
         }
-        if (!found) {
-          const o = document.createElement('option');
-          o.value = FIXED_TOPIC; o.textContent = FIXED_TOPIC;
-          topicSel.insertBefore(o, topicSel.firstChild);
-          topicSel.selectedIndex = 0;
-        } else {
-          topicSel.value = topicSel.options[topicSel.selectedIndex].value; // 保留原 PTAHDAO 的那项
-        }
-        // 最终再次兜底：把 value 强制写回并设为不可编辑（DevTools 改 value 也不会影响 onTopicChange 的永远固定逻辑）
-        topicSel.disabled = true;
-        topicSel.style.opacity = '0.4';
-        topicSel.style.pointerEvents = 'none';
       }
+      // 恢复已确认缴费勾选：显示 + 默认不选（通用流程）
+      const feeCb = document.getElementById('cm-fee-paid');
+      const feeCbLabel = feeCb && (feeCb.closest ? feeCb.closest('label') : feeCb.parentElement);
+      if (feeCbLabel) feeCbLabel.style.display = 'flex';
+      if (feeCb) {
+        feeCb.checked = false;
+        feeCb.dispatchEvent(new Event('change', { bubbles: true }));
+      }
+      // 恢复标签：签约方（不会永远是持有人）
+      const nl = $('#cm-signer-name-label'); if (nl) nl.innerHTML = '签约方姓名 <span class="req">*</span>';
+      const pl = $('#cm-signer-phone-label'); if (pl) pl.innerHTML = '签约方手机号 <span class="req">*</span>';
+      const il = $('#cm-signer-idcard-label'); if (il) il.textContent = '签约方身份证号';
+
       this.onTopicChange();
       this.updateCreateBtn();
-      // 时间字段手动输入时同步更新按钮选中态
+      // 时间字段手动输入时同步快捷时段选择器
       $('#cm-time').oninput = () => this._renderQuickSlots();
       $('#cm-time').onchange = () => this._renderQuickSlots();
       // 访客模式：显示系统指派公证人提示 + 渲染快捷时段
       this._renderGuestNotice();
       this._renderQuickSlots();
     },
-    // 主题切换：已固定为 PTAHDAO（永远走PTAHDAO分支，无else恢复）—— 固定只读标题卡 + 隐藏cm-topic + 专用字段显示 + 已缴费勾选隐藏 + Label适配
+    // 主题切换：通用实现 —— 用户自由选 → PTAHDAO 时显示信托字段，其他主题显示正常
     onTopicChange() {
       const topic = $('#cm-topic')?.value || '';
-      const isPtah = true;  // ========== 永远固定 PTAHDAO，不管 topic 真正值是什么 ==========
+      const isPtah = /PTAHDAO/.test(topic);
       const ptahBox = $('#cm-ptah-fields');
-      if (ptahBox) ptahBox.style.display = 'block'; // 永远显示 PTAHDAO 黄色信托字段区
-      // PTAHDAO 模式下调整 Label
+      if (ptahBox) ptahBox.style.display = isPtah ? 'block' : 'none';
+      // PTAHDAO 模式下调整 Label（仅当 PTAHDAO 选中）
       const nl = $('#cm-signer-name-label');
       const pl = $('#cm-signer-phone-label');
       const il = $('#cm-signer-idcard-label');
-      if (nl) nl.innerHTML = '持有人姓名 <span class="req">*</span>';
-      if (pl) pl.innerHTML = '持有人手机 <span class="req">*</span>';
-      if (il) il.textContent = '持有人证件号';
-      // ===== PTAHDAO 固定：只读标题卡 + 隐藏原主题下拉框 =====
-      const FIXED_PTAH_TOPIC = 'PTAHDAO信托结算用户签署【受益人声明书】公证申请表';
+      if (isPtah) {
+        if (nl) nl.innerHTML = '持有人姓名 <span class="req">*</span>';
+        if (pl) pl.innerHTML = '持有人手机 <span class="req">*</span>';
+        if (il) il.textContent = '持有人证件号';
+      } else {
+        if (nl) nl.innerHTML = '签约方姓名 <span class="req">*</span>';
+        if (pl) pl.innerHTML = '签约方手机号 <span class="req">*</span>';
+        if (il) il.textContent = '签约方身份证号';
+      }
+      // ====== 主题下拉框：永远显示（允许切换） ======
       const topicSel = $('#cm-topic');
       if (topicSel) {
         const topicWrap = topicSel.closest ? (topicSel.closest('.field') || topicSel.parentElement) : topicSel.parentElement;
-        // 永远隐藏主题下拉框（用户根本看不到，不能选任何其他主题）
-        if (topicWrap) topicWrap.style.display = 'none';
-        // 永远插入只读固定标题卡片（如果不存在）— 紫色渐变 + 蓝紫边框 + 加粗签约事项固定标题
-        if (ptahBox && !document.getElementById('ptah-topic-readonly')) {
+        if (topicWrap) topicWrap.style.display = 'block';
+        // 清除旧的只读 PTAHDAO 紫色标题卡（如有）—— 用户切换了主题就不再展示
+        const oldRo = document.getElementById('ptah-topic-readonly'); if (oldRo) oldRo.remove();
+        // ====== 如果是 PTAHDAO，显示一个品牌只读提示卡（但不禁止用户切换到其他主题）======
+        if (isPtah && ptahBox && !document.getElementById('ptah-topic-readonly')) {
           const ro = document.createElement('div');
           ro.id = 'ptah-topic-readonly';
-          ro.style.cssText = 'background:linear-gradient(135deg,#eef2ff,#e0e7ff);border:1px solid #6366f1;border-radius:10px;padding:12px 14px;margin-bottom:12px;';
-          ro.innerHTML = '<div style="font-size:12px;color:#4338ca;font-weight:600;margin-bottom:4px;">📝 签约事项（PTAHDAO专用 · 固定不可更改）</div>' +
-            '<div style="font-size:14px;color:#1e1b4b;font-weight:700;line-height:1.5;">' + FIXED_PTAH_TOPIC + '</div>';
+          ro.style.cssText = 'background:linear-gradient(135deg,#eef2ff,#e0e7ff);border:1px solid #6366f1;border-radius:10px;padding:10px 14px;margin-bottom:10px;';
+          ro.innerHTML = '<div style="font-size:12px;color:#4338ca;font-weight:600;margin-bottom:2px;">🏦 PTAHDAO 信托受益人声明书 · 专用办理流程（可切换到其他主题）</div>';
           ptahBox.parentElement.insertBefore(ro, ptahBox);
         }
-        // ====== 一次性从付费到签署：隐藏已确认缴费勾选 + 强制选中（永远生效） ======
+        // ====== 通用：显示已缴费复选框（当 PTAHDAO 或 受益人声明书公证/香港版时默认选中但可改）======
         const feeCb = document.getElementById('cm-fee-paid');
+        const feeCbLabel = feeCb && (feeCb.closest ? feeCb.closest('label') : feeCb.parentElement);
+        if (feeCbLabel) feeCbLabel.style.display = 'flex';
         if (feeCb) {
-          feeCb.checked = true;
+          const recommendPay = isPtah || /受益人声明书公证/.test(topic);
+          feeCb.checked = recommendPay;
           feeCb.dispatchEvent(new Event('change', { bubbles: true }));
-          const feeLabel = feeCb.closest ? feeCb.closest('label') : feeCb.parentElement;
-          if (feeLabel) feeLabel.style.display = 'none';
         }
       }
       this.updateCreateFee();
@@ -1265,37 +1274,28 @@
     },
     updateCreateBtn() {
       const topic = $('#cm-topic')?.value || '';
-      const isPtah = topic.indexOf('PTAHDAO') >= 0;
       const btn = $('#cm-submit-btn');
       if (!btn) return;
-      if (isPtah) {
-        // PTAHDAO 一次性流程：付费→签约一气呵成，不用手动管勾选状态
-        btn.textContent = '💰 确认缴费并立即签署';
-        btn.disabled = false;
-        btn.style.opacity = '1';
-        return;
-      }
       const paid = $('#cm-fee-paid')?.checked;
       if (paid) {
-        btn.textContent = '确认缴费并创建会议';
+        btn.textContent = '💰 确认缴费并生成会议号';
         btn.disabled = false;
         btn.style.opacity = '1';
       } else {
-        btn.textContent = '创建会议（未缴费）';
-        btn.style.opacity = '0.6';
+        btn.textContent = '申请创建会议（待缴费，可稍后补缴后生成会议号）';
+        btn.disabled = false;
+        btn.style.opacity = '0.92';
       }
     },
     // ---- 缴费流程 ----
     tryCreate() {
-      const topic = $('#cm-topic')?.value || '';
-      const isPtah = topic.indexOf('PTAHDAO') >= 0;
-      const paid = isPtah ? true : !!($('#cm-fee-paid')?.checked); // PTAHDAO 始终走「先缴费再签约」一次性路径
+      const paid = !!($('#cm-fee-paid')?.checked);
       if (paid) {
         // 需要先缴费：关闭创建弹窗，打开缴费弹窗
         this.closeModal('create-modal');
         this.openPayModal();
       } else {
-        // 未缴费也允许创建（标记未缴费）
+        // 未缴费也允许申请（标记未缴费，但生成会议号同样生效）
         this.submitCreate();
       }
     },
@@ -1638,10 +1638,11 @@
       // 生成会议入口链接（跨设备自包含，含 session 数据）
       const link = this.buildSignerLink(s);
       const caseLink = this.buildCaseNoLink(s);
-      // 填充弹窗
+      // 填充弹窗：改为以 会议号 为绝对主角
       const topicEl = $('#pay-success-topic');
       if (topicEl) topicEl.textContent = s.topic || s.docTitle || '--';
       const sidEl = $('#pay-success-sid');
+      // 因为要兼容老代码 sidEl -> 这里写入原始短 GZ id
       if (sidEl) sidEl.textContent = s.id;
       const whenEl = $('#pay-success-when');
       if (whenEl) whenEl.textContent = '预约 ' + (typeof fmtTime === 'function' ? fmtTime(s.appointAt) : (s.date + ' ' + s.time));
@@ -1658,33 +1659,69 @@
       this._paySuccessSessionId = s.id;
       this._paySuccessLink = link;
       this._paySuccessCaseLink = caseLink;
+      this._paySuccessMeetingNo = s.meetingNo || s.id;
+
+      // ====== 【重点】在 会议信息区上方插入 超大会议号 展示块（申请与进入会议室功能分离的核心呈现）======
+      const infoBox = document.getElementById('pay-success-info');
+      if (infoBox) {
+        const min10 = 10 * 60 * 1000;
+        const diff = (s.appointAt || Date.now()) - Date.now();
+        const tips = [];
+        if (diff > min10) {
+          const mins = Math.ceil(diff / 60000);
+          tips.push(`距开始还有 <b>${mins} 分钟</b>，<span style="color:#dc2626;">请提前 10 分钟进入会议室</span>（预留实人核验+设备调试+承诺录音准备）`);
+        } else if (diff >= 0) {
+          tips.push(`<span style="color:#15803d;">✅ 已进入「提前 10 分钟」办理时段</span>，请尽快进入会议室（预留实人核验+设备调试）`);
+        } else {
+          const lateMin = Math.floor(-diff / 60000);
+          tips.push(`已超过预约时间 <b>${lateMin} 分钟</b>，请立即进入会议室（公证人可能正在等候）`);
+        }
+        // 注入 超大会议号 HTML
+        const injectId = 'pay-success-meetingno-big';
+        let block = document.getElementById(injectId);
+        if (!block) {
+          block = document.createElement('div');
+          block.id = injectId;
+          infoBox.parentElement.insertBefore(block, infoBox);
+        }
+        block.style.cssText = 'background:linear-gradient(135deg,#4338ca,#6d28d9);color:#fff;border-radius:14px;padding:18px 18px 16px;margin-bottom:14px;text-align:center;box-shadow:0 14px 34px rgba(79,70,229,.42);';
+        block.innerHTML = `
+          <div style="font-size:12.5px;opacity:0.92;font-weight:600;letter-spacing:1.5px;">📌 您的视频签约会议号（请保存好）</div>
+          <div style="font-family:ui-monospace,monospace;font-size:34px;font-weight:800;letter-spacing:1.5px;margin-top:4px;">${s.meetingNo || '--'}</div>
+          <button type="button" onclick="App.copyMeetingNoFromPaySuccess()" style="margin-top:8px;padding:6px 14px;border:none;border-radius:999px;background:rgba(255,255,255,0.22);color:#fff;font-size:12.5px;font-weight:700;cursor:pointer;backdrop-filter:blur(4px);">📋 一键复制会议号</button>
+          <div style="margin-top:10px;padding:8px 12px;background:rgba(255,255,255,0.12);border-radius:8px;font-size:12.5px;line-height:1.7;text-align:left;color:#f0f9ff;">
+            ⏰ <b>温馨提示：</b>${tips.join(' / ')}<br/>
+            <span style="opacity:0.92;">· 首页右侧「凭会议号进入」卡片输入此会议号即可进入视频签约室（支持跨设备）</span><br/>
+            <span style="opacity:0.92;">· 链接与会议号均 <b>24 小时内有效</b>，请妥善保管好。</span>
+          </div>
+        `;
+      }
       // 打开弹窗
       this.openModal('pay-success-modal');
-      this.speak('缴费成功！会议室入口链接已生成，24小时内有效，请点击进入会议室。');
-      // ====== PTAHDAO 一次性流程：付完费 1.2 秒倒计时后自动跳入签约房间，用户无需手动点按钮 ======
-      const isPtahFlow = s._ptahdao || /PTAHDAO|受益人声明书|信托/.test(s.topic || '') || (s.trustAccount && s.settlementNo);
-      if (isPtahFlow && typeof this.enterRoomFromPaySuccess === 'function') {
-        const self3 = this;
-        const modalBody = document.getElementById('pay-success-modal')?.querySelector('.modal-body');
-        let tipNode = document.getElementById('pay-success-entry-hint');
-        if (!tipNode && modalBody) {
-          tipNode = document.createElement('div');
-          tipNode.id = 'pay-success-entry-hint';
-          tipNode.style.cssText = 'margin-top:14px;padding:12px 14px;background:linear-gradient(135deg,#dcfce7,#bbf7d0);border:1px solid #86efac;border-radius:10px;text-align:center;color:#065f46;font-weight:700;font-size:13px;letter-spacing:0.2px;';
-          tipNode.innerHTML = '🚀 缴费成功，正在进入签约房间… <span id="pay-success-countdown" style="font-family:monospace;font-size:15px;">1.2</span> 秒后自动进入';
-          modalBody.appendChild(tipNode);
-        }
-        const cdNode = document.getElementById('pay-success-countdown');
-        let remain = 1.2;
-        const cdTimer = cdNode ? setInterval(function () {
-          remain = Math.max(0, +(remain - 0.1).toFixed(2));
-          cdNode.textContent = remain.toFixed(1);
-          if (remain <= 0) clearInterval(cdTimer);
-        }, 100) : null;
-        setTimeout(function () {
-          if (cdTimer) clearInterval(cdTimer);
-          self3.enterRoomFromPaySuccess();
-        }, 1200);
+      this.speak('缴费成功！会议号已生成。温馨提示：请提前十分钟进入会议室，预留实人核验与设备调试时间。');
+      // ====== 不再倒计时自动进入：申请和进入会议室功能分离，让用户自行点按钮 ======
+    },
+    // 从缴费成功弹窗复制会议号
+    copyMeetingNoFromPaySuccess() {
+      const mn = this._paySuccessMeetingNo || '';
+      if (!mn) return this.toast('会议号未生成', 'warning');
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(mn).then(() => this.toast('会议号 ' + mn + ' 已复制到剪贴板（请分享给签署方）', 'success'))
+          .catch(() => this._copyTextToast(mn, '会议号'));
+      } else {
+        this._copyTextToast(mn, '会议号');
+      }
+    },
+    _copyTextToast(text, label) {
+      try {
+        const inp = document.createElement('input');
+        inp.value = text; inp.style.position = 'fixed'; inp.style.left = '-9999px';
+        document.body.appendChild(inp); inp.select();
+        document.execCommand('copy');
+        document.body.removeChild(inp);
+        this.toast((label || '内容') + ' 已复制', 'success');
+      } catch (e) {
+        this.toast('复制失败，请手动选中复制：' + text, 'warning');
       }
     },
     // 复制入会链接
@@ -1767,7 +1804,31 @@
         </div>
       `).join('');
     },
-    removeFile(i) { this.state.tempFiles.splice(i, 1); this.renderFileList(); },
+    /**
+     * 生成可读会议号：YT-<4位年份>-<6位序号>
+     * 示例：YT-2026-048371
+     * 保证同一年份内单调递增且唯一；浏览器/沙箱本地生成，按 Store.sessions 同一年统计 +1。
+     */
+    genMeetingNo(appointAtTs) {
+      const yr = new Date(appointAtTs || Date.now()).getFullYear();
+      const prefix = 'YT-' + yr + '-';
+      const all = Store.get('sessions', []) || [];
+      let maxSeq = 0;
+      for (const s of all) {
+        const mn = String(s.meetingNo || '').toUpperCase();
+        if (!mn.startsWith(prefix)) continue;
+        const num = parseInt(mn.slice(prefix.length), 10);
+        if (!isNaN(num) && num > maxSeq) maxSeq = num;
+      }
+      // 起始序号 = 当年 000001，每次 +1；为避免创建时冲突，再加随机 3 位尾数
+      const next = maxSeq + 1;
+      // 6 位填充：不足 6 位用 0 左侧补齐（6 位最多同年 999,999 个会议号）
+      const seq = String(next).padStart(6, '0');
+      const mn = prefix + seq;
+      // 保证不会重复（理论上 next 单调递增）—— 保险：若真重复（高并发？）加 0.5-999 随机尾号
+      const clash = all.some(x => (x.meetingNo || '').toUpperCase() === mn);
+      return clash ? (prefix + String(Math.floor(Math.random() * 900000) + 100000)) : mn;
+    },
     submitCreate() {
       const topic = $('#cm-topic').value;
       const name = $('#cm-signer-name').value.trim();
@@ -1800,7 +1861,6 @@
       const notary = isGuest ? DEFAULT_NOTARY : u;
       const appointAt = new Date(date + 'T' + time + ':00').getTime();
       if (isNaN(appointAt)) return this.toast('预约时间无效', 'warning');
-      // 时间冲突校验：同公证人同一时段（±30 分钟）不能重复预约
       const allSessions = Store.get('sessions', []);
       const conflict = allSessions.some(x =>
         x.notaryId === notary.id && x.status !== 'canceled' && x.status !== 'done' &&
@@ -1811,8 +1871,11 @@
       if (appointAt < Date.now() - 5 * 60 * 1000) {
         return this.toast('预约时间不能早于当前时间，请重新选择', 'warning');
       }
+      // ========== 生成短可读会议号 YT-<4位年份>-<6位序号唯一> ==========
+      const meetingNo = this.genMeetingNo(appointAt);
       const s = {
         id: 'GZ' + Date.now().toString().slice(-8),
+        meetingNo,       // 申请和加入会议室的主入口（用户凭这个号加入）
         topic, status: 'pending',
         notaryId: notary.id, notaryName: notary.name, notaryOrg: notary.org || '--',
         notaryCertNo: notary.certNo || '',
@@ -1844,44 +1907,38 @@
       Store.set('sessions', ss);
       this.closeModal('create-modal');
       if (s.feeDetail) {
-        this.toast(`✅ 申请成功！${s.feeDetail.method} 缴费 ${s.feeDetail.amount} 已确认，通知已发送至 ${maskPhone(phone)}${extras.length > 0 ? ` 等 ${1 + extras.length} 人` : ''}`, 'success');
+        this.toast(`✅ 申请成功！${s.feeDetail.method} 缴费 ${s.feeDetail.amount} 已确认，会议号 ${s.meetingNo} 已生成，通知已发送至 ${maskPhone(phone)}${extras.length > 0 ? ` 等 ${1 + extras.length} 人` : ''}`, 'success');
       } else {
-        this.toast(`申请成功！未缴费（待补缴），通知已发送至 ${maskPhone(phone)}`, 'success');
+        this.toast(`申请成功！会议号 ${s.meetingNo} 已生成（待缴费），通知已发送至 ${maskPhone(phone)}`, 'info');
       }
-      // 清除 pendingFee 并登录签约方
+      // 清除 pendingFee
       this.state.pendingFee = null;
       this.state.pendingTxHash = null;
-      // ===== PTAHDAO 表单创建路径 & 普通访客路径：缴费成功后自动签约人登录 + showPaySuccessLink（24小时有效）=====
-      const isPtahPaid = s.feeDetail && s.feePaid && (ptahFields || !!s.trustAccount);
-      if (s.feeDetail && s.feePaid && (isPtahPaid || !isGuest)) {
-        // 24 小时有效
-        s.joinTokenExp = Date.now() + 24 * 60 * 60 * 1000;
+      // ===== 申请 和 进入会议室 功能分离：统一展示 大号会议号 + 复制 + 提前10分钟提示 =====
+      s.joinTokenExp = Date.now() + 24 * 60 * 60 * 1000;
+      {
         const ssRe = Store.get('sessions', []);
         const idxRe = ssRe.findIndex(x => x.id === s.id);
         if (idxRe >= 0) { ssRe[idxRe].joinTokenExp = s.joinTokenExp; Store.set('sessions', ssRe); }
-        // 自动登录签约人（与 PTAHDAO URL 入口一致）
-        if (!this.state.currentUser || this.state.currentUser.role !== 'signer') {
-          this.state.currentUser = {
-            id: 'signer_' + s.id,
-            name: s.signerName,
-            phone: s.signerPhone,
-            idcard: s.signerIdcard || '',
-            role: 'signer',
-            org: ptahFields ? 'PTAHDAO信托' : '',
-            guest: true,
-          };
-          Store.set('currentUser', this.state.currentUser);
-        }
-        const nav = document.getElementById('navbar'); if (nav) nav.classList.remove('hidden');
-        if (typeof this.updateNavUser === 'function') { try { this.updateNavUser(); } catch(_) {} }
-        // 弹出缴费成功 + 入会链接（代替原 showSignerLinkModal）
-        this.showPaySuccessLink(s);
-      } else if (!isGuest) {
-        this.renderSessions(); this.renderHome(); this.updatePendingBadge();
-      } else {
-        // 访客未缴费路径：保持原 showSignerLinkModal（兼容）
-        this.showSignerLinkModal(s);
       }
+      // 自动登录签约人（方便点击「立即进入会议室」按钮，但 不强制 自动倒计时进入，让用户自行决定）
+      if (!this.state.currentUser || this.state.currentUser.role !== 'signer') {
+        this.state.currentUser = {
+          id: 'signer_' + s.id,
+          name: s.signerName,
+          phone: s.signerPhone,
+          idcard: s.signerIdcard || '',
+          role: 'signer',
+          org: ptahFields ? 'PTAHDAO信托' : '',
+          guest: true,
+        };
+        Store.set('currentUser', this.state.currentUser);
+      }
+      const nav = document.getElementById('navbar'); if (nav) nav.classList.remove('hidden');
+      if (typeof this.updateNavUser === 'function') { try { this.updateNavUser(); } catch(_) {} }
+      // 已缴费：显示缴费成功+会议号弹窗；未缴费：显示签约链接弹窗（同样带 会议号 大字）
+      if (s.feeDetail && s.feePaid) this.showPaySuccessLink(s);
+      else this.showSignerLinkModal(s);
       // 结束分支 B
       // 通知第三方平台：创建会议成功
       this._emitSdkEvent('create', {
@@ -2021,10 +2078,34 @@
       const token = s.joinToken;
       this._currentSignerSession = s;
       $('#signer-link-topic').textContent = s.topic;
-      $('#signer-link-sid').textContent = s.id;
+      $('#signer-link-sid').textContent = s.meetingNo ? `会议号 ${s.meetingNo} · 原编号 ${s.id}` : s.id;
       $('#signer-link-when').textContent = `预约 ${fmtTime(s.appointAt)}`;
       $('#signer-link-name').textContent = s.signerName;
       $('#signer-link-notary').textContent = `${s.notaryName}（${s.notaryOrg || ''}）`;
+      // ====== 在链接卡片上方追加 大号会议号 + 提前10分钟 提示 =====
+      const headParent = document.querySelector('#signer-link-modal .modal-body');
+      if (headParent) {
+        const min10 = 10 * 60 * 1000;
+        const diff = (s.appointAt || Date.now()) - Date.now();
+        const tip = diff > min10
+          ? `⏰ 距开始还有 <b style="color:#dc2626;">${Math.ceil(diff/60000)} 分钟</b>，请提前 10 分钟进入会议室（预留实人核验+设备调试+承诺录音准备）`
+          : (diff >= 0 ? `<span style="color:#15803d;">✅ 已进入「提前 10 分钟」办理时段</span>，请尽快进入会议室（预留实人核验+设备调试）`
+                     : `⚠ 已超过预约时间 <b style="color:#dc2626;">${Math.floor(-diff/60000)} 分钟</b>，请立即进入会议室`);
+        const injId = 'signer-link-meetingno-big';
+        let block = document.getElementById(injId);
+        if (!block) {
+          block = document.createElement('div');
+          block.id = injId;
+          headParent.insertBefore(block, headParent.firstChild);
+        }
+        block.style.cssText = 'background:linear-gradient(135deg,#0d9488,#0f766e);color:#fff;border-radius:12px;padding:14px 16px;margin-bottom:14px;text-align:center;';
+        block.innerHTML = `
+          <div style="font-size:12px;opacity:0.9;font-weight:600;letter-spacing:1px;">📌 视频签约会议号</div>
+          <div style="font-family:monospace;font-size:30px;font-weight:800;letter-spacing:1.5px;margin-top:2px;">${s.meetingNo || s.id}</div>
+          <button type="button" onclick="App._copyTextToast('${s.meetingNo || s.id}','会议号')" style="margin-top:6px;padding:5px 12px;border:none;border-radius:999px;background:rgba(255,255,255,0.22);color:#fff;font-size:12px;font-weight:700;cursor:pointer;">📋 一键复制会议号</button>
+          <div style="margin-top:8px;padding:7px 10px;background:rgba(255,255,255,0.12);border-radius:8px;font-size:12px;line-height:1.6;text-align:left;">${tip}</div>
+        `;
+      }
       // 填充域名输入框
       const domainInput = $('#link-domain-input');
       if (domainInput) domainInput.value = Store.get('linkDomain', '');
@@ -4202,27 +4283,26 @@ ${bodyFragment}
     },
     joinById(sid, name, phone) {
       sid = (sid || '').trim().toUpperCase();
-      if (!sid) { this.toast('请输入会议号', 'warning'); return; }
-      // 找 session：当前浏览器 Store，或从 URL d参数哈希中还原
-      let s = Store.get('sessions', []).find(x => x.id.toUpperCase() === sid);
+      if (!sid) { this.toast('请输入会议号（YT-YYYY-NNNNNN 或 GZ 格式）', 'warning'); return; }
+      // 查找 session：① YT 格式会议号（优先，新主入口）→ ② 旧 GZ session id → ③ signer sessions → ④ localStorage 缓存
+      let s = Store.get('sessions', []).find(x => (x.meetingNo || '').toUpperCase() === sid || x.id.toUpperCase() === sid);
       if (!s) {
-        // 没找到的话，先尝试从 localStorage 里的 sessions（不同存储键）
-        s = Store.get('signer-sessions', []).find(x => (x.id || '').toUpperCase() === sid);
+        s = Store.get('signer-sessions', []).find(x => ((x.meetingNo || '').toUpperCase() === sid) || (x.id || '').toUpperCase() === sid);
       }
       if (!s) {
-        // 再尝试：如果浏览器里有 deep link 缓存，也可找
-        const reg = new RegExp(`"id"\\s*:\\s*"${sid}"`);
-        // 遍历所有 Store 键
+        const reg1 = new RegExp(`"meetingNo"\\s*:\\s*"${sid.replace(/[-.]/g,'[$&]')}"`);
+        const reg2 = new RegExp(`"id"\\s*:\\s*"${sid}"`);
         try {
           for (let i = 0; i < localStorage.length; i++) {
             const k = localStorage.key(i);
             if (!/sessions|signer|cache|meeting/i.test(k)) continue;
             const v = localStorage.getItem(k);
-            if (v && reg.test(v)) {
+            if (!v) continue;
+            if (reg1.test(v) || reg2.test(v)) {
               try {
                 const arr = JSON.parse(v);
                 if (Array.isArray(arr)) {
-                  const match = arr.find(x => (x.id || '').toUpperCase() === sid);
+                  const match = arr.find(x => ((x.meetingNo || '').toUpperCase() === sid) || (x.id || '').toUpperCase() === sid);
                   if (match) { s = match; break; }
                 }
               } catch (e) {}
@@ -4264,6 +4344,7 @@ ${bodyFragment}
             joinTokenExp: now + 24 * 3600 * 1000,
             _rebuiltFromMeetingNo: true,
             _caseNo: 'CASE-' + sid,
+            meetingNo: sid, // 重建也保留会议号
           };
           const all = Store.get('sessions', []);
           all.unshift(placeholder);
@@ -4298,6 +4379,19 @@ ${bodyFragment}
         if (s.signerIdcard) this.state.currentUser.idcard = s.signerIdcard;
       }
       // 进入房间：AI公证流程自动启动条件保留（autoNotary / PTAHDAO + guestCreated + signer 角色）
+      // ========= 温馨提示：提前 10 分钟进入会议室 =========
+      const at = typeof s.appointAt === 'number' ? s.appointAt : (s.appointAt ? new Date(String(s.appointAt).replace(' ','T') + ':00').getTime() : Date.now());
+      const diff = at - Date.now();
+      const min10 = 10 * 60 * 1000;
+      if (diff > min10) {
+        const mins = Math.ceil(diff / 60000);
+        this.toast(`⏰ 温馨提示：距签约开始还有 ${mins} 分钟，请提前 10 分钟进入会议室（预留实人核验+设备调试+承诺录音准备），谢谢！`, 'info');
+      } else if (diff >= 0) {
+        this.toast(`✅ 已进入「提前 10 分钟」办理时段，祝您办理顺利！（设备调试+承诺录音请尽快开始）`, 'success');
+      } else {
+        const lateMin = Math.max(1, Math.floor(-diff / 60000));
+        this.toast(`⚠ 已超过预约时间 ${lateMin} 分钟，请立即完成实人核验与承诺录音，公证人可能正在等候`, 'warning');
+      }
       this.joinRoom(s.id);
     },
 
@@ -4461,8 +4555,8 @@ ${bodyFragment}
       this.initStep2();
       // 暴露外部 API（window.NotaryAPI + postMessage 监听）
       this._initExternalAPI();
-      // [PTAHDAO] 信托声明入口：外部平台跳转带 ?from=ptahdao&ta=&sn=&sa=&holder=&phone=&idcard=
-      if (this._handlePTAHDaoEntry()) return;
+      // ====== PTAHDAO 入口已按要求去除 ======
+      // （_handlePTAHDaoEntry 不启用，用户通过首页两张大卡 申请 / 凭会议号进入 完成操作）
       // 优先处理签约人深链入口（?join=TOKEN&sid=ID 或 #Pt028&d=BASE64）
       if (this._handleJoinDeepLink()) return;
       // embed 模式：第三方平台嵌入，渲染极简创建 UI

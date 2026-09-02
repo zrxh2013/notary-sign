@@ -60,8 +60,8 @@
       <div class="bg-shape s3"></div>
     </div>
     <div class="auth-container">
-      <!-- 链接申请模式：无登录注册，直接显示创建会议 + 凭号加入 -->
-      <div class="auth-brand" style="max-width:460px;margin:0 auto;display:block;float:none;">
+      <!-- 链接申请模式：无登录注册，直接显示两张大卡片（申请会议 / 凭号加入） -->
+      <div class="auth-brand" style="max-width:760px;margin:0 auto;display:block;float:none;">
         <div class="big-logo">
           <svg viewBox="0 0 24 24" width="56" height="56" fill="none" stroke="#3b82f6" stroke-width="1.8">
             <path d="M9 12l2 2 4-4M12 2l9 4v6c0 5-4 9-9 10-5-1-9-5-9-10V6l9-4z"/>
@@ -75,36 +75,57 @@
           <li><span class="dot ok"></span>电子签名法律效力</li>
           <li><span class="dot ok"></span>区块链存证可追溯</li>
         </ul>
-        <button type="button" id="guest-create-btn" onclick="App.guestCreateMeeting()"
-          style="width:100%;margin-top:18px;padding:14px 16px;border:none;border-radius:12px;background:linear-gradient(135deg,#3b82f6,#1e40af);color:#fff;font-size:16px;font-weight:700;cursor:pointer;box-shadow:0 6px 18px rgba(59,130,246,.35);transition:all .2s;letter-spacing:0.5px;"
-          onmouseover="this.style.transform='translateY(-1px)';this.style.boxShadow='0 8px 22px rgba(59,130,246,.45)';"
-          onmouseout="this.style.transform='translateY(0)';this.style.boxShadow='0 6px 18px rgba(59,130,246,.35)';">
-          ⚡ 立即发起公证签约申请
-        </button>
-        <p style="text-align:center;font-size:12px;color:#64748b;margin-top:10px;">选择时间 → 在线缴费 → 自动生成会议号 → 进入视频房间签约</p>
-        <!-- 凭会议号加入 -->
-        <div style="margin-top:18px;padding:16px;border:1px dashed #cbd5e1;border-radius:12px;background:#f8fafc;">
-          <div style="font-size:13px;color:#475569;margin-bottom:10px;font-weight:600;">📋 已有会议号，直接加入</div>
-          <div style="display:flex;gap:6px;">
-            <input type="text" id="home-join-sid" placeholder="输入会议号（如 GZ54114024）"
-              style="flex:1;padding:10px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:14px;outline:none;"
-              onkeydown="if(event.key==='Enter') App.joinById(document.getElementById('home-join-sid').value, document.getElementById('home-join-name').value, document.getElementById('home-join-phone').value)" />
+
+        <!-- ========== 两张大卡：申请创建会议 / 凭会议号进入会议室（并列，移动端自动堆叠） ========== -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:20px;grid-auto-rows:minmax(240px,auto);">
+          <!-- 左卡：📋 申请创建视频签约会议 -->
+          <div style="background:linear-gradient(160deg,#eff6ff,#dbeafe);border:2px solid #3b82f6;border-radius:16px;padding:20px 20px 22px;box-shadow:0 10px 30px rgba(59,130,246,.22);cursor:pointer;transition:transform .2s,box-shadow .2s;display:flex;flex-direction:column;"
+               onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 14px 34px rgba(59,130,246,.35)';"
+               onmouseout="this.style.transform='translateY(0)';this.style.boxShadow='0 10px 30px rgba(59,130,246,.22)';"
+               onclick="App.guestCreateMeeting()">
+            <div style="font-size:34px;">📋</div>
+            <div style="font-size:17px;font-weight:800;color:#1e3a8a;margin-top:6px;letter-spacing:0.2px;">申请创建视频签约会议</div>
+            <div style="font-size:12.5px;color:#475569;margin-top:8px;line-height:1.7;">
+              · 自由选择签约事项与参会人员<br/>
+              · 选定签约时间（最短可约 30 分钟后）<br/>
+              · 在线缴费后 <b style="color:#1d4ed8;">自动生成 YT 格式会议号</b><br/>
+              · 复制会议号给签署方凭号直接进入
+            </div>
+            <div style="flex:1 1 auto;"></div>
+            <button type="button" style="margin-top:16px;padding:13px 16px;border:none;border-radius:12px;background:linear-gradient(135deg,#3b82f6,#1e40af);color:#fff;font-size:14.5px;font-weight:700;cursor:pointer;box-shadow:0 6px 18px rgba(30,64,175,.45);letter-spacing:0.3px;">
+              ⚡ 开始申请（自动生成会议号）
+            </button>
+            <div style="text-align:center;font-size:11.5px;color:#64748b;margin-top:8px;">⏰ 请提前 10 分钟进入会议室（预留实人核验+设备调试）</div>
           </div>
-          <div style="display:flex;gap:6px;margin-top:8px;">
-            <input type="text" id="home-join-name" placeholder="您的姓名（签署人）" style="flex:1;padding:9px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;outline:none;" />
-            <input type="text" id="home-join-phone" placeholder="手机号" style="flex:1;padding:9px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;outline:none;" />
+
+          <!-- 右卡：🎬 凭会议号进入视频签约会议室 -->
+          <div style="background:linear-gradient(160deg,#f0fdfa,#ccfbf1);border:2px solid #0d9488;border-radius:16px;padding:20px 20px 22px;box-shadow:0 10px 30px rgba(13,148,136,.22);display:flex;flex-direction:column;">
+            <div style="font-size:34px;">🎬</div>
+            <div style="font-size:17px;font-weight:800;color:#115e59;margin-top:6px;letter-spacing:0.2px;">凭会议号进入视频签约室</div>
+            <div style="font-size:12.5px;color:#475569;margin-top:8px;line-height:1.7;">
+              · 已收到申请方分享的 <b style="color:#0f766e;">YT-年份-XXXXXX</b> 会议号<br/>
+              · 输入您的真实姓名与手机号（签署人）<br/>
+              · 系统自动匹配会议信息，完成实人核验<br/>
+              · 视频签约+承诺录音+手写签名一步到位
+            </div>
+            <!-- 直接嵌入表单（右卡内输入框+按钮） -->
+            <div style="margin-top:14px;display:grid;gap:8px;">
+              <input type="text" id="home-join-sid" placeholder="会议号（例：YT-2026-048371）"
+                style="width:100%;padding:10px 12px;border:1px solid #99f6e4;border-radius:8px;font-size:13.5px;outline:none;background:#fff;font-family:monospace;font-weight:600;color:#0f172a;"
+                onkeydown="if(event.key==='Enter') App.joinById(document.getElementById('home-join-sid').value, document.getElementById('home-join-name').value, document.getElementById('home-join-phone').value)" />
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+                <input type="text" id="home-join-name" placeholder="您的姓名（签署人）" style="padding:9px 12px;border:1px solid #99f6e4;border-radius:8px;font-size:13px;outline:none;background:#fff;" />
+                <input type="text" id="home-join-phone" placeholder="手机号" style="padding:9px 12px;border:1px solid #99f6e4;border-radius:8px;font-size:13px;outline:none;background:#fff;" />
+              </div>
+              <button type="button" class="btn-primary" style="width:100%;padding:12px;font-size:14px;font-weight:700;background:linear-gradient(135deg,#0d9488,#0f766e);border:none;letter-spacing:0.3px;box-shadow:0 6px 18px rgba(13,148,136,.45);"
+                onclick="App.joinById(document.getElementById('home-join-sid').value, document.getElementById('home-join-name').value, document.getElementById('home-join-phone').value)">
+                ▶ 立即进入会议室
+              </button>
+              <div style="text-align:center;font-size:11.5px;color:#047857;margin-top:2px;">⏰ 温馨提示：请提前 10 分钟进入会议室（预留实人核验+设备调试时间）</div>
+            </div>
           </div>
-          <button class="btn-primary small" style="width:100%;margin-top:10px;padding:10px;font-size:14px;font-weight:600;"
-            onclick="App.joinById(document.getElementById('home-join-sid').value, document.getElementById('home-join-name').value, document.getElementById('home-join-phone').value)">▶ 进入视频签约房间</button>
         </div>
-        <!-- PTAHDAO 信托声明专用入口 -->
-        <div style="margin-top:16px;padding:16px;border-radius:12px;background:linear-gradient(135deg,#4c1d95 0%,#7c3aed 60%,#a78bfa 100%);color:#fff;box-shadow:0 6px 20px rgba(124,58,237,.35);">
-          <div style="font-size:15px;font-weight:700;margin-bottom:4px;">🏦 PTAHDAO 信托受益人声明</div>
-          <div style="font-size:12px;color:#e9d5ff;margin-bottom:12px;">香港叶谢邓律师行 · 邓达明 CAO-HK-D0468</div>
-          <button onclick="App.guestCreateMeeting('PTAHDAO 信托受益人声明书签署公证')" style="width:100%;padding:11px;border:none;border-radius:8px;background:#fff;color:#5b21b6;font-size:14px;font-weight:700;cursor:pointer;">
-            立即签署受益人声明书
-          </button>
-        </div>
+        <p style="text-align:center;font-size:12px;color:#64748b;margin-top:14px;">申请 → 缴费 → <b>生成 YT 格式会议号</b> → 分享会议号 → 凭会议号进入视频房间签署</p>
       </div>
     </div>
   </section>
