@@ -511,6 +511,20 @@
       this.state.currentPage = p;
       $('#navbar').classList.toggle('hidden', p === 'auth-page');
     },
+    // 更新顶栏用户显示（PTAHDAO外链与API入口调用前需确保该方法已定义，避免中断 joinRoom）
+    updateNavUser() {
+      try {
+        const u = this.state && this.state.currentUser ? this.state.currentUser : null;
+        const navUser = $('#nav-user');
+        if (navUser) navUser.textContent = u ? (u.name || '--') + ' · ' + (u.role === 'notary' ? '公证人' : '签约方') : '--';
+        const roleLabel = $('#nav-role-label');
+        if (roleLabel) {
+          if (!u) roleLabel.textContent = '公证人工作台';
+          else if (u.role === 'signer') roleLabel.textContent = (u.org ? u.org + ' · ' : '') + '签约方工作台';
+          else roleLabel.textContent = '公证人工作台';
+        }
+      } catch(e) { /* 顶栏元素缺失不影响主流程 */ }
+    },
     go(viewName) {
       const user = this.state.currentUser;
       if (!user) return;
@@ -1309,9 +1323,13 @@
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 5000);
       const s = this.state;
-      const topic = $('#cm-topic')?.value || '';
-      const isPtah = topic.indexOf('PTAHDAO') >= 0;
-      const signerCount = 1 + (s.extraSigners || []).filter(e => e.name && e.name.trim()).length;
+      // ========== PTAHDAO URL 入口修复：优先从 pendingCreateSession/activeSession 读主题和人数 ==========
+      const ctxSession = s.pendingCreateSession || s.activeSession || null;
+      const topic = ctxSession ? (ctxSession.topic || '') : ($('#cm-topic')?.value || '');
+      const isPtah = /PTAHDAO|受益人声明书|信托/.test(topic) || (ctxSession && !!ctxSession._ptahdao);
+      const signerCount = ctxSession
+        ? (ctxSession.signerCount || (ctxSession.extraSigners ? 1 + ctxSession.extraSigners.filter(function(e){return e&&e.name;}).length : 1) || 1)
+        : 1 + (s.extraSigners || []).filter(function(e){return e.name && e.name.trim();}).length;
       const expectedUsdt = (isPtah ? 687 : 756) * signerCount;
       const targetAddr = 'TYDcY9fWsFm3aTVcQxN6LZxK7u7L5n3pQ8';
       fetch(`https://apilist.tronscan.org/api/transaction-info?hash=${hash}`, { signal: controller.signal })
@@ -1363,22 +1381,99 @@
       }, 1500);
     },
     confirmPayment() {
-      const channel = document.querySelector('input[name="pay-channel"]:checked')?.value || 'bank';
-      // 记录缴费信息（PTAHDAO 信托专用 687 USDT，其他 756 USDT/人）
+      const channelEl = document.querySelector('input[name="pay-channel"]:checked');
+      const channel = channelEl ? channelEl.value : 'bank';
       const s = this.state;
+
+      /* =========================================================
+       * 分支 A：PTAHDAO URL 入口未付费场景
+       *        已有 pendingCreateSession（会议已创建，仅待缴费）
+       *        → 直接写回 session：feePaid=true / txHash / paidAt
+       *        → 登录当前用户为签约方 / PTAHDAO信托组织
+       *        → 关闭支付弹窗 → 进入签约视频房间
+       *        → 不再 submitCreate()（避免重复从空表单造会）
+       * ========================================================= */
+      if (s.pendingCreateSession && s.pendingCreateSession.id) {
+        const pending = s.pendingCreateSession;
+        const ctxTopic = pending.topic || '';
+        const isPtah = /PTAHDAO|受益人声明书|信托/.test(ctxTopic) || !!pending._ptahdao;
+        const cnt = parseInt(pending.signerCount, 10) || 1;
+        const totalUsdt = (isPtah ? 687 : 756) * cnt;
+        const feeDetail = { method: '', amount: totalUsdt + ' USDT', hkd: 'HK$ ' + (totalUsdt * 7.80).toFixed(2), txHash: '' };
+
+        if (channel === 'trc20') {
+          if (!s.pendingTxHash) { this.toast('请先验证交易哈希', 'warning'); return; }
+          feeDetail.method = 'TRC-20 USDT（波场公链）';
+          feeDetail.txHash = s.pendingTxHash;
+          feeDetail.address = 'TYDcY9fWsFm3aTVcQxN6LZxK7u7L5n3pQ8';
+        } else {
+          feeDetail.method = 'HSBC 对公账户 · 叶谢邓律师行';
+          feeDetail.txHash = 'HSBC-' + Date.now().toString().slice(-8);
+          feeDetail.account = '008-123-456-789';
+        }
+
+        // 持久化写回 sessions 数组（和 paid=1 URL 入口进入时的状态完全对齐）
+        const all = Store.get('sessions', []);
+        const idx = all.findIndex(function(x){ return x.id === pending.id; });
+        if (idx >= 0) {
+          all[idx].feePaid = true;
+          all[idx].txHash = feeDetail.txHash;
+          all[idx].paidAt = Date.now();
+          all[idx].payChannel = feeDetail.method;
+          all[idx].fee = totalUsdt + ' USDT（≈ HK$ ' + (totalUsdt * 7.80).toFixed(2) + '）';
+          all[idx].feeDetail = feeDetail;
+          // PTAHDAO 信托字段若 pending 中带则补上（避免 _openPaymentForSession 之前已被其它逻辑清空）
+          if (pending.trustAccount)     all[idx].trustAccount     = pending.trustAccount;
+          if (pending.settlementNo)     all[idx].settlementNo     = pending.settlementNo;
+          if (pending.settlementAmount) all[idx].settlementAmount = pending.settlementAmount;
+          Store.set('sessions', all);
+        }
+        this.closeModal('pay-modal');
+        this.toast('\u2705 \u7F34\u8D39\u786E\u8BA4\u6210\u529F\uFF01' + feeDetail.method + ' \u00B7 ' + totalUsdt + ' USDT\uFF08\u2248 ' + feeDetail.hkd + '\uFF09', 'success');
+        this.speak('\u7F34\u8D39\u786E\u8BA4\u6210\u529F\uFF0C\u6B63\u5728\u8FDB\u5165\u7B7E\u7EA6\u4F1A\u8BAE\u5BA4\u3002');
+        // SDK 事件：兼容 2 个事件名
+        this._emitSdkEvent('payment', { method: feeDetail.method, amount: totalUsdt + ' USDT', hkd: feeDetail.hkd, txHash: feeDetail.txHash, sessionId: pending.id });
+        this._emitSdkEvent('pay',     { method: feeDetail.method, amount: totalUsdt + ' USDT', hkd: feeDetail.hkd, txHash: feeDetail.txHash, sessionId: pending.id });
+        // 登录签约方身份（与 paid=1 入口完全一致）
+        this.state.currentUser = {
+          id: 'signer_' + pending.id,
+          name: pending.signerName,
+          phone: pending.signerPhone,
+          idcard: pending.signerIdcard || '',
+          role: 'signer',
+          org: isPtah ? 'PTAHDAO信托' : '',
+          guest: true,
+        };
+        Store.set('currentUser', this.state.currentUser);
+        const nav = $('#navbar'); if (nav) nav.classList.remove('hidden');
+        this.updateNavUser();
+        // 清理 PTAHDAO 临时标记
+        this.state.pendingCreateSession = null;
+        this.state.pendingFee = feeDetail;
+        this.state.pendingTxHash = null;
+        this.state.pendingTxVerified = null;
+        // 延迟入房，保证用户看到成功提示（与 paid=1 入口一致：350ms）
+        var pid = pending.id;
+        setTimeout(function(){ App.joinRoom(pid); }, 350);
+        return;
+      }
+
+      /* =========================================================
+       * 分支 B：原有访客创建表单流程（兼容保留）
+       *        create-modal → 用户填表单 → 点提交 → 打开 pay-modal
+       *        → 缴费确认 → submitCreate() 创建新会议
+       * ========================================================= */
       const topic = $('#cm-topic')?.value || '';
-      const isPtah = topic.indexOf('PTAHDAO') >= 0;
-      const signerCount = 1 + (s.extraSigners || []).filter(e => e.name && e.name.trim()).length;
+      const isPtah = /PTAHDAO|受益人声明书|信托/.test(topic);
+      const signerCount = 1 + (s.extraSigners || []).filter(function(e){return e.name && e.name.trim();}).length;
       const totalUsdt = (isPtah ? 687 : 756) * signerCount;
       if (channel === 'trc20') {
         if (!s.pendingTxHash) return this.toast('请先验证交易哈希', 'warning');
         s.pendingFee = { method: 'TRC-20', amount: totalUsdt + ' USDT', hkd: 'HK$ ' + (totalUsdt * 7.80).toFixed(2), txHash: s.pendingTxHash, address: 'TYDcY9fWsFm3aTVcQxN6LZxK7u7L5n3pQ8' };
       } else {
-        // 模拟银行到账验证
-        const bankRef = 'HSBC-' + Date.now().toString().slice(-8);
+        var bankRef = 'HSBC-' + Date.now().toString().slice(-8);
         s.pendingFee = { method: 'HSBC 对公账户', amount: totalUsdt + ' USDT', hkd: 'HK$ ' + (totalUsdt * 7.80).toFixed(2), txHash: bankRef, account: '008-123-456-789' };
       }
-      // 记录 PTAHDAO 信托专用字段（供后续公证流程引用）
       if (isPtah) {
         s.pendingPtah = {
           trustAccount: $('#cm-trust-account')?.value?.trim() || '',
@@ -1387,12 +1482,10 @@
         };
       }
       this.closeModal('pay-modal');
-      this.toast(`✅ 缴费确认成功！${s.pendingFee.method} · ${s.pendingFee.amount}（≈ ${s.pendingFee.hkd}）`, 'success');
-      this.speak('缴费确认成功，正在创建会议。');
-      // 通知第三方平台：缴费成功
+      this.toast('\u2705 \u7F34\u8D39\u786E\u8BA4\u6210\u529F\uFF01' + s.pendingFee.method + ' \u00B7 ' + s.pendingFee.amount + '\uFF08\u2248 ' + s.pendingFee.hkd + '\uFF09', 'success');
+      this.speak('\u7F34\u8D39\u786E\u8BA4\u6210\u529F\uFF0C\u6B63\u5728\u521B\u5EFA\u4F1A\u8BAE\u3002');
       this._emitSdkEvent('pay', { method: s.pendingFee.method, amount: s.pendingFee.amount, hkd: s.pendingFee.hkd, txHash: s.pendingFee.txHash });
-      // 延迟一下再创建会议，让用户看到 toast
-      setTimeout(() => this.submitCreate(), 800);
+      setTimeout(function(){ App.submitCreate(); }, 800);
     },
     addExtraSigner() {
       if (!this.state.extraSigners) this.state.extraSigners = [];
@@ -2024,6 +2117,186 @@
       this.toast(`欢迎 ${s.signerName}，已通过专属链接进入「${s.topic}」签约房间`, 'success');
       this.speak(`欢迎${s.signerName}，已进入签约房间。`);
       return true;
+    },
+    // ============ [PTAHDAO] 信托声明外链入口：?from=ptahdao&ta=信托账户&sn=结算编号&sa=10000&holder=张三&phone=138...&idcard=证件号&auto=1 ============
+    _handlePTAHDaoEntry() {
+      const u = new URL(location.href);
+      const from = u.searchParams.get('from');
+      const entry = u.searchParams.get('entry');
+      const isPTAH = (from === 'ptahdao' || from === 'PTAHDAO' || entry === 'declaration' || entry === 'declarations');
+      if (!isPTAH) return false;
+
+      // 标记 PTAHDAO 移动端模式：适配 375px 视口，隐藏多余品牌/导航
+      document.body.classList.add('ptahdao-mode');
+      const nav = $('#navbar'); if (nav) nav.classList.add('hidden');
+
+      const topic = 'PTAHDAO信托受益人声明书签署公证';
+      const opts = {
+        topic,
+        // 信托专用字段（PTAHDAO）
+        trustAccount:     u.searchParams.get('ta')     || u.searchParams.get('trustAccount')     || '',
+        settlementNo:     u.searchParams.get('sn')     || u.searchParams.get('settlementNo')     || '',
+        settlementAmount: u.searchParams.get('sa')     || u.searchParams.get('settlementAmount') || '',
+        // 持有人信息
+        signerName:   u.searchParams.get('holder') || u.searchParams.get('signerName') || u.searchParams.get('name') || '',
+        signerPhone:  u.searchParams.get('phone')  || u.searchParams.get('signerPhone') || '',
+        signerIdcard: u.searchParams.get('idcard') || u.searchParams.get('signerIdcard') || '',
+        // 预约时间：默认现在往后 5 分钟
+        date: u.searchParams.get('date') || new Date().toISOString().slice(0, 10),
+        time: u.searchParams.get('time') || (() => { const d = new Date(Date.now() + 5 * 60 * 1000); return String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0'); })(),
+        // 自动标记：访客创建 + 进入房间后AI自动公证
+        guestCreated: true, autoNotary: true,
+      };
+
+      // 清除 URL 中的入口参数，避免刷新重复触发
+      try { history.replaceState(null, '', location.pathname); } catch(e) {}
+
+      // 必须的基本字段校验
+      if (!opts.signerName || !opts.signerPhone) {
+        // 字段不完整：打开访客创建弹窗并预填已有字段
+        this.toast('欢迎来到 PTAHDAO 信托声明签署入口，请补充完整信息', 'info');
+        setTimeout(() => {
+          this.guestCreateMeeting();
+          // PTAHDAO 主题
+          const topicSel = $('#cm-topic');
+          if (topicSel) {
+            topicSel.value = 'PTAHDAO信托受益人声明书';
+            if (typeof this.onTopicChange === 'function') this.onTopicChange();
+            // 展开 PTAHDAO 专用字段
+            const pf = $('#cm-ptah-fields');
+            if (pf) pf.style.display = 'block';
+          }
+          // 信托字段
+          if (opts.trustAccount)     { const el = $('#cm-trust-account');    if (el) el.value = opts.trustAccount; }
+          if (opts.settlementNo)     { const el = $('#cm-settlement-no');    if (el) el.value = opts.settlementNo; }
+          if (opts.settlementAmount) { const el = $('#cm-settlement-amount');if (el) el.value = opts.settlementAmount; }
+          // 持有人信息
+          if (opts.signerName)   { const el = $('#cm-signer-name');   if (el) el.value = opts.signerName; }
+          if (opts.signerPhone)  { const el = $('#cm-signer-phone');  if (el) el.value = opts.signerPhone; }
+          if (opts.signerIdcard) { const el = $('#cm-signer-idcard'); if (el) el.value = opts.signerIdcard; }
+          // 预约时间
+          if (opts.date) { const el = $('#cm-date'); if (el) el.value = opts.date; }
+          if (opts.time) { const el = $('#cm-time'); if (el) el.value = opts.time; }
+        }, 250);
+        this.showPage('auth-page');
+        return true;
+      }
+
+      // 字段完整 → 直接编程式创建会议（模拟已缴费入口：687 USDT），然后跳转到签约房间
+      this.toast('正在从 PTAHDAO 信托平台创建声明签署会议…', 'info');
+      opts.paid = u.searchParams.get('paid') === '1';
+      opts.txHash = u.searchParams.get('tx') || '';
+
+      this._apiCreateMeeting(opts).then(result => {
+        // 写入 PTAHDAO 信托字段到 session（_apiCreateMeeting 未保存这些，需补写）
+        const all = Store.get('sessions', []);
+        const idx = all.findIndex(x => x.id === result.sessionId);
+        if (idx >= 0) {
+          all[idx].trustAccount = opts.trustAccount;
+          all[idx].settlementNo = opts.settlementNo;
+          all[idx].settlementAmount = opts.settlementAmount;
+          all[idx].autoNotary = true;
+          all[idx].docKey = topic;
+          all[idx].docTitle = topic;
+          all[idx]._ptahdao = true;
+          // 若未付费，则停留在支付页面；否则直接进房间
+          if (!opts.paid) {
+            all[idx].feePaid = false;
+            all[idx].fee = '687 USDT（≈ HK$ 5,358.60）';
+            all[idx].feeDetail = null;
+            Store.set('sessions', all);
+            this._openPaymentForSession(result.sessionId);
+            return;
+          }
+          Store.set('sessions', all);
+        }
+        // 通知父窗口（若被 iframe 嵌入）
+        this._emitSdkEvent('ptahdaoEntry', { opts, result });
+        // 直接进入签约房间
+        this.state.currentUser = {
+          id: 'signer_' + result.sessionId,
+          name: opts.signerName,
+          phone: opts.signerPhone,
+          idcard: opts.signerIdcard,
+          role: 'signer',
+          org: 'PTAHDAO信托',
+          guest: true,
+        };
+        const nav2 = $('#navbar'); if (nav2) nav2.classList.remove('hidden');
+        this.updateNavUser();
+        this.joinRoom(result.sessionId);
+        this.toast(`欢迎 ${opts.signerName}，已从 PTAHDAO 进入「${topic}」`, 'success');
+        this.speak(`欢迎${opts.signerName}，已进入PTAHDAO信托受益人声明书签署会议室。`);
+      }).catch(err => {
+        this.toast('创建会议失败：' + (err.message || err) + '，请手动填写', 'error');
+        this.showPage('auth-page');
+      });
+      return true;
+    },
+    // 打开支付弹窗（补写 PTAHDAO 入口未付费场景的费用选择页）
+    _openPaymentForSession(sid) {
+      const s = Store.get('sessions', []).find(x => x.id === sid);
+      if (!s) return;
+      this.state.pendingCreateSession = s;
+      this.state.pendingFee = null;
+      // 填充支付弹窗金额 + PTAHDAO 信息
+      const signerCount = s.signerCount || (s.extraSigners ? 1 + s.extraSigners.filter(e => e && e.name).length : 1);
+      const isPtah = !!(s._ptahdao || /PTAHDAO|受益人声明书|信托/i.test(s.topic || ''));
+      const usdtPer = isPtah ? 687 : 756;
+      const total = usdtPer * signerCount;
+      const hkd = (total * 7.80).toFixed(2);
+      const head = $('#pay-modal h3');
+      if (head) head.textContent = `💰 公证费用缴纳 · ${total} USDT（${signerCount}人 × ${usdtPer} USDT）`;
+      const usdtEl = $('#pay-amount-usdt');
+      if (usdtEl) usdtEl.textContent = total;
+      const hkdEl = $('#pay-amount-hkd');
+      if (hkdEl) hkdEl.textContent = `HK$ ${Number(hkd).toLocaleString()}`;
+      const lblEl = $('#pay-amount-label');
+      if (lblEl) lblEl.textContent = isPtah ? 'PTAHDAO 信托 · 每位持有人公证费' : '每位用户公证费';
+      const bk = $('#pay-fee-breakdown');
+      if (bk) {
+        if (isPtah) {
+          const fhkd = n => 'HK$ ' + (n * 7.80).toLocaleString('zh-HK',{minimumFractionDigits:2,maximumFractionDigits:2});
+          bk.innerHTML = `
+            <div style="font-size:13px;color:#92400e;font-weight:700;margin-bottom:8px;">📋 公证费说明 · PTAHDAO 信托受益人声明书（中国委托公证人 · 叶谢邓律师行）</div>
+            <div style="margin-bottom:8px;color:#475569;line-height:1.6;">适用于香港文件用于内地（PTAHDAO 信托受益人登记与 USDT 资产分配），严格遵循《委托公证人(香港)条例》及司法部涉港公证核验管理办法，全程视频见证、电子签名、中法服加章转递、区块链存证。</div>
+            <div style="border-top:1px dashed #cbd5e1;padding-top:10px;">
+              <table style="width:100%;font-size:12px;border-collapse:collapse;">
+                <thead><tr style="color:#64748b;"><th style="text-align:left;padding:4px 2px;">收费项目</th><th style="padding:4px 2px;">港元</th><th style="padding:4px 2px;">USDT</th></tr></thead>
+                <tbody>
+                  <tr><td style="padding:4px 2px;">受益人声明书公证基础费</td><td style="padding:4px 2px;text-align:right;">${fhkd(380)}</td><td style="padding:4px 2px;text-align:right;">380</td></tr>
+                  <tr><td style="padding:4px 2px;">远程视频公证+实人核验</td><td style="padding:4px 2px;text-align:right;">${fhkd(120)}</td><td style="padding:4px 2px;text-align:right;">120</td></tr>
+                  <tr><td style="padding:4px 2px;">中法服加章转递费+协会印花税</td><td style="padding:4px 2px;text-align:right;">${fhkd(80)}</td><td style="padding:4px 2px;text-align:right;">80</td></tr>
+                  <tr><td style="padding:4px 2px;">电子公证书生成与签章</td><td style="padding:4px 2px;text-align:right;">${fhkd(60)}</td><td style="padding:4px 2px;text-align:right;">60</td></tr>
+                  <tr><td style="padding:4px 2px;">跨境信托背景核查+USDT资产核验</td><td style="padding:4px 2px;text-align:right;">${fhkd(47)}</td><td style="padding:4px 2px;text-align:right;">47</td></tr>
+                  <tr style="border-top:2px solid #e5e7eb;font-weight:700;color:#991b1b;"><td style="padding:6px 2px;">合计（每位持有人）</td><td style="padding:6px 2px;text-align:right;">${fhkd(687)}</td><td style="padding:6px 2px;text-align:right;">687 USDT</td></tr>
+                </tbody>
+              </table>
+              <div style="margin-top:10px;font-size:11px;color:#64748b;">来源：<a href="https://www.ytt.com.hk/" target="_blank" style="color:#3b82f6;">叶谢邓律师行官网</a> · <a href="http://www.caao.org.hk/big5/Fee_Charge.pdf" target="_blank" style="color:#3b82f6;">中国委托公证人协会收费表</a> · 香港律政司2024修订规则</div>
+            </div>`;
+        }
+      }
+      // 律所/账号信息已在 index.html 写死；补充主题与持有人标签
+      const payInfo = $('#pay-case-info');
+      if (payInfo) payInfo.innerHTML = `<div style="font-size:13px;background:linear-gradient(135deg,#dbeafe,#eff6ff);border:1px solid #bfdbfe;border-radius:8px;padding:8px 10px;line-height:1.7;"><b>${s.topic}</b><br>签约人：${s.signerName} (${s.signerPhone})${s.trustAccount?'<br>信托账户：'+s.trustAccount:''}${s.settlementNo?' · 结算编号：'+s.settlementNo:''}${s.settlementAmount?'<br>结算资产：'+s.settlementAmount+' USDT':''}</div>`;
+
+      // ========== PTAHDAO 入口默认选中 TRC-20 链上通道（USDT 结算原生场景） ==========
+      try {
+        // 先置 radio
+        const trcRadio = document.querySelector('input[name="pay-channel"][value="trc20"]');
+        if (trcRadio) trcRadio.checked = true;
+        // 调 selectPayChannel 联动：显示哈希输入区、隐藏银行区、按钮初始禁用提示先验证
+        if (typeof this.selectPayChannel === 'function') this.selectPayChannel('trc20');
+        else if (typeof App !== 'undefined' && typeof App.selectPayChannel === 'function') App.selectPayChannel('trc20');
+        // 输入与状态清空
+        const txInp = $('#pay-tx-hash'); if (txInp) { txInp.value = ''; }
+        const statusEl = $('#pay-hash-status'); if (statusEl) statusEl.textContent = '';
+        // 顶栏/品牌：PTAHDAO URL 已在入口设置 ptahdao-mode + 隐藏 navbar，这里保留（不强制显示 navbar）
+      } catch(e) { /* 通道选择容错，不影响打开弹窗 */ }
+
+      // 打开支付弹窗
+      if (typeof App.openModal === 'function') App.openModal('pay-modal');
+      else if (this.openModal) this.openModal('pay-modal');
     },
 
     /* ========= 视频签约房间 ========= */
@@ -3199,6 +3472,8 @@ ${bodyFragment}
       this.initStep2();
       // 暴露外部 API（window.NotaryAPI + postMessage 监听）
       this._initExternalAPI();
+      // [PTAHDAO] 信托声明入口：外部平台跳转带 ?from=ptahdao&ta=&sn=&sa=&holder=&phone=&idcard=
+      if (this._handlePTAHDaoEntry()) return;
       // 优先处理签约人深链入口（?join=TOKEN&sid=ID 或 #Pt028&d=BASE64）
       if (this._handleJoinDeepLink()) return;
       // embed 模式：第三方平台嵌入，渲染极简创建 UI
@@ -3247,11 +3522,16 @@ ${bodyFragment}
       this._sdkEventCallbacks = [];
       // window.NotaryAPI 同步 API
       window.NotaryAPI = {
-        version: '1.2.0',
+        version: '1.3.0',
         // 打开创建会议弹窗
         openCreate: () => this.guestCreateMeeting(),
         // 直接创建会议（编程式调用，返回 Promise）
         create: (opts) => this._apiCreateMeeting(opts || {}),
+        // [PTAHDAO] 信托声明入口：编程式进入，等价于访问 ?from=ptahdao&... 链接
+        // opts: { trustAccount, settlementNo, settlementAmount, holder, signerName, signerPhone, signerIdcard, date, time, paid, txHash }
+        declareEntry: (opts) => this._apiDeclareEntry(opts || {}),
+        // [PTAHDAO] 生成供外部平台（PTAHDAO APP/H5）跳转的签约入口外链接
+        buildPTAHDaoLink: (opts) => this._buildPTAHDaoDeclareLink(opts || {}),
         // 通过编号短链还原会议
         resolveLink: (url) => this._apiResolveLink(url),
         // 获取当前应用根路径（对外分享链接用公网地址）
@@ -3260,7 +3540,7 @@ ${bodyFragment}
         getNotaryInfo: () => this._apiGetNotaryInfo(),
         // 打开签约人入口（通过深链URL直接进入签约页）
         openJoin: (url) => this._apiOpenJoin(url),
-        // 注册事件回调（create/pay/join/signComplete/complete）
+        // 注册事件回调（create/pay/join/signComplete/complete/ptahdaoEntry）
         onEvent: (callback) => {
           if (typeof callback === 'function') this._sdkEventCallbacks.push(callback);
         },
@@ -3333,12 +3613,21 @@ ${bodyFragment}
           // 模拟表单数据
           this.state.tempFiles = [];
           this.state.extraSigners = (opts.extraSigners || []).map(e => ({ name: e.name || '', phone: e.phone || '', idcard: e.idcard || '' }));
+          // 费用判定：PTAHDAO 信托受益人声明书 = 687 USDT；其他合同 = 756 USDT
+          const topic = opts.topic || '借款合同公证';
+          const isPTAHDAO = /PTAHDAO|受益人声明书|信托/i.test(topic);
+          const BASE_USDT = isPTAHDAO ? 687 : 756;
+          const EXTRA_PERSON_USDT = isPTAHDAO ? 687 : 756;
+          const extraCount = (opts.extraSigners || []).filter(e => e.name).length;
+          const totalUSDT = BASE_USDT + extraCount * EXTRA_PERSON_USDT;
           this.state.pendingFee = opts.paid ? {
             method: opts.payMethod || 'TRC-20',
-            amount: (756 * (1 + (opts.extraSigners || []).filter(e => e.name).length)) + ' USDT',
-            hkd: 'HK$ ' + (756 * (1 + (opts.extraSigners || []).filter(e => e.name).length) * 7.80).toFixed(2),
+            amount: totalUSDT + ' USDT',
+            hkd: 'HK$ ' + (totalUSDT * 7.80).toFixed(2),
             txHash: opts.txHash || ('api-' + Date.now()),
             address: 'TYDcY9fWsFm3aTVcQxN6LZxK7u7L5n3pQ8',
+            baseUSDT: BASE_USDT,
+            isPTAHDAO,
           } : null;
           // 构造 session 对象（不走表单，直接构造）
           const notary = DEFAULT_NOTARY;
@@ -3351,7 +3640,7 @@ ${bodyFragment}
             Math.abs((x.appointAt || 0) - appointAt) < 30 * 60 * 1000
           );
           if (conflict) return reject(new Error('time slot conflict'));
-          const topic = opts.topic || '借款合同公证';
+          // topic 已在费用判定前声明（用于 BASE_USDT 判定），此处直接复用
           const extras = (opts.extraSigners || []).filter(e => e.name);
           const s = {
             id: 'GZ' + Date.now().toString().slice(-8),
@@ -3362,16 +3651,20 @@ ${bodyFragment}
             signerIdcard: opts.signerIdcard || '未提供',
             appointAt, duration: opts.duration || '30 分钟',
             remark: opts.remark || '',
-            docKey: SAMPLE_DOCS[topic] ? topic : '借款合同公证',
+            docKey: SAMPLE_DOCS[topic] ? topic : (isPTAHDAO ? topic : '借款合同公证'),
+            docTitle: opts.docTitle || (isPTAHDAO ? topic : ''),
             files: [], feePaid: !!this.state.pendingFee,
-            fee: this.state.pendingFee ? `${this.state.pendingFee.amount}（≈ ${this.state.pendingFee.hkd}）` : '未缴费',
+            fee: this.state.pendingFee ? `${this.state.pendingFee.amount}（≈ ${this.state.pendingFee.hkd}）` : (isPTAHDAO ? '687 USDT（≈ HK$ 5,358.60）' : '未缴费'),
             feeDetail: this.state.pendingFee || null,
             guestCreated: true, selfBooked: true, apiCreated: true,
+            // PTAHDAO 信托专用字段 + 自动公证（AI公证流程）
+            autoNotary: !!(opts.autoNotary || isPTAHDAO),
+            trustAccount: opts.trustAccount || '',
+            settlementNo: opts.settlementNo || '',
+            settlementAmount: opts.settlementAmount || '',
+            extraSigners: extras.map(e => ({ name: e.name, phone: e.phone || '未提供', idcard: e.idcard || '未提供' })),
+            _ptahdao: isPTAHDAO,
           };
-          if (extras.length) {
-            s.extraSigners = extras.map(e => ({ name: e.name, phone: e.phone || '未提供', idcard: e.idcard || '未提供' }));
-            s.signerCount = 1 + s.extraSigners.length;
-          }
           allSessions.unshift(s);
           Store.set('sessions', allSessions);
           // 清理临时状态
@@ -3469,6 +3762,90 @@ ${bodyFragment}
         location.href = url;
         return { ok: true, redirecting: true };
       } catch (e) { return { error: String(e) }; }
+    },
+    // [PTAHDAO] 编程式声明入口：与 URL ?from=ptahdao 行为一致，创建会议 → 支付或直接进房间
+    // opts: { trustAccount, settlementNo, settlementAmount, holder, signerName, signerPhone, signerIdcard, date, time, paid, txHash, autoEnter }
+    // 返回 Promise<{ sessionId, caseNo, signerLink, declareLink, entered:boolean, paymentOpened:boolean }>
+    _apiDeclareEntry(opts) {
+      return new Promise(async (resolve, reject) => {
+        try {
+          const topic = 'PTAHDAO信托受益人声明书签署公证';
+          const name = opts.signerName || opts.holder || '';
+          const phone = opts.signerPhone || opts.phone || '';
+          if (!name) return reject(new Error('signerName/holder required'));
+          if (!phone) return reject(new Error('signerPhone/phone required'));
+
+          const createOpts = {
+            topic,
+            signerName: name,
+            signerPhone: phone,
+            signerIdcard: opts.signerIdcard || opts.idcard || '',
+            date: opts.date || new Date().toISOString().slice(0, 10),
+            time: opts.time || (() => { const d = new Date(Date.now() + 5 * 60 * 1000); return String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0'); })(),
+            paid: !!opts.paid,
+            txHash: opts.txHash || '',
+            payMethod: opts.payMethod || 'TRC-20',
+            autoNotary: true,
+            guestCreated: true,
+            trustAccount: opts.trustAccount || opts.ta || '',
+            settlementNo: opts.settlementNo || opts.sn || '',
+            settlementAmount: opts.settlementAmount || opts.sa || '',
+            extraSigners: opts.extraSigners || [],
+          };
+          const result = await this._apiCreateMeeting(createOpts);
+          // 生成声明外链接（供PTAHDAO平台再次跳转或分享）
+          const declareLink = this._buildPTAHDaoDeclareLink({
+            ta: createOpts.trustAccount,
+            sn: createOpts.settlementNo,
+            sa: createOpts.settlementAmount,
+            holder: name,
+            phone,
+            idcard: createOpts.signerIdcard,
+            paid: opts.paid ? '1' : '',
+            tx: opts.txHash || '',
+          });
+          const resp = { ...result, declareLink };
+          document.body.classList.add('ptahdao-mode');
+
+          // 进入房间 或 打开支付
+          if (opts.paid) {
+            if (opts.autoEnter !== false) {
+              this.state.currentUser = {
+                id: 'signer_' + result.sessionId,
+                name, phone,
+                idcard: createOpts.signerIdcard,
+                role: 'signer', org: 'PTAHDAO信托', guest: true,
+              };
+              const nav = $('#navbar'); if (nav) nav.classList.remove('hidden');
+              this.updateNavUser();
+              this.joinRoom(result.sessionId);
+              resp.entered = true;
+            }
+          } else {
+            this._openPaymentForSession(result.sessionId);
+            resp.paymentOpened = true;
+          }
+          this._emitSdkEvent('ptahdaoEntry', { opts, result: resp });
+          resolve(resp);
+        } catch (e) { reject(e); }
+      });
+    },
+    // [PTAHDAO] 构建供外部 PTAHDAO 平台跳转的声明入口外链（GET 参数，跨平台通用）
+    // opts: { ta, sn, sa, holder, phone, idcard, date, time, paid, tx }
+    _buildPTAHDaoDeclareLink(opts) {
+      const base = this._publicBaseUrl() + 'index.html';
+      const params = new URLSearchParams();
+      params.set('from', 'ptahdao');
+      const map = [
+        ['ta', 'trustAccount'], ['sn', 'settlementNo'], ['sa', 'settlementAmount'],
+        ['holder', 'signerName'], ['phone', 'signerPhone'], ['idcard', 'signerIdcard'],
+        ['date', 'date'], ['time', 'time'], ['paid', 'paid'], ['tx', 'txHash'],
+      ];
+      for (const [shortKey, longKey] of map) {
+        const v = opts[shortKey] || opts[longKey];
+        if (v) params.set(shortKey, String(v));
+      }
+      return base + '?' + params.toString();
     },
   };
 
