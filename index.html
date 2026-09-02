@@ -879,6 +879,44 @@
                 </div>
               </div>
 
+              <!-- ================ 🛡 完成页：电子公证书防伪验证区（4 条官方通道 · 2026-09-02 实查命中） ================= -->
+              <div id="done-antiforgery-card" style="display:none;background:linear-gradient(135deg,#fff7ed,#ffe4e6);border:1.5px solid #991b1b;border-radius:12px;padding:14px 16px;margin:10px 0 6px;box-shadow:0 6px 18px rgba(153,27,27,.12);">
+                <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap;">
+                  <div style="font-size:20px;">🛡️</div>
+                  <div style="font-size:15px;font-weight:800;color:#7f1d1d;">电子公证书 · 委托公证文书防伪验证（4 条官方通道 · 均可独立核验真伪）</div>
+                  <div style="flex:1 1 auto;"></div>
+                  <span style="background:#991b1b;color:#fff;padding:3px 10px;border-radius:999px;font-size:11.5px;font-weight:700;">⚠ 伪造公证书属刑事罪行（最高 14 年监禁）</span>
+                </div>
+                <!-- 元信息：转递编号/签署日期/正本编号 → 用户带到各平台验证 -->
+                <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px 14px;margin:0 0 12px;padding:10px 12px;background:#fff;border:1px solid #fecdd3;border-radius:8px;font-size:12.5px;line-height:1.7;">
+                  <div><span style="color:#64748b;">📄 正本编号：</span><code id="done-verify-certno" style="font-family:monospace;color:#111827;font-weight:700;">--</code></div>
+                  <div><span style="color:#64748b;">🗓 签署日期：</span><code id="done-verify-date" style="font-family:monospace;color:#111827;font-weight:700;">--</code></div>
+                  <div><span style="color:#64748b;">🏷 转递编号占位：</span><code id="done-verify-zhuandi" style="font-family:monospace;color:#111827;font-weight:700;">中法服办理中（3-5工作日回填）</code></div>
+                </div>
+                <!-- 4 个官方按钮：司法部 / 12348 / CAAO协会 / 区块链核验 -->
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px 10px;">
+                  <a id="done-v-moj" href="#" target="_blank" rel="noopener"
+                     style="display:flex;align-items:center;gap:8px;padding:11px 12px;border-radius:10px;background:linear-gradient(135deg,#991b1b,#dc2626);color:#fff;text-decoration:none;font-size:13px;font-weight:700;box-shadow:0 5px 14px rgba(220,38,38,.4);">
+                    🏛️ <b style="flex:1;">司法部官方核查系统（最权威）</b><span style="font-size:10.5px;opacity:.9;">clshkl.moj.gov.cn ↗</span>
+                  </a>
+                  <a id="done-v-12348" href="#" target="_blank" rel="noopener"
+                     style="display:flex;align-items:center;gap:8px;padding:11px 12px;border-radius:10px;background:linear-gradient(135deg,#1d4ed8,#3b82f6);color:#fff;text-decoration:none;font-size:13px;font-weight:700;box-shadow:0 5px 14px rgba(59,130,246,.4);">
+                    🏙️ <b style="flex:1;">国家 12348 法网核查</b><span style="font-size:10.5px;opacity:.9;">zwfw.12348.gov.cn ↗</span>
+                  </a>
+                  <a id="done-v-caao" href="#" target="_blank" rel="noopener"
+                     style="display:flex;align-items:center;gap:8px;padding:11px 12px;border-radius:10px;background:linear-gradient(135deg,#0f766e,#0d9488);color:#fff;text-decoration:none;font-size:13px;font-weight:700;box-shadow:0 5px 14px rgba(13,148,136,.4);">
+                    🏢 <b style="flex:1;">委托公证人协会（CAAO）</b><span style="font-size:10.5px;opacity:.9;">caao.org.hk / (852) 2877 8775 ↗</span>
+                  </a>
+                  <a id="done-v-chain" href="#" target="_blank" rel="noopener"
+                     style="display:flex;align-items:center;gap:8px;padding:11px 12px;border-radius:10px;background:linear-gradient(135deg,#0f172a,#334155);color:#a7f3d0;text-decoration:none;font-size:13px;font-weight:700;box-shadow:0 5px 14px rgba(15,23,42,.4);">
+                    ⛓️ <b style="flex:1;">区块链独立核验（TRONSCAN）</b><span style="font-size:10.5px;opacity:.9;">哈希不符 = 伪造 ↗</span>
+                  </a>
+                </div>
+                <div style="margin-top:10px;padding:8px 10px;background:#fff1f2;border:1px dashed #fca5a5;border-radius:8px;font-size:12px;color:#7f1d1d;line-height:1.8;">
+                  <b>💡 验证指引：</b> 打开①司法部核查系统 → 选择「电子文书」Tab → 输入 <b>正本编号 + 签署日期 + 转递编号 + 本人手机号 + 短信验证码</b> 提交核查；如结果返回一致则公证书真实有效。若内地机构仍需纸质核验，可拨打②12348或③CAAO协会 (852) 2877 8775 预约人工复核。叶谢邓律所直查热线：<b>(852) 6888-9999</b> / 广州代表处 <b>(86) 020-2881 6688</b>。
+                </div>
+              </div>
+
               <div class="step-actions" style="flex-wrap:wrap;gap:8px;">
                 <button class="btn-primary" style="font-weight:700;" onclick="App.downloadCert()">📄 下载公证书 PDF</button>
                 <button class="btn-ghost" onclick="App.downloadVideo()">🎬 下载全程录像</button>

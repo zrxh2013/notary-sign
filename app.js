@@ -49,6 +49,25 @@
     address: '香港旺角弥敦道 738-740 号荣华大楼 2 楼全层',
     website: 'www.ytt.com.hk',
     notaryHotline: '(852) 6888-9999',
+    /** 2026-09-02 经 WebSearch 实查：委托公证查询专页（叶谢邓官方） */
+    chinaAttestingPage: 'https://www.ytt.so/',
+    /** 线上查询 / 公证核验表单（叶谢邓官网 enquiry-form 真实页面） */
+    enquiryForm: 'https://www.ytt.com.hk/zh-hans/enquiry-form/',
+    /** 内地广州代表处（叶谢邓官方穗代表处，公证书真伪查询可联系） */
+    gzOffice: { phone: '(86) 020-2881 6688', address: '广州天河区林和西路161号中泰国际广场B座2003室' },
+    /** 官方防伪验证通道（5 条，与 beneficiary-declaration-official.html 页脚同步，2026-09 实查） */
+    antiForgery: {
+      /** 🥇 司法部最权威：中国委托公证（香港）核查系统（纸质+电子双入口） */
+      mojVerify: 'https://clshkl.moj.gov.cn/',
+      /** 🥈 国家政务平台：12348 中国法网 → 查询服务 → 委托公证文书（香港）核查 */
+      gov12348: 'https://zwfw.12348.gov.cn/',
+      /** 🥉 中国委托公证人协会有限公司（CAAO）官网 + 服务平台 App */
+      caao: 'https://www.caao.org.hk/',
+      caaoHotline: '(852) 2877 8775',
+      /** ⛓ 区块链独立核验（TRON / ETH） */
+      tronscan: 'https://tronscan.io/#/transaction/',
+      etherscan: 'https://etherscan.io/tx/',
+    },
   };
   // 国际公证人（谢连忠高级合伙人，Notary Public）—— 用于国际公证场景
   const DEFAULT_NOTARY_PUBLIC = {
@@ -3795,6 +3814,40 @@
       $('#summary-list').innerHTML = summary.map(([k, v]) => `<div class="summary-item"><label>${k}</label><span>${v}</span></div>`).join('');
       this.addSystemMsg('【系统】签约完成，文书已上传至区块链存证');
       this.addSystemMsg(`【系统】信托结算全流程 ${s.settlement ? (s.settlement.record.files.length + s.settlement.record.toolRecords.length + 1) : 0} 项记录已上链至 TRC-20 专用地址`);
+
+      // ============== 🛡 完成页防伪区：注入 4 个官方验证通道 URL + 正本编号/签署日期/转递编号占位 ==============
+      const antiCard = $('#done-antiforgery-card');
+      if (antiCard) {
+        antiCard.style.display = 'block';
+        const af = DEFAULT_NOTARY.antiForgery || {};
+        // 1) 正本编号
+        const certNoEl = $('#done-verify-certno'); if (certNoEl) certNoEl.textContent = s.certNo || '--';
+        // 2) 签署日期（中法服审核需要精确日期）
+        const dt = new Date(now);
+        const ymd = `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}-${String(dt.getDate()).padStart(2,'0')}`;
+        const dateEl = $('#done-verify-date'); if (dateEl) dateEl.textContent = ymd;
+        // 3) 转递编号（中法服办理完成后回填，此处先生成建议占位格式 ZD-YYYY-NNNNNN = 中法服转递专用章编号示例）
+        const zdNo = `ZD-${dt.getFullYear()}-${(s.certNo||'').slice(-8).padStart(8,'0')}`;
+        const zdEl = $('#done-verify-zhuandi'); if (zdEl) zdEl.textContent = `${zdNo}（办理中，中法服 3-5 工作日加章后最终确定）`;
+        // 4) 四个按钮 href（带查询参数便于用户复制转递编号&正本编号&日期前往）
+        const safe = (x) => encodeURIComponent(String(x||''));
+        const queryTail = `certno=${safe(s.certNo)}&date=${safe(ymd)}&zdno=${safe(zdNo)}&org=${safe(s.notaryOrg||'叶谢邓律师行')}&notary=${safe(s.notaryName||'邓达明')}&cao=${safe(s.notaryCertNo||DEFAULT_NOTARY.certNo)}&signer=${safe(s.signerName||'')}`;
+        const moj = $('#done-v-moj'); if (moj) moj.href = `${af.mojVerify}?${queryTail}`;           // ① 司法部官方（电子文书 Tab）
+        const g12348 = $('#done-v-12348'); if (g12348) g12348.href = `${af.gov12348}?service=委托公证文书（香港）核查&${queryTail}`;  // ② 12348 法网
+        const caao = $('#done-v-caao'); if (caao) caao.href = `${af.caao}contacts?${queryTail}`;      // ③ CAAO 协会 contact 页面（含电话 + App 下载）
+        // ④ 区块链独立核验：优先按 session.settlement.network（已明确定义 TRON/ETH 存证网络）判断；不明确时再按哈希首字符特征兜底
+        const chainBtn = $('#done-v-chain');
+        if (chainBtn && s.txHash) {
+          const hash = (s.txHash||'').replace(/^0x/i,'');
+          const net = String((s.settlement && s.settlement.network) || '').toUpperCase();
+          let useEth = false;
+          if (net.indexOf('ETH') >= 0 || net.indexOf('ETHEREUM') >= 0) useEth = true;
+          else if (net.indexOf('TRON') >= 0 || net.indexOf('TRC') >= 0) useEth = false;
+          else useEth = (/^0x[0-9a-fA-F]{64}$/.test(s.txHash)) && (/^[a-fA-F]/.test(hash.slice(0,1))); // 未明确网络时兜底：0x 开头 64 位且首字母十六进制字母 → 倾向 ETH
+          chainBtn.href = useEth ? ((af.etherscan||'https://etherscan.io/tx/') + (s.txHash.replace(/^0x/,''))) : ((af.tronscan||'https://tronscan.io/#/transaction/') + hash);
+        } else if (chainBtn) { chainBtn.href = af.tronscan || 'https://tronscan.io/'; }
+      }
+
       clearInterval(this.state.timerId);
 
       // ================ 🎙️ 完成页：如果本次办理包含持有人承诺录音 → 展示播放卡片 + 计算哈希 ================
