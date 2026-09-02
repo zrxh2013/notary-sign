@@ -1906,13 +1906,15 @@
         feeDetail: this.state.pendingFee || null,
         guestCreated: isGuest, // 标记访客自助创建
         selfBooked: true, // 用户自行选择时间
+        autoNotary: isGuest, // 访客创建的会议一律启用 AI 自动公证推进（视频连线签名 3-5 分钟节奏）
       };
       // PTAHDAO 信托专用字段保存
       if (ptahFields) {
         s.trustAccount = ptahFields.trustAccount;
         s.settlementAmount = ptahFields.settlementAmount;
         s.settlementNo = ptahFields.settlementNo;
-        s.autoNotary = true; // 标记自动公证流程
+        // PTAHDAO 额外保障 autoNotary 为 true（访客创建已是 true，兼容内嵌 API 场景）
+        s.autoNotary = true;
       }
       // 收集额外签约方
       const extras = (this.state.extraSigners || []).filter(e => e.name && e.name.trim());
@@ -2787,32 +2789,59 @@
     },
     // 内部公证人自动流程
     _startAutoNotaryFlow() {
+      // ================ 📹 视频连线签名总时长控制在 3-5 分钟（180-300s） ================
+      // 节奏设计：AI 自动推进 5 步骤 × 28s / 步 = 140s 左右；叠加承诺录音 30-45s + 手写签名 40-60s + 链上存证 20s ≈ 230-265s（3分50秒 ~ 4分25秒）✅ 落在 3-5 分钟
+      const PACE_MS = 28000;          // 每一步给用户阅读 + 确认 + 语音播报的时间（28s / 步）
+      const T_AI_0_START  = 2000;     // T+2s    欢迎 + 材料初审
+      const T_AI_1_ID     = T_AI_0_START + 4000;   // T+6s    身份证核验 (在 0-2.8s 播报完就开始)
+      const T_AI_1_FACE   = T_AI_1_ID + PACE_MS;   // T+34s   人脸活体比对 (给够用户把脸对准镜头 28s)
+      const T_AI_1_PASS   = T_AI_1_FACE + PACE_MS; // T+62s   实人核验通过 (人脸比对 28s)
+      const T_AI_2_NOTICE = T_AI_1_PASS + PACE_MS; // T+90s   法律告知已确认 (告知 28s)
+      const T_AI_3_DOC    = T_AI_2_NOTICE + PACE_MS; // T+118s 文书核查 (28s)
+      const T_AI_4_NOTARY = T_AI_3_DOC + PACE_MS;   // T+146s 公证人出证签署 (28s)
+      const T_AI_5_COMMIT = T_AI_4_NOTARY + 2500;   // T+148.5s 公证人签完→弹承诺录音（紧凑，不再空等）
+      // 目标：到达承诺录音卡片弹出时间 ≈ 2分28秒（给用户录30-45s + 签40s + 存证20s = 约3分58秒完成）
+
+      // 写入起点用于 ETA 计算（避免被重入覆盖：一次性写入保护）
+      if (!this.state._autoNotaryStartedAt) {
+        this.state._autoNotaryStartedAt = Date.now();
+      } else {
+        return; // 不重复触发（双保险：已启动过则直接退出）
+      }
+      // ETA：总预计 4 分钟（240s）→ 每 5 秒更新一次 "预计剩余 N 分钟"
+      this.state._etaTimerId = setInterval(() => this._updateEta(), 5000);
+      this._updateEta();
+
       const s = this.state.activeSession;
       if (!s) return;
       this.addSystemMsg('【公证人】已开始本次公证流程，正在进行材料初审与实人核验...');
-      this.toast('公证人已接入，将按中国委托公证人法定流程办理...', 'info');
-      this.speak('公证人已接入，即将开始实人核验，请稍候。');
+      this.toast('📹 视频连线预计总时长 3-5 分钟（法定流程5步+承诺录音+手写签名+链上存证）', 'info');
+      this.speak('欢迎进入视频签约会议室。温馨提示：本次公证办理全程预计3至5分钟，请保持端坐、网络畅通、不要离开镜头，我们会按法定步骤推进。');
       this._setAutoStep = (n, label) => { /* 内部状态，无 UI */ };
+
       // 1) 材料初审 + 实人核验：自动扫描身份证 + 人脸比对
       setTimeout(() => {
         this.addSystemMsg('【公证人】读取身份证件信息，核验申请人主体资格...');
-        this.speak('正在进行身份证件核验。');
+        this.speak('正在进行身份证件核验，请确认身份证信息与本人一致。');
         this.startIDScan();
-      }, 800);
-      // 2) 人脸比对
+        this._updateEta();
+      }, T_AI_0_START);
+
       setTimeout(() => {
         this.addSystemMsg('【公证人】身份证件核验通过，开始人脸活体比对...');
-        this.speak('请将面部对准识别框，开始人脸比对。');
+        this.speak('身份证件核验通过，请将面部正对摄像头并保持清晰，开始人脸活体比对。');
         this.startFaceVerify();
-      }, 3200);
-      // 3) 通过核验 → 下一步
+        this._updateEta();
+      }, T_AI_1_FACE);
+
       setTimeout(() => {
         this.addSystemMsg('【公证人】实人核验通过（身份证读卡+人脸比对），进入法律告知与声明意愿确认环节。');
-        this.speak('实人核验通过，即将进入法律告知步骤。');
+        this.speak('实人核验通过，进入法律告知环节，请仔细阅读告知事项。');
         this._setAutoStep(2, '法律告知与声明意愿确认');
         this.passVerify();
-      }, 6200);
-      // 4) 告知事项自动勾选 + 下一步
+        this._updateEta();
+      }, T_AI_1_PASS);
+
       setTimeout(() => {
         const cb = $('#agree-notice');
         if (cb && !cb.checked) { cb.checked = true; cb.dispatchEvent(new Event('change')); }
@@ -2820,10 +2849,11 @@
         if (btn && !btn.disabled) {
           this.nextStep(); this._setAutoStep(3, '文书真实性合法性核查');
           this.addSystemMsg('【公证人】法律告知事项已确认，进入文书真实性核查环节（依《宣誓及声明条例》）。');
-          this.speak('法律告知步骤完成，即将进入文书核查步骤。');
+          this.speak('法律告知步骤完成，进入文书核查环节，请核对文书内容无误。');
         }
-      }, 7400);
-      // 5) 文书核查自动勾选 + 下一步
+        this._updateEta();
+      }, T_AI_2_NOTICE);
+
       setTimeout(() => {
         const cb = $('#agree-doc');
         if (cb && !cb.checked) { cb.checked = true; cb.dispatchEvent(new Event('change')); }
@@ -2831,15 +2861,16 @@
         if (btn && !btn.disabled) {
           this.nextStep(); this._setAutoStep(4, '公证人出证与电子签署');
           this.addSystemMsg('【公证人】文书核查无误，进入公证人出证与双方签署环节。');
-          this.speak('文书核查步骤完成，即将进入出证签署步骤。');
+          this.speak('文书核查步骤完成，即将由公证人完成出证签署，随后请您录制承诺并手写签名。');
         }
-      }, 8800);
+        this._updateEta();
+      }, T_AI_3_DOC);
+
       // 6) 公证人（内部AI助手·对外隐藏）自动签名完成出证（加盖委托公证人专用章），然后自动弹出手写板给【持有人】
       setTimeout(() => {
         const se = this.state.activeSession;
         this.state.notarySigned = true;
         if (!se.signatures) se.signatures = {};
-        // 合成公证人默认签名PNG（画在canvas，base64存入session.signatures.notary，完成页公证书直接合成用）
         try {
           const cv = document.createElement('canvas'); cv.width = 480; cv.height = 140;
           const cc = cv.getContext('2d');
@@ -2847,7 +2878,7 @@
           se.signatures.notary = cv.toDataURL('image/png');
         } catch (e) { se.signatures.notary = null; }
         this.addSystemMsg('【公证人】公证人签署出证，已加盖委托公证人专用印章，电子副本同步上传至律政司与司法部双平台备案。');
-        this.speak('公证人正在签署出证。');
+        this.speak('公证人已完成出证签署。接下来请您录制承诺并手写签名，完成后即可链上存证。');
         this._setAutoStep(5, '加章转递与区块链存证');
         // 更新槽位（若页面上已渲染签名槽）
         const slotArea = document.getElementById('slot-notary-area');
@@ -2873,14 +2904,46 @@
             self2.openSignaturePad({ role: 'signer', name: se.signerName }, (p) => self2._applySignatureFromPad(p));
           }
         }, 1200);
-      }, 10000);
+      }, T_AI_4_NOTARY);
       // 7) 删除旧的"模拟签约方自动签名"逻辑——现在第6步结尾已通过 openSignaturePad 让用户手写确认，签完后会自动进入完成页，不需要这里再处理
+    },
+    /* ============ 视频连线 ETA 预计剩余时间（目标总时长 3-5 分钟，默认锚定 4 分钟 / 240s） ============ */
+    _updateEta() {
+      try {
+        const TARGET_TOTAL_SEC = 240; // 4 分钟目标
+        const startTs = this.state._autoNotaryStartedAt || this.state.startTime || Date.now();
+        const elapsed = Math.max(0, Math.floor((Date.now() - startTs) / 1000));
+        const remain = Math.max(0, TARGET_TOTAL_SEC - elapsed);
+        const m = Math.floor(remain / 60), s = remain % 60;
+        const eta = $('#room-eta');
+        if (!eta) return;
+        let tip = '';
+        if (elapsed < 10) {
+          tip = '⏳ 预计剩余 3-4 分钟（办理节奏）';
+        } else if (remain >= 180) {
+          tip = `⏳ 预计剩余 ${m} 分 ${s.toString().padStart(2,'0')} 秒（按法定步骤推进）`;
+        } else if (remain >= 60) {
+          tip = `⏳ 预计剩余 ${m} 分 ${s.toString().padStart(2,'0')} 秒（即将进入签名环节）`;
+        } else if (remain > 0) {
+          tip = `⏳ 预计剩余 ${remain} 秒（链上存证中）`;
+        } else {
+          // 超过 4 分钟但还在办理（一般在承诺录音/签名耗时较长），提示"签名完成后立即存证"
+          const over = elapsed - TARGET_TOTAL_SEC;
+          const om = Math.floor(over / 60), os = over % 60;
+          tip = `✍️ 办理中（已用时 ${om}分${os.toString().padStart(2,'0')}秒，签名后立即出证）`;
+        }
+        eta.textContent = tip;
+        if (remain <= 0) eta.style.color = '#92400e';
+        else eta.style.color = remain <= 60 ? '#065f46' : '#4338ca';
+      } catch (e) { /* 静默：ETA 提示非关键路径 */ }
     },
     updateTimer() {
       const diff = Math.floor((Date.now() - this.state.startTime) / 1000);
       const h = Math.floor(diff / 3600), m = Math.floor((diff % 3600) / 60), s = diff % 60;
       const t = $('#room-timer');
       if (t) t.textContent = `${pad2(h)}:${pad2(m)}:${pad2(s)}`;
+      // 每分钟自动刷新一次 ETA（兜底：避免 setInterval 被回收）
+      if (diff > 0 && diff % 60 === 0) this._updateEta?.();
     },
     applyStep() {
       const step = this.state.roomStep;
@@ -4276,6 +4339,10 @@ ${bodyFragment}
       // 关闭摄像头和屏幕共享，释放 track（防止摄像头灯一直亮）
       this.stopLocalCamera();
       clearInterval(this.state.timerId);
+      // 清理 3-5 分钟 ETA 定时器 与 自动公证起点标记（避免离开房间再进来被"已启动"保护拒绝启动）
+      try { if (this.state._etaTimerId) clearInterval(this.state._etaTimerId); } catch (e) {}
+      this.state._etaTimerId = null;
+      this.state._autoNotaryStartedAt = null;
       const s = this.state.activeSession;
       const role = this.state.currentUser ? this.state.currentUser.role : 'signer';
       if (!s) {

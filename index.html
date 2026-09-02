@@ -619,8 +619,13 @@
           <div>
             <div class="process-title">视频签约流程</div>
             <div class="process-sub" id="room-session-id">会议编号: --</div>
+            <!-- 📹 3-5 分钟总时长提示（视频连线签名法定办理节奏） -->
+            <div class="process-sub" id="room-duration-hint" style="color:#4338ca;font-weight:600;margin-top:2px;letter-spacing:0.1px;">📹 预计总时长 3-5 分钟（实人核验+法律告知+文书核查+承诺录音+手写签名+链上存证）</div>
           </div>
-          <div class="timer" id="room-timer">00:00:00</div>
+          <div style="text-align:right;">
+            <div class="timer" id="room-timer">00:00:00</div>
+            <div id="room-eta" style="font-size:11px;color:#4338ca;font-weight:600;margin-top:3px;">⏳ 预计剩余 4 分钟</div>
+          </div>
         </div>
 
         <!-- 步骤条 -->
