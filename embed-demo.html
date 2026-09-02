@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>外部APP嵌入示例 · 信签云 SDK Demo</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f1f5f9; color: #1e293b; padding: 16px; }
+  .demo-header { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+  .demo-header h1 { font-size: 20px; }
+  .demo-header .badge { background: #3b82f6; color: #fff; font-size: 11px; padding: 2px 8px; border-radius: 10px; }
+  .demo-layout { display: grid; grid-template-columns: 1fr 320px; gap: 16px; max-width: 1200px; margin: 0 auto; }
+  .iframe-wrap { background: #fff; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,.08); overflow: hidden; }
+  .iframe-wrap iframe { width: 100%; height: 600px; border: 0; display: block; }
+  .side-panel { background: #fff; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,.08); padding: 20px; }
+  .side-panel h2 { font-size: 16px; margin-bottom: 12px; }
+  .btn { display: block; width: 100%; padding: 10px 16px; margin-bottom: 8px; border: none; border-radius: 8px; font-size: 14px; cursor: pointer; transition: .15s; }
+  .btn-primary { background: #3b82f6; color: #fff; }
+  .btn-primary:hover { background: #2563eb; }
+  .btn-secondary { background: #f1f5f9; color: #1e293b; }
+  .btn-secondary:hover { background: #e2e8f0; }
+  .btn-success { background: #22c55e; color: #fff; }
+  .btn-success:hover { background: #16a34a; }
+  .log-box { background: #0f172a; color: #94a3b8; font-size: 12px; font-family: 'SF Mono', Monaco, monospace; border-radius: 8px; padding: 12px; height: 200px; overflow-y: auto; margin-top: 12px; }
+  .log-box .entry { margin-bottom: 4px; }
+  .log-box .entry .ts { color: #64748b; }
+  .log-box .entry .event { color: #60a5fa; font-weight: 600; }
+  .log-box .entry .payload { color: #4ade80; word-break: break-all; }
+  .notary-info { background: #f8fafc; border-radius: 8px; padding: 12px; margin-bottom: 12px; font-size: 13px; line-height: 1.6; }
+  .notary-info .label { color: #64748b; }
+  .fee-table { width: 100%; font-size: 12px; border-collapse: collapse; margin-top: 8px; }
+  .fee-table th, .fee-table td { padding: 4px 8px; text-align: left; border-bottom: 1px solid #e2e8f0; }
+  .fee-table .total td { font-weight: 700; color: #3b82f6; }
+  @media (max-width: 768px) { .demo-layout { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<div class="demo-header">
+  <h1>外部APP嵌入示例</h1>
+  <span class="badge">SDK v1.2.0</span>
+</div>
+
+<div class="demo-layout">
+  <!-- 左侧：iframe 嵌入区域 -->
+  <div class="iframe-wrap">
+    <iframe id="notary-iframe" src="https://zrxh2013.github.io/notary-sign/?embed=1" allow="camera; microphone; fullscreen"></iframe>
+  </div>
+
+  <!-- 右侧：控制面板 -->
+  <div class="side-panel">
+    <h2>SDK 控制面板</h2>
+    <div id="notary-info" class="notary-info" style="display:none;"></div>
+    <button class="btn btn-secondary" onclick="demoGetNotaryInfo()">获取公证人信息</button>
+    <button class="btn btn-primary" onclick="demoCreateMeeting()">编程式创建会议</button>
+    <button class="btn btn-secondary" onclick="demoOpenCreate()">打开创建弹窗</button>
+    <button class="btn btn-success" onclick="demoOpenJoin()">通过链接进入签约</button>
+    <hr style="margin:12px 0;border:none;border-top:1px solid #e2e8f0;">
+    <h2 style="font-size:14px;">事件日志</h2>
+    <div id="log-box" class="log-box">
+      <div class="entry"><span class="ts">--:--:--</span> 等待 SDK 就绪...</div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // ===== 信签云 SDK 嵌入通信层 =====
+  const iframe = document.getElementById('notary-iframe');
+  const logBox = document.getElementById('log-box');
+  let msgId = 0;
+  const pendingPromises = {};
+
+  // 日志输出
+  function log(event, payload) {
+    const now = new Date();
+    const ts = String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0') + ':' + String(now.getSeconds()).padStart(2,'0');
+    const entry = document.createElement('div');
+    entry.className = 'entry';
+    entry.innerHTML = `<span class="ts">${ts}</span> <span class="event">[${event}]</span> <span class="payload">${payload ? JSON.stringify(payload).slice(0, 200) : ''}</span>`;
+    logBox.appendChild(entry);
+    logBox.scrollTop = logBox.scrollHeight;
+  }
+
+  // 监听 iframe 返回的消息
+  window.addEventListener('message', (e) => {
+    const data = e.data;
+    if (!data) return;
+
+    // SDK 就绪
+    if (data.type === 'notary-ready') {
+      log('notary-ready', { version: data.version });
+      return;
+    }
+
+    // SDK 事件推送（create/pay/join/signComplete/complete）
+    if (data.type === 'notary-event') {
+      log('event:' + data.event, data.payload);
+      // 可在此处联动外部APP业务逻辑
+      if (data.event === 'create') {
+        log('✅ 会议创建成功', { caseNo: data.payload.caseNo, signerLink: data.payload.signerLink });
+      } else if (data.event === 'signComplete') {
+        log('🎉 签署完成', { certNo: data.payload.certNo, blockH: data.payload.blockH });
+      }
+      return;
+    }
+
+    // API 调用响应
+    if (data.type === 'notary-api-resp' && pendingPromises[data.id]) {
+      const { resolve, reject } = pendingPromises[data.id];
+      delete pendingPromises[data.id];
+      if (data.error) reject(new Error(data.error));
+      else resolve(data.result);
+    }
+  });
+
+  // 通过 postMessage 调用 iframe 内的 NotaryAPI
+  function callApi(action, ...args) {
+    return new Promise((resolve, reject) => {
+      const id = 'msg_' + (++msgId);
+      pendingPromises[id] = { resolve, reject };
+      iframe.contentWindow.postMessage({ type: 'notary-api', id, action, args }, '*');
+      // 超时
+      setTimeout(() => {
+        if (pendingPromises[id]) {
+          delete pendingPromises[id];
+          reject(new Error('timeout'));
+        }
+      }, 10000);
+    });
+  }
+
+  // ===== Demo 按钮 =====
+  function demoGetNotaryInfo() {
+    callApi('getNotaryInfo').then(info => {
+      const el = document.getElementById('notary-info');
+      el.style.display = 'block';
+      let feeRows = info.feeStandard.items.map(i =>
+        `<tr><td>${i.name}</td><td>${i.hkd}</td><td>${i.usdt} USDT</td></tr>`
+      ).join('');
+      el.innerHTML = `
+        <div><span class="label">公证人：</span>${info.name}（${info.org}）</div>
+        <div><span class="label">资格：</span>${info.legalBasis}</div>
+        <div><span class="label">电话：</span>${info.phone} · 热线 ${info.hotline}</div>
+        <div><span class="label">地址：</span>${info.address}</div>
+        <div><span class="label">官网：</span><a href="${info.website}" target="_blank">${info.website}</a></div>
+        <table class="fee-table"><thead><tr><th>收费项目</th><th>港元</th><th>USDT</th></tr></thead><tbody>${feeRows}<tr class="total"><td>合计</td><td>${info.feeStandard.total.hkd}</td><td>${info.feeStandard.total.usdt} USDT</td></tr></tbody></table>
+      `;
+      log('getNotaryInfo', { name: info.name });
+    }).catch(err => log('error', { error: err.message }));
+  }
+
+  function demoCreateMeeting() {
+    const opts = {
+      signerName: '张三',
+      signerPhone: '13800138000',
+      signerIdcard: '440101199001011234',
+      date: new Date().toISOString().slice(0, 10),
+      time: '14:00',
+      topic: 'PTAHDAO信托受益人声明书签署公证',
+      paid: true,
+      txHash: '0x' + Math.random().toString(16).slice(2).repeat(4).slice(0, 64),
+    };
+    log('create →', opts);
+    callApi('create', opts).then(result => {
+      log('create ←', result);
+      alert('会议创建成功！\n编号：' + result.caseNo + '\n签约链接：' + result.signerLink);
+    }).catch(err => log('create error', { error: err.message }));
+  }
+
+  function demoOpenCreate() {
+    callApi('openCreate').then(() => log('openCreate', { ok: true }));
+  }
+
+  function demoOpenJoin() {
+    const url = prompt('请输入签约人链接（如 #Pt028&d=... 或 ?join=...&sid=...&d=...）');
+    if (!url) return;
+    log('openJoin →', { url });
+    callApi('openJoin', url).then(result => {
+      log('openJoin ←', result);
+    }).catch(err => log('openJoin error', { error: err.message }));
+  }
+</script>
+</body>
+</html>

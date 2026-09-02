@@ -2038,6 +2038,8 @@
       if ((s.autoNotary || (s.guestCreated && /PTAHDAO/.test(s.topic || ''))) && u.role === 'signer') {
         setTimeout(() => this._startAutoNotaryFlow(), 600);
       }
+      // 通知第三方平台：已进入签约房间
+      this._emitSdkEvent('join', { sessionId: s.id, topic: s.topic, role: u.role, notaryName: s.notaryName, signerName: s.signerName });
     },
     // 内部公证人自动流程
     _startAutoNotaryFlow() {
@@ -2530,6 +2532,8 @@
       s.endedAt = now; s.status = 'done';
       if (!s.txHash) s.txHash = '0x' + randHex(40);
       if (!s.blockH) s.blockH = Math.floor(Math.random() * 1000000 + 20000000);
+      // 通知第三方平台：签署完成
+      this._emitSdkEvent('signComplete', { sessionId: s.id, status: 'done', certNo: s.certNo, txHash: s.txHash, blockH: s.blockH });
 
       // ---- 正本编号生成器（香港/内地两种规则）----
       if (!s.certNo) {
@@ -2950,31 +2954,29 @@ ${bodyFragment}
       }
       this.showPage('auth-page');
     },
-    // embed 模式：?embed=1 → 隐藏登录页装饰，直接打开访客创建弹窗
+    // embed 模式：?embed=1 → 隐藏导航栏和登录装饰，渲染极简嵌入 UI
     _handleEmbedMode() {
       const u = new URL(location.href);
       const isEmbed = u.searchParams.get('embed') === '1' || u.searchParams.get('embed') === 'true';
       if (!isEmbed) return false;
-      // 隐藏所有页面 + 导航栏，只保留 auth-page 容器
+      // 标记 body.embed-mode，CSS 统一隐藏 navbar / auth-brand / auth-card
+      document.body.classList.add('embed-mode');
+      // 隐藏 navbar
+      const nav = $('#navbar'); if (nav) nav.classList.add('hidden');
+      // 切到 auth-page
       $$('.page').forEach(el => el.classList.remove('active'));
       const authPage = $('#auth-page');
       if (authPage) {
         authPage.classList.add('active');
-        // 隐藏品牌装饰、tabs、登录表单，只保留创建弹窗可弹
-        const brand = authPage.querySelector('.auth-brand');
-        if (brand) brand.style.display = 'none';
-        const card = authPage.querySelector('.auth-card');
-        if (card) card.style.display = 'none';
-        // 注入极简嵌入头部
-        let head = $('#embed-head');
-        if (!head) {
-          head = document.createElement('div');
+        // 注入极简嵌入头部（CSS 已定义样式）
+        if (!$('#embed-head')) {
+          const head = document.createElement('div');
           head.id = 'embed-head';
-          head.style.cssText = 'text-align:center;padding:24px 16px 8px;';
           head.innerHTML = `
-            <h2 style="font-size:18px;color:#1e293b;margin:0 0 6px;">🔗 视频签约 · 自助创建</h2>
-            <p style="font-size:12px;color:#64748b;margin:0;">由 信签云 提供公证服务 · 香港叶谢邓律师行 邓达明公证人</p>`;
-          authPage.querySelector('.auth-container')?.insertBefore(head, authPage.querySelector('.auth-container').firstChild);
+            <h2>🔗 视频签约 · 自助创建</h2>
+            <p>由 信签云 提供公证服务 · 香港叶谢邓律师行 邓达明公证人</p>`;
+          const container = authPage.querySelector('.auth-container');
+          if (container) container.insertBefore(head, container.firstChild);
         }
       }
       // 自动打开访客创建弹窗
@@ -2984,23 +2986,45 @@ ${bodyFragment}
     },
     // 暴露给第三方平台调用的 API（postMessage / window.NotaryAPI）
     _initExternalAPI() {
+      // 事件回调注册表
+      this._sdkEventCallbacks = [];
       // window.NotaryAPI 同步 API
       window.NotaryAPI = {
-        version: '1.0.0',
+        version: '1.2.0',
         // 打开创建会议弹窗
         openCreate: () => this.guestCreateMeeting(),
         // 直接创建会议（编程式调用，返回 Promise）
         create: (opts) => this._apiCreateMeeting(opts || {}),
         // 通过编号短链还原会议
         resolveLink: (url) => this._apiResolveLink(url),
-        // 获取当前应用根路径
-        getBaseUrl: () => this._appBaseUrl(),
+        // 获取当前应用根路径（对外分享链接用公网地址）
+        getBaseUrl: () => this._publicBaseUrl(),
+        // 获取公证人信息
+        getNotaryInfo: () => this._apiGetNotaryInfo(),
+        // 打开签约人入口（通过深链URL直接进入签约页）
+        openJoin: (url) => this._apiOpenJoin(url),
+        // 注册事件回调（create/pay/join/signComplete/complete）
+        onEvent: (callback) => {
+          if (typeof callback === 'function') this._sdkEventCallbacks.push(callback);
+        },
+        // 销毁 SDK（移除事件监听）
+        destroy: () => {
+          this._sdkEventCallbacks = [];
+          window.removeEventListener('message', window.NotaryAPI._onMessage);
+        },
         // 监听第三方平台 postMessage 请求
         _onMessage: (e) => {
           if (!e.data || e.data.type !== 'notary-api') return;
           const { id, action, args } = e.data;
           if (!window.NotaryAPI[action]) {
             e.source.postMessage({ type: 'notary-api-resp', id, error: 'unknown action: ' + action }, '*');
+            return;
+          }
+          // onEvent / destroy 特殊处理（无返回值，不走 Promise 回复）
+          if (action === 'onEvent') {
+            const cb = (args && args[0]);
+            if (typeof cb === 'function') this._sdkEventCallbacks.push(cb);
+            e.source.postMessage({ type: 'notary-api-resp', id, result: true }, '*');
             return;
           }
           Promise.resolve(window.NotaryAPI[action](...(args || [])))
@@ -3010,7 +3034,7 @@ ${bodyFragment}
       };
       window.addEventListener('message', window.NotaryAPI._onMessage);
       // 通知父窗口 SDK 已就绪（嵌入到第三方平台时）
-      this._postToParent({ type: 'notary-ready', version: '1.0.0', url: location.href });
+      this._postToParent({ type: 'notary-ready', version: '1.2.0', url: location.href });
     },
     // 向父窗口 postMessage（仅当被嵌入到 iframe 时有意义）
     _postToParent(msg) {
@@ -3020,8 +3044,15 @@ ${bodyFragment}
         }
       } catch (e) { /* 跨域被阻止，忽略 */ }
     },
-    // 触发 SDK 事件（create / close / pay / join）
+    // 触发 SDK 事件（create / pay / join / signComplete / complete）
     _emitSdkEvent(event, payload) {
+      // 1. 本地回调（同窗口直接调用）
+      if (this._sdkEventCallbacks) {
+        this._sdkEventCallbacks.forEach(cb => {
+          try { cb({ event, payload }); } catch (e) { /* 忽略回调异常 */ }
+        });
+      }
+      // 2. postMessage 通知父窗口（跨域 iframe）
       this._postToParent({ type: 'notary-event', event, payload });
     },
     // 编程式创建会议：opts = { topic, signerName, signerPhone, signerIdcard, date, time, duration, remark, extraSigners, paid }
@@ -3139,6 +3170,48 @@ ${bodyFragment}
         }
         return result;
       } catch (e) { return { url, error: String(e) }; }
+    },
+    // 获取公证人信息（供外部APP展示）
+    _apiGetNotaryInfo() {
+      return {
+        name: DEFAULT_NOTARY.name,
+        org: DEFAULT_NOTARY.org,
+        certNo: DEFAULT_NOTARY.certNo,
+        phone: DEFAULT_NOTARY.phone || '(852) 6248-8888',
+        hotline: '(852) 6888-9999',
+        website: 'https://www.ytt.com.hk',
+        address: '香港旺角弥敦道738-740号荣华大楼2楼全层',
+        legalBasis: '中国委托公证人（司法部注册 CAO-HK-D0468）',
+        feeStandard: {
+          items: [
+            { name: '受益人声明书公证基础费', hkd: 'HK$ 2,964', usdt: 380 },
+            { name: '远程视频公证+实人核验', hkd: 'HK$ 936', usdt: 120 },
+            { name: '中法服加章转递费+协会印花税', hkd: 'HK$ 624', usdt: 80 },
+            { name: '电子公证书生成与签章', hkd: 'HK$ 468', usdt: 60 },
+            { name: '跨境信托背景核查+USDT资产核验', hkd: 'HK$ 366.6', usdt: 47 },
+          ],
+          total: { hkd: 'HK$ 5,358.60', usdt: 687 },
+        },
+      };
+    },
+    // 通过深链URL直接进入签约页（在当前 iframe 内跳转）
+    _apiOpenJoin(url) {
+      try {
+        if (!url || typeof url !== 'string') return { error: 'url required' };
+        // 验证是本系统公网域名的链接
+        const u = new URL(url);
+        const validHosts = ['zrxh2013.github.io', 'www.ytt.com.hk'];
+        const host = u.hostname.toLowerCase();
+        const isCustom = Store.get('linkDomain', '');
+        if (isCustom && host === isCustom.toLowerCase().split('/')[0]) {
+          // 允许自定义域名
+        } else if (!validHosts.some(h => host === h || host.endsWith('.' + h))) {
+          return { error: 'invalid domain: ' + host };
+        }
+        // 在当前 iframe 内跳转
+        location.href = url;
+        return { ok: true, redirecting: true };
+      } catch (e) { return { error: String(e) }; }
     },
   };
 

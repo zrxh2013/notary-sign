@@ -89,6 +89,17 @@ a:hover { color: var(--primary-dark); }
   box-shadow: var(--shadow-sm);
 }
 #navbar.hidden { display: none; }
+
+/* ========== Embed 模式（iframe 嵌入） ========== */
+body.embed-mode { background: #f8fafc; }
+body.embed-mode #navbar { display: none !important; }
+body.embed-mode #auth-page { min-height: 100vh; padding: 0; }
+body.embed-mode .auth-brand { display: none !important; }
+body.embed-mode .auth-card { display: none !important; }
+body.embed-mode .auth-container { max-width: 640px; margin: 0 auto; padding: 16px; }
+#embed-head { text-align: center; padding: 20px 16px 8px; }
+#embed-head h2 { font-size: 18px; color: #1e293b; margin: 0 0 6px; }
+#embed-head p { font-size: 12px; color: #64748b; margin: 0; }
 .nav-left, .nav-right { display: flex; align-items: center; gap: 16px; }
 .logo { display: flex; align-items: center; gap: 8px; font-size: 18px; font-weight: 700; color: var(--primary-dark); }
 .nav-center { font-weight: 600; color: var(--text); }
