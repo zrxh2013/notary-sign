@@ -974,50 +974,30 @@
         <!-- 公证费说明 + 清单（动态填充） -->
         <div id="pay-fee-breakdown" style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:12px 16px;margin-bottom:16px;font-size:12px;color:#475569;line-height:1.7;"></div>
 
-        <!-- 缴费方式选择 -->
-        <div style="font-size:13px;font-weight:600;margin-bottom:10px;">选择缴费方式</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;">
-          <!-- 方式A：律所对公账户 -->
-          <div class="pay-channel" id="pay-channel-bank" onclick="App.selectPayChannel('bank')" style="border:2px solid var(--primary);border-radius:10px;padding:14px;cursor:pointer;transition:all .2s;">
-            <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
-              <input type="radio" name="pay-channel" value="bank" checked />
-              <span style="font-size:14px;font-weight:700;">🏦 律所对公账户</span>
+        <!-- 缴费方式（仅保留 TRC-20 USDT，已移除银行对公账户） -->
+        <div style="font-size:13px;font-weight:600;margin-bottom:10px;">缴费方式：⛓️ TRC-20 USDT（波场公链 · 信托结算专用存证通道）</div>
+        <div style="display:grid;grid-template-columns:1fr;gap:12px;margin-bottom:16px;">
+          <!-- 唯一通道：TRC-20 区块链 -->
+          <div class="pay-channel" id="pay-channel-trc20" onclick="App.selectPayChannel('trc20')" style="border:2px solid #991b1b;border-radius:10px;padding:16px 18px;cursor:pointer;transition:all .2s;background:linear-gradient(135deg,#fff1f2,#ffe4e6);">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+              <input type="radio" name="pay-channel" value="trc20" checked />
+              <span style="font-size:15px;font-weight:700;color:#7f1d1d;">⛓️ TRC-20 USDT（信托结算专用链上通道）</span>
             </div>
-            <div style="font-size:11px;color:#6b7280;line-height:1.6;">
-              <div><b>户名：</b>YIP, TSE &amp; TANG SOLICITORS</div>
-              <div><b>银行：</b>The Hongkong and Shanghai Banking Corp Ltd</div>
-              <div><b>分行：</b>Central (HQ) Branch · 中環總行</div>
-              <div><b>账号：</b>008-123-456-789</div>
-              <div><b>SWIFT：</b>HSBCHKHHXXX</div>
-              <div style="margin-top:4px;border-top:1px dashed #e5e7eb;padding-top:4px;">
-                <b>办公地址：</b>香港中环德辅道中 71 号永安集团大厦 24 楼 2406-7 室<br/>
-                <b>公证热线：</b>+852 6888-9999 &nbsp; <b>官网：</b>www.ytt.com.hk
-              </div>
-              <div style="margin-top:4px;color:#059669;">✓ 网上银行自动同步到账确认</div>
-              <div style="font-size:10px;color:#9ca3af;margin-top:2px;">※ 汇款前请致电公证热线核对账号信息，以律所官网最新公布为准</div>
-            </div>
-          </div>
-          <!-- 方式B：TRC-20 区块链 -->
-          <div class="pay-channel" id="pay-channel-trc20" onclick="App.selectPayChannel('trc20')" style="border:2px solid #e5e7eb;border-radius:10px;padding:14px;cursor:pointer;transition:all .2s;">
-            <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
-              <input type="radio" name="pay-channel" value="trc20" />
-              <span style="font-size:14px;font-weight:700;">⛓️ TRC-20 USDT</span>
-            </div>
-            <div style="font-size:11px;color:#6b7280;line-height:1.6;">
+            <div style="font-size:12px;color:#6b7280;line-height:1.8;">
               <div><b>网络：</b>Tron Network (TRC-20)</div>
               <div><b>合约：</b>TR7NHqjeKQxGTCi8q8fL</div>
-              <div><b>收款地址：</b></div>
-              <div style="font-family:monospace;font-size:10px;background:#f1f5f9;padding:4px 6px;border-radius:4px;word-break:break-all;margin-top:2px;">
+              <div><b>收款地址（请务必转入下方地址）：</b></div>
+              <div style="font-family:monospace;font-size:11px;background:#fef2f2;padding:8px 10px;border:1px solid #fecaca;border-radius:6px;word-break:break-all;margin-top:4px;color:#991b1b;font-weight:600;">
                 TYDcY9fWsFm3aTVcQxN6LZxK7u7L5n3pQ8
               </div>
-              <div style="margin-top:4px;color:#991b1b;">⛓ 信托结算专用存证地址</div>
-              <div style="font-size:10px;color:#6b7280;">全流程文件+工具记录将上链至此地址</div>
+              <div style="margin-top:8px;color:#991b1b;font-weight:600;">⛓ 信托结算专用存证地址</div>
+              <div style="font-size:11px;color:#6b7280;">全流程文件+签署记录+工具使用凭证将同步上链至此地址，公证处+中法服可核验</div>
             </div>
           </div>
         </div>
 
-        <!-- 转账哈希输入 -->
-        <div id="pay-hash-section" style="display:none;">
+        <!-- 转账哈希输入（TRC-20 专属，默认直接展开） -->
+        <div id="pay-hash-section" style="display:block;">
           <label style="font-size:13px;font-weight:600;display:block;margin-bottom:8px;">输入转账交易哈希（TX Hash）</label>
           <input type="text" id="pay-tx-hash" placeholder="粘贴 TRON 网络交易哈希（64位十六进制）"
             style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-family:monospace;font-size:12px;" />
@@ -1027,13 +1007,7 @@
           </button>
         </div>
 
-        <!-- 银行到账确认 -->
-        <div id="pay-bank-section">
-          <div style="font-size:12px;color:#6b7280;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:10px 12px;">
-            ✅ 选择律所对公账户后，系统将通过 HSBC 商业网银 API 自动核对到账状态。<br/>
-            请在转账完成后点击「确认缴费」按钮，系统将自动验证到账记录。
-          </div>
-        </div>
+        <!-- 银行对公账户通道已按要求移除 -->
       </div>
       <div class="modal-foot">
         <button class="btn-ghost" onclick="App.closeModal('pay-modal'); App.openModal('create-modal')">返回</button>

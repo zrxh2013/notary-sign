@@ -1372,22 +1372,19 @@
         if (!sn && !ta) { info.innerHTML = ''; return; }
         info.innerHTML = `<div style="font-size:13px;background:linear-gradient(135deg,#dbeafe,#eff6ff);border:1px solid #bfdbfe;border-radius:8px;padding:8px 10px;line-height:1.7;"><b>${topic || '签约事项'}</b>${sn ? '<br>签约人：' + sn + (sp ? ' (' + sp + ')' : '') : ''}${ta ? '<br>信托账户：' + ta : ''}${sn2 ? (ta ? ' · 结算编号：' + sn2 : '<br>结算编号：' + sn2) : ''}${sa ? '<br>结算资产：' + sa + ' USDT' : ''}</div>`;
       })();
-      // PTAHDAO 表单创建入口：默认 TRC-20 + 绑定哈希输入自动校验 + 填充案件信息
+      // PTAHDAO 表单创建入口：仅支持 TRC-20 USDT 链上通道（银行对公账户已按要求移除）
       const self2 = this;
       function bindPtahPayUI() {
-        // 选通道：PTAHDAO 默认 TRC-20；否则默认银行
-        const channel = isPtah ? 'trc20' : 'bank';
+        // 强制单通道：TRC-20（不再有 bank 分支）
         const trcRadio = document.querySelector('input[name="pay-channel"][value="trc20"]');
-        const bankRadio = document.querySelector('input[name="pay-channel"][value="bank"]');
-        if (channel === 'trc20' && trcRadio) trcRadio.checked = true;
-        if (channel === 'bank' && bankRadio) bankRadio.checked = true;
-        if (typeof self2.selectPayChannel === 'function') self2.selectPayChannel(channel);
+        if (trcRadio) trcRadio.checked = true;
+        if (typeof self2.selectPayChannel === 'function') self2.selectPayChannel('trc20');
         // 重置输入
         const txInp = document.getElementById('pay-tx-hash');
         if (txInp) txInp.value = '';
         const st = document.getElementById('pay-hash-status');
         if (st) st.textContent = '';
-        // 绑定自动校验（仅 TRC-20 场景才有必要；但 PTAHDAO 默认走 TRC-20）
+        // 绑定自动校验（TRC-20 专属，400ms 防抖自动调用 verifyTxHash）
         if (!txInp || txInp.__formBound) return;
         txInp.__formBound = true;
         let t = null;
@@ -1396,8 +1393,8 @@
           const v = (txInp.value || '').trim();
           const s2 = $('#pay-hash-status');
           const b = $('#pay-confirm-btn');
-          if (!v) { if (s2) s2.innerHTML = ''; if (b) { b.disabled = true; b.textContent = '请先输入交易哈希'; } return; }
-          if (!/^[0-9a-fA-F]{64}$/.test(v)) { if (s2) s2.innerHTML = '<span style="color:#dc2626;">❌ 应为 64 位十六进制（0-9/a-f/A-F）</span>'; if (b) { b.disabled = true; b.textContent = '请先验证交易哈希'; } return; }
+          if (!v) { if (s2) s2.innerHTML = ''; if (b) { b.disabled = true; b.style.opacity = '0.55'; b.style.cursor = 'not-allowed'; b.textContent = '⚠ 请先输入并验证交易哈希'; } return; }
+          if (!/^[0-9a-fA-F]{64}$/.test(v)) { if (s2) s2.innerHTML = '<span style="color:#dc2626;">❌ 应为 64 位十六进制（0-9/a-f/A-F）</span>'; if (b) { b.disabled = true; b.style.opacity = '0.55'; b.style.cursor = 'not-allowed'; b.textContent = '⚠ 请先输入并验证交易哈希'; } return; }
           t = setTimeout(() => { if (typeof self2.verifyTxHash === 'function') self2.verifyTxHash(); }, 400);
         };
         txInp.addEventListener('input', handler);
@@ -1408,29 +1405,20 @@
       else bindPtahPayUI();
     },
     selectPayChannel(channel) {
-      // UI 高亮
-      const bank = $('#pay-channel-bank');
+      // 🏦 银行对公通道已移除：仅接受 channel='trc20'，任何其他值当作异常强制回退到 TRC-20
+      const forceChannel = (channel === 'trc20') ? 'trc20' : 'trc20';
       const trc = $('#pay-channel-trc20');
-      if (bank) bank.style.borderColor = channel === 'bank' ? 'var(--primary)' : '#e5e7eb';
-      if (trc) trc.style.borderColor = channel === 'trc20' ? '#991b1b' : '#e5e7eb';
-      // radio
+      if (trc) trc.style.borderColor = (forceChannel === 'trc20') ? '#991b1b' : '#e5e7eb';
+      // radio（唯一的一个 trc20，不存在 bank radio 了）
       document.querySelectorAll('input[name="pay-channel"]').forEach(r => {
-        r.checked = r.value === channel;
+        r.checked = r.value === forceChannel;
       });
-      // 显示/隐藏对应区域
+      // 永远显示哈希输入区（银行区已从DOM删除，不需要再切换）
       const hashSec = $('#pay-hash-section');
-      const bankSec = $('#pay-bank-section');
+      if (hashSec) hashSec.style.display = 'block';
       const btn = $('#pay-confirm-btn');
-      if (channel === 'trc20') {
-        if (hashSec) hashSec.style.display = 'block';
-        if (bankSec) bankSec.style.display = 'none';
-        // 🔐 进入TRC20通道：按钮必须先验证哈希才能启用，绝对禁用自动兜底
-        if (btn) { btn.disabled = true; btn.style.opacity = '0.55'; btn.style.cursor = 'not-allowed'; btn.textContent = '⚠ 请先输入并验证交易哈希'; }
-      } else {
-        if (hashSec) hashSec.style.display = 'none';
-        if (bankSec) bankSec.style.display = 'block';
-        if (btn) { btn.disabled = false; btn.style.opacity = '1'; btn.style.cursor = 'pointer'; btn.textContent = '确认缴费（银行自动到账验证）'; }
-      }
+      // 🔐 TRC-20 通道：按钮必须先通过 verifyTxHash() 显式验证，初始禁用 + 灰底
+      if (btn) { btn.disabled = true; btn.style.opacity = '0.55'; btn.style.cursor = 'not-allowed'; btn.textContent = '⚠ 请先输入并验证交易哈希'; }
     },
     verifyTxHash() {
       const input = $('#pay-tx-hash');
@@ -1535,30 +1523,28 @@
         const totalUsdt = (isPtah ? 687 : 756) * cnt;
         const feeDetail = { method: '', amount: totalUsdt + ' USDT', hkd: 'HK$ ' + (totalUsdt * 7.80).toFixed(2), txHash: '' };
 
+        // 🏦 对公账户已移除：仅接受 TRC-20 通道，任何其他 channel 直接报错拒下
+        if (channel !== 'trc20') {
+          this.toast('❌ 当前仅支持 TRC-20 USDT 链上缴费，银行对公通道已关闭', 'error');
+          return;
+        }
         // 🔐 TRC-20 绝对严格：必须已通过 verifyTxHash() 显式验证成功
         //    禁止任何"64位合法即自动通过"的兜底——用户要求验证通过后才能点"付费完成"
-        if (channel === 'trc20') {
-          if (s.pendingTxVerified !== 'live' && s.pendingTxVerified !== 'simulated') {
-            // 只要没有显式验证标记（无论格式多么合法、无论是否手动调过验证），一律拒绝
-            this.toast('❌ 请先粘贴 TRON 交易哈希并点击/等待自动验证「✅ 验证通过」后，再确认缴费', 'error');
-            const st = $('#pay-hash-status');
-            if (st && !st.innerText.includes('✅')) {
-              st.innerHTML = '<div style="color:#dc2626;font-weight:600;">❌ 尚未完成交易验证，请先输入正确的 64 位十六进制哈希</div>';
-            }
-            return;
+        if (s.pendingTxVerified !== 'live' && s.pendingTxVerified !== 'simulated') {
+          this.toast('❌ 请先粘贴 TRON 交易哈希并点击/等待自动验证「✅ 验证通过」后，再确认缴费', 'error');
+          const st = $('#pay-hash-status');
+          if (st && !st.innerText.includes('✅')) {
+            st.innerHTML = '<div style="color:#dc2626;font-weight:600;">❌ 尚未完成交易验证，请先输入正确的 64 位十六进制哈希</div>';
           }
-          if (!s.pendingTxHash) {
-            this.toast('❌ 请粘贴 TRON 交易哈希', 'warning');
-            return;
-          }
-          feeDetail.method = 'TRC-20 USDT（波场公链）';
-          feeDetail.txHash = s.pendingTxHash;
-          feeDetail.address = 'TYDcY9fWsFm3aTVcQxN6LZxK7u7L5n3pQ8';
-        } else {
-          feeDetail.method = 'HSBC 对公账户 · 叶谢邓律师行';
-          feeDetail.txHash = 'HSBC-' + Date.now().toString().slice(-8);
-          feeDetail.account = '008-123-456-789';
+          return;
         }
+        if (!s.pendingTxHash) {
+          this.toast('❌ 请粘贴 TRON 交易哈希', 'warning');
+          return;
+        }
+        feeDetail.method = 'TRC-20 USDT（波场公链 · 信托结算专用存证通道）';
+        feeDetail.txHash = s.pendingTxHash;
+        feeDetail.address = 'TYDcY9fWsFm3aTVcQxN6LZxK7u7L5n3pQ8';
 
         // 持久化写回 sessions 数组（和 paid=1 URL 入口进入时的状态完全对齐）
         const all = Store.get('sessions', []);
@@ -1625,22 +1611,22 @@
       const isPtah = /PTAHDAO|受益人声明书|信托/.test(topic);
       const signerCount = 1 + (s.extraSigners || []).filter(function(e){return e.name && e.name.trim();}).length;
       const totalUsdt = (isPtah ? 687 : 756) * signerCount;
-      if (channel === 'trc20') {
-        // 🔐 TRC-20 绝对严格：必须已通过 verifyTxHash() 显式验证成功
-        if (s.pendingTxVerified !== 'live' && s.pendingTxVerified !== 'simulated') {
-          this.toast('❌ 请先粘贴 TRON 交易哈希并点击/等待自动验证「✅ 验证通过」后，再确认缴费', 'error');
-          const st = $('#pay-hash-status');
-          if (st && !st.innerText.includes('✅')) {
-            st.innerHTML = '<div style="color:#dc2626;font-weight:600;">❌ 尚未完成交易验证，请先输入正确的 64 位十六进制哈希</div>';
-          }
-          return;
-        }
-        if (!s.pendingTxHash) return this.toast('❌ 请粘贴 TRON 交易哈希', 'warning');
-        s.pendingFee = { method: 'TRC-20', amount: totalUsdt + ' USDT', hkd: 'HK$ ' + (totalUsdt * 7.80).toFixed(2), txHash: s.pendingTxHash, address: 'TYDcY9fWsFm3aTVcQxN6LZxK7u7L5n3pQ8' };
-      } else {
-        var bankRef = 'HSBC-' + Date.now().toString().slice(-8);
-        s.pendingFee = { method: 'HSBC 对公账户', amount: totalUsdt + ' USDT', hkd: 'HK$ ' + (totalUsdt * 7.80).toFixed(2), txHash: bankRef, account: '008-123-456-789' };
+      // 🏦 对公账户已移除：仅接受 TRC-20 通道，其他通道直接报错返回
+      if (channel !== 'trc20') {
+        this.toast('❌ 当前仅支持 TRC-20 USDT 链上缴费，银行对公通道已关闭', 'error');
+        return;
       }
+      // 🔐 TRC-20 绝对严格：必须已通过 verifyTxHash() 显式验证成功
+      if (s.pendingTxVerified !== 'live' && s.pendingTxVerified !== 'simulated') {
+        this.toast('❌ 请先粘贴 TRON 交易哈希并点击/等待自动验证「✅ 验证通过」后，再确认缴费', 'error');
+        const st = $('#pay-hash-status');
+        if (st && !st.innerText.includes('✅')) {
+          st.innerHTML = '<div style="color:#dc2626;font-weight:600;">❌ 尚未完成交易验证，请先输入正确的 64 位十六进制哈希</div>';
+        }
+        return;
+      }
+      if (!s.pendingTxHash) return this.toast('❌ 请粘贴 TRON 交易哈希', 'warning');
+      s.pendingFee = { method: 'TRC-20 USDT（波场公链 · 信托结算专用存证通道）', amount: totalUsdt + ' USDT', hkd: 'HK$ ' + (totalUsdt * 7.80).toFixed(2), txHash: s.pendingTxHash, address: 'TYDcY9fWsFm3aTVcQxN6LZxK7u7L5n3pQ8' };
       if (isPtah) {
         s.pendingPtah = {
           trustAccount: $('#cm-trust-account')?.value?.trim() || '',
@@ -2581,18 +2567,21 @@
       const payInfo = $('#pay-case-info');
       if (payInfo) payInfo.innerHTML = `<div style="font-size:13px;background:linear-gradient(135deg,#dbeafe,#eff6ff);border:1px solid #bfdbfe;border-radius:8px;padding:8px 10px;line-height:1.7;"><b>${s.topic}</b><br>签约人：${s.signerName} (${s.signerPhone})${s.trustAccount?'<br>信托账户：'+s.trustAccount:''}${s.settlementNo?' · 结算编号：'+s.settlementNo:''}${s.settlementAmount?'<br>结算资产：'+s.settlementAmount+' USDT':''}</div>`;
 
-      // ========== PTAHDAO 入口默认选中 TRC-20 链上通道（USDT 结算原生场景） ==========
+      // ========== 唯一通道：TRC-20 USDT（银行对公账户已移除） ==========
       try {
-        // 先置 radio
+        // 强制勾选唯一的 trc20 radio
         const trcRadio = document.querySelector('input[name="pay-channel"][value="trc20"]');
         if (trcRadio) trcRadio.checked = true;
-        // 调 selectPayChannel 联动：显示哈希输入区、隐藏银行区、按钮初始禁用提示先验证
+        // 调 selectPayChannel('trc20') 联动：强制哈希输入区显示、按钮初始禁用提示先验证、通道边框红
         if (typeof this.selectPayChannel === 'function') this.selectPayChannel('trc20');
         else if (typeof App !== 'undefined' && typeof App.selectPayChannel === 'function') App.selectPayChannel('trc20');
         // 输入与状态清空
         const txInp = $('#pay-tx-hash'); if (txInp) { txInp.value = ''; }
         const statusEl = $('#pay-hash-status'); if (statusEl) statusEl.textContent = '';
-        // ===== 修复：输入框绑定自动校验（无需点「验证」按钮），解决用户漏点导致的失败 =====
+        // 清空历史验证状态，确保每次支付都必须重新验证哈希
+        this.state.pendingTxHash = null;
+        this.state.pendingTxVerified = null;
+        // ===== 自动验证绑定：输入/粘贴/变更 400ms 后自动调 verifyTxHash，无需点按钮 =====
         const self = this;
         function bindAutoVerify() {
           const inp = $('#pay-tx-hash');
@@ -2606,15 +2595,15 @@
             const btn = $('#pay-confirm-btn');
             if (!v) {
               if (st) st.innerHTML = '';
-              if (btn) { btn.disabled = true; btn.textContent = '请先输入交易哈希'; }
+              if (btn) { btn.disabled = true; btn.style.opacity = '0.55'; btn.style.cursor = 'not-allowed'; btn.textContent = '⚠ 请先输入并验证交易哈希'; }
               return;
             }
             if (!/^[0-9a-fA-F]{64}$/.test(v)) {
               if (st) st.innerHTML = '<span style="color:#dc2626;">❌ 哈希格式不正确：应为 64 位十六进制（0-9/a-f/A-F）</span>';
-              if (btn) { btn.disabled = true; btn.textContent = '请先验证交易哈希'; }
+              if (btn) { btn.disabled = true; btn.style.opacity = '0.55'; btn.style.cursor = 'not-allowed'; btn.textContent = '⚠ 请先输入并验证交易哈希'; }
               return;
             }
-            // 格式正确 → 延迟 400ms 自动调用 verifyTxHash 执行（避免每按一个键都请求一次）
+            // 格式正确 → 延迟 400ms 自动调用 verifyTxHash 执行
             timer = setTimeout(() => {
               if (typeof self.verifyTxHash === 'function') self.verifyTxHash();
               else if (typeof App !== 'undefined' && typeof App.verifyTxHash === 'function') App.verifyTxHash();
@@ -2629,8 +2618,7 @@
         } else {
           bindAutoVerify();
         }
-        // 顶栏/品牌：PTAHDAO URL 已在入口设置 ptahdao-mode + 隐藏 navbar，这里保留（不强制显示 navbar）
-      } catch(e) { /* 通道选择容错，不影响打开弹窗 */ }
+      } catch(e) { /* 通道选择容错，不影响打开支付弹窗 */ }
 
       // 打开支付弹窗
       if (typeof App.openModal === 'function') App.openModal('pay-modal');
