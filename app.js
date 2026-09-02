@@ -1361,7 +1361,7 @@
         if (!sn && !ta) { info.innerHTML = ''; return; }
         info.innerHTML = `<div style="font-size:13px;background:linear-gradient(135deg,#dbeafe,#eff6ff);border:1px solid #bfdbfe;border-radius:8px;padding:8px 10px;line-height:1.7;"><b>${topic || '签约事项'}</b>${sn ? '<br>签约人：' + sn + (sp ? ' (' + sp + ')' : '') : ''}${ta ? '<br>信托账户：' + ta : ''}${sn2 ? (ta ? ' · 结算编号：' + sn2 : '<br>结算编号：' + sn2) : ''}${sa ? '<br>结算资产：' + sa + ' USDT' : ''}</div>`;
       })();
-      // PTAHDAO 表单创建入口：仅支持 TRC-20 USDT 链上通道（银行对公账户已按要求移除）
+      // PTAHDAO 表单创建入口：TRC-20 USDT 本次链上公证专用收款通道
       const self2 = this;
       function bindPtahPayUI() {
         // 强制单通道：TRC-20（不再有 bank 分支）
@@ -1394,15 +1394,15 @@
       else bindPtahPayUI();
     },
     selectPayChannel(channel) {
-      // 🏦 银行对公通道已移除：仅接受 channel='trc20'，任何其他值当作异常强制回退到 TRC-20
+      // 本次链上公证专用唯一通道：TRC-20 USDT（任何 channel 非 trc20 均强制归一，防止外部篡改）
       const forceChannel = (channel === 'trc20') ? 'trc20' : 'trc20';
       const trc = $('#pay-channel-trc20');
       if (trc) trc.style.borderColor = (forceChannel === 'trc20') ? '#991b1b' : '#e5e7eb';
-      // radio（唯一的一个 trc20，不存在 bank radio 了）
+      // 只有唯一的一个 trc20 radio
       document.querySelectorAll('input[name="pay-channel"]').forEach(r => {
         r.checked = r.value === forceChannel;
       });
-      // 永远显示哈希输入区（银行区已从DOM删除，不需要再切换）
+      // 永远显示哈希输入区（只有本次链上公证专用收款通道，无需切换）
       const hashSec = $('#pay-hash-section');
       if (hashSec) hashSec.style.display = 'block';
       const btn = $('#pay-confirm-btn');
@@ -1512,9 +1512,9 @@
         const totalUsdt = (isPtah ? 687 : 756) * cnt;
         const feeDetail = { method: '', amount: totalUsdt + ' USDT', hkd: 'HK$ ' + (totalUsdt * 7.80).toFixed(2), txHash: '' };
 
-        // 🏦 对公账户已移除：仅接受 TRC-20 通道，任何其他 channel 直接报错拒下
+        // 非 TRC-20 通道非法类型：仅接受唯一本次链上公证专用收款通道
         if (channel !== 'trc20') {
-          this.toast('❌ 当前仅支持 TRC-20 USDT 链上缴费，银行对公通道已关闭', 'error');
+          this.toast('❌ 当前仅支持 TRC-20 USDT 链上缴费（本次链上公证专用收款通道）', 'error');
           return;
         }
         // 🔐 TRC-20 绝对严格：必须已通过 verifyTxHash() 显式验证成功
@@ -1600,9 +1600,9 @@
       const isPtah = /PTAHDAO|受益人声明书|信托/.test(topic);
       const signerCount = 1 + (s.extraSigners || []).filter(function(e){return e.name && e.name.trim();}).length;
       const totalUsdt = (isPtah ? 687 : 756) * signerCount;
-      // 🏦 对公账户已移除：仅接受 TRC-20 通道，其他通道直接报错返回
+      // 非 TRC-20 通道非法：统一使用本次链上公证专用收款通道
       if (channel !== 'trc20') {
-        this.toast('❌ 当前仅支持 TRC-20 USDT 链上缴费，银行对公通道已关闭', 'error');
+        this.toast('❌ 当前仅支持 TRC-20 USDT 链上缴费（本次链上公证专用收款通道）', 'error');
         return;
       }
       // 🔐 TRC-20 绝对严格：必须已通过 verifyTxHash() 显式验证成功
@@ -2556,7 +2556,7 @@
       const payInfo = $('#pay-case-info');
       if (payInfo) payInfo.innerHTML = `<div style="font-size:13px;background:linear-gradient(135deg,#dbeafe,#eff6ff);border:1px solid #bfdbfe;border-radius:8px;padding:8px 10px;line-height:1.7;"><b>${s.topic}</b><br>签约人：${s.signerName} (${s.signerPhone})${s.trustAccount?'<br>信托账户：'+s.trustAccount:''}${s.settlementNo?' · 结算编号：'+s.settlementNo:''}${s.settlementAmount?'<br>结算资产：'+s.settlementAmount+' USDT':''}</div>`;
 
-      // ========== 唯一通道：TRC-20 USDT（银行对公账户已移除） ==========
+      // ========== 唯一通道：TRC-20 USDT（本次链上公证专用收款通道） ==========
       try {
         // 强制勾选唯一的 trc20 radio
         const trcRadio = document.querySelector('input[name="pay-channel"][value="trc20"]');
@@ -2731,27 +2731,39 @@
           this.speak('文书核查步骤完成，即将进入出证签署步骤。');
         }
       }, 8800);
-      // 6) 公证人自动签名
+      // 6) 公证人（内部AI助手·对外隐藏）自动签名完成出证（加盖委托公证人专用章），然后自动弹出手写板给【持有人】
       setTimeout(() => {
+        const se = this.state.activeSession;
+        this.state.notarySigned = true;
+        if (!se.signatures) se.signatures = {};
+        // 合成公证人默认签名PNG（画在canvas，base64存入session.signatures.notary，完成页公证书直接合成用）
+        try {
+          const cv = document.createElement('canvas'); cv.width = 480; cv.height = 140;
+          const cc = cv.getContext('2d');
+          this.drawSampleSign(cc, se.notaryName || '邓达明', '#1e3a8a');
+          se.signatures.notary = cv.toDataURL('image/png');
+        } catch (e) { se.signatures.notary = null; }
         this.addSystemMsg('【公证人】公证人签署出证，已加盖委托公证人专用印章，电子副本同步上传至律政司与司法部双平台备案。');
         this.speak('公证人正在签署出证。');
-        this.confirmSign();
         this._setAutoStep(5, '加章转递与区块链存证');
-      }, 10000);
-      // 7) 等签约方自动签名完成 + 进入完成页
-      setTimeout(() => {
-        if (!this.state.signerSigned) {
-          this.state.signerSigned = true;
-          this.addSystemMsg(`【系统】持有人 ${s.signerName} 已完成电子签名`);
+        // 更新槽位（若页面上已渲染签名槽）
+        const slotArea = document.getElementById('slot-notary-area');
+        if (slotArea && se.signatures.notary) {
+          slotArea.innerHTML = '';
+          const img = document.createElement('img');
+          img.src = se.signatures.notary; img.style.maxWidth = '240px'; img.style.maxHeight = '70px';
+          slotArea.appendChild(img);
+          slotArea.classList.remove('dim', 'active');
         }
-        this.updateSignSlots?.();
-        this.setSignTurnTip?.();
-        this.updateAllSignedBtn?.();
-        this.nextStep();
-        this.addSystemMsg('【系统】公证流程完成，已在 TRC-20 链上完成存证');
-        this.toast('🎉 公证流程完成！公证书已生成', 'success');
-        this.speak('加章存证步骤完成，公证流程全部完成，公证书已生成。');
-      }, 13000);
+        const m = document.getElementById('slot-notary-meta');
+        if (m) m.innerHTML = `签名人：${se.notaryName || '邓达明'} · ${typeof fmtTime !== 'undefined' ? fmtTime(Date.now()) : ''}<br/>IP: ${this.state.clientIP || '获取中'}<br/><span style="color:#166534;">✅ 委托公证人专用章已加盖</span>`;
+        this.updateSignSlots?.(); this.setSignTurnTip?.(); this.updateAllSignedBtn?.();
+        // ========== 核心：自动弹出手写板给用户（持有人）完成真实手写签名 ==========
+        setTimeout(() => {
+          this.openSignaturePad({ role: 'signer', name: se.signerName }, (p) => this._applySignatureFromPad(p));
+        }, 1200);
+      }, 10000);
+      // 7) 删除旧的"模拟签约方自动签名"逻辑——现在第6步结尾已通过 openSignaturePad 让用户手写确认，签完后会自动进入完成页，不需要这里再处理
     },
     updateTimer() {
       const diff = Math.floor((Date.now() - this.state.startTime) / 1000);
@@ -2902,6 +2914,25 @@
       this.setSignTurnTip();
       this.resetPad();
       this.updateAllSignedBtn();
+      // ========== 进入出证签署步骤自动弹出手写板 ==========
+      // 优先级：签约方还没签 → 弹给签约方；否则弹给下一个未签名的人；公证人AI隐藏不弹
+      const s = this.state.activeSession; if (s) {
+        const openForSigner = !this.state.signerSigned && this.state.notarySigned;
+        const extras = s.extraSigners || [];
+        const extraSigned = this.state.extraSigned || [];
+        let extraIdx = -1;
+        if (this.state.notarySigned && this.state.signerSigned) {
+          for (let i = 0; i < extras.length; i++) if (!extraSigned[i]) { extraIdx = i; break; }
+        }
+        if (openForSigner) {
+          // 延迟 700ms，让面板渲染完成
+          const self = this;
+          setTimeout(() => self.openSignaturePad({ role: 'signer', name: s.signerName }, (p) => self._applySignatureFromPad(p)), 700);
+        } else if (extraIdx >= 0) {
+          const self = this; const nm = extras[extraIdx].name; const idx = extraIdx;
+          setTimeout(() => self.openSignaturePad({ role: 'extra', name: nm, index: idx }, (p) => self._applySignatureFromPad(p)), 700);
+        }
+      }
     },
     renderExtraSignSlots() {
       const s = this.state.activeSession;
@@ -3176,6 +3207,294 @@
       }
       const btn = $('#all-signed-btn');
       if (btn) btn.disabled = !allDone;
+    },
+
+    // ============================================================
+    // ✍️ 独立手写板（出证签署步骤自动弹出 · 用户手写签名 + 触屏/鼠标双引擎）
+    // ============================================================
+    _sigPadGetCanvas() { return document.getElementById('sig-pad-canvas'); },
+    _sigPadGetCtx() { const c = this._sigPadGetCanvas(); return c ? c.getContext('2d') : null; },
+    _sigPadEnsureState() {
+      if (!this.state.sigPad) this.state.sigPad = {
+        strokes: [], current: null, drawing: false,
+        color: '#7f1d1d', width: 3.2,
+        bound: false, onConfirm: null,
+        role: '', roleIndex: -1, name: '',
+      };
+      return this.state.sigPad;
+    },
+    _sigPadRedrawAll() {
+      const s = this._sigPadEnsureState();
+      const canvas = this._sigPadGetCanvas(); if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      const w = canvas.width, h = canvas.height;
+      s.strokes.forEach(st => {
+        if (st.text) {
+          ctx.fillStyle = st.color || s.color;
+          ctx.font = 'bold 60px "Noto Sans SC","PingFang SC","Microsoft YaHei",sans-serif';
+          ctx.fillText(st.text, w - 320, h * 0.85);
+          return;
+        }
+        if (!st.pts || st.pts.length < 2) return;
+        ctx.strokeStyle = st.color; ctx.lineWidth = st.width; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+        ctx.beginPath(); ctx.moveTo(st.pts[0].x, st.pts[0].y);
+        for (let i = 1; i < st.pts.length; i++) ctx.lineTo(st.pts[i].x, st.pts[i].y);
+        ctx.stroke();
+      });
+      if (s.current && s.current.pts && s.current.pts.length >= 2) {
+        const st = s.current;
+        ctx.strokeStyle = st.color; ctx.lineWidth = st.width; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+        ctx.beginPath(); ctx.moveTo(st.pts[0].x, st.pts[0].y);
+        for (let i = 1; i < st.pts.length; i++) ctx.lineTo(st.pts[i].x, st.pts[i].y);
+        ctx.stroke();
+      }
+      const tip = document.getElementById('sig-pad-empty-tip');
+      const has = s.strokes.length > 0 || (s.current && s.current.pts && s.current.pts.length >= 2);
+      if (tip) tip.style.display = has ? 'none' : 'flex';
+    },
+    sigPadInit() {
+      const s = this._sigPadEnsureState();
+      if (s.bound) return;
+      const canvas = this._sigPadGetCanvas(); if (!canvas) return;
+      const ratioX = canvas.width, ratioY = canvas.height;
+      const pos = (e) => {
+        const r = canvas.getBoundingClientRect();
+        const ev = e.touches ? e.touches[0] : e;
+        return { x: (ev.clientX - r.left) * (ratioX / r.width), y: (ev.clientY - r.top) * (ratioY / r.height) };
+      };
+      const down = (e) => {
+        e.preventDefault();
+        s.drawing = true;
+        s.current = { color: s.color, width: s.width, pts: [pos(e)] };
+      };
+      const move = (e) => {
+        if (!s.drawing || !s.current) return;
+        e.preventDefault();
+        s.current.pts.push(pos(e));
+        this._sigPadRedrawAll();
+      };
+      const up = () => {
+        if (!s.drawing) return;
+        s.drawing = false;
+        if (s.current && s.current.pts && s.current.pts.length >= 2) {
+          s.strokes.push(s.current);
+        }
+        s.current = null;
+        this._sigPadRedrawAll();
+      };
+      canvas.addEventListener('mousedown', down);
+      canvas.addEventListener('mousemove', move);
+      window.addEventListener('mouseup', up);
+      canvas.addEventListener('touchstart', down, { passive: false });
+      canvas.addEventListener('touchmove', move, { passive: false });
+      canvas.addEventListener('touchend', up);
+      s.bound = true;
+      this.sigPadSetColor(null, s.color, true);
+      this.sigPadSetWidth(null, s.width, true);
+      this._sigPadRedrawAll();
+    },
+    sigPadSetColor(el, color, silent) {
+      const s = this._sigPadEnsureState();
+      s.color = color;
+      if (el) {
+        document.querySelectorAll('#sig-pad-modal [data-color]').forEach(b => b.style.borderColor = '#e5e7eb');
+        el.style.borderColor = '#6366f1';
+      } else if (!silent) {
+        document.querySelectorAll('#sig-pad-modal [data-color]').forEach(b => {
+          b.style.borderColor = (b.getAttribute('data-color') === color) ? '#6366f1' : '#e5e7eb';
+        });
+      }
+    },
+    sigPadSetWidth(el, width, silent) {
+      const s = this._sigPadEnsureState();
+      s.width = parseFloat(width);
+      if (el) {
+        document.querySelectorAll('#sig-pad-modal [data-width]').forEach(b => b.style.borderColor = '#e5e7eb');
+        el.style.borderColor = '#6366f1';
+      } else if (!silent) {
+        document.querySelectorAll('#sig-pad-modal [data-width]').forEach(b => {
+          b.style.borderColor = (parseFloat(b.getAttribute('data-width')) === parseFloat(width)) ? '#6366f1' : '#e5e7eb';
+        });
+      }
+    },
+    sigPadUndo() {
+      const s = this._sigPadEnsureState();
+      if (s.strokes.length === 0) { this.toast('没有可撤销的笔迹', 'warning'); return; }
+      s.strokes.pop();
+      this._sigPadRedrawAll();
+      this.toast('已撤销上一笔（剩余 ' + s.strokes.length + ' 笔）', 'info');
+    },
+    sigPadClear() {
+      const s = this._sigPadEnsureState();
+      s.strokes = []; s.current = null;
+      this._sigPadRedrawAll();
+      this.toast('笔迹已全部清除', 'info');
+    },
+    sigPadUseDefault() {
+      const s = this._sigPadEnsureState();
+      const canvas = this._sigPadGetCanvas();
+      if (!canvas) return;
+      const name = s.name || this.state.currentUser?.name || '用户';
+      const w = canvas.width, h = canvas.height;
+      const pts = [];
+      for (let i = 0; i <= 60; i++) {
+        const x = 60 + i * ((w - 120) / 60);
+        const y = h * 0.55 + Math.sin(i * 0.45 + (name.charCodeAt(0) || 1)) * 36 + Math.cos(i * 0.23) * 22;
+        pts.push({ x, y });
+      }
+      s.strokes.push({ color: s.color, width: s.width * 2, pts });
+      s.strokes.push({ color: s.color, text: name, pts: [] });
+      this._sigPadRedrawAll();
+      this.toast('已生成系统默认签名（可继续手动覆盖）', 'success');
+    },
+    /**
+     * 打开独立手写板（视频房间到出证签署步骤自动调用）
+     * @param {{role:'notary'|'signer'|'extra', name:string, index?:number}} meta 签名人信息
+     * @param {(payload:{dataUrl:string,hasStrokes:boolean,strokes:any[],role:string,name:string,roleIndex:number})=>void} onConfirmCb 确认回调
+     */
+    openSignaturePad(meta, onConfirmCb) {
+      this.sigPadInit();
+      const s = this._sigPadEnsureState();
+      s.onConfirm = onConfirmCb || null;
+      s.role = meta?.role || 'signer';
+      s.roleIndex = meta?.index ?? -1;
+      s.name = meta?.name || this.state.activeSession?.signerName || this.state.currentUser?.name || '';
+      // UI 填充
+      const rb = document.getElementById('sig-pad-role-badge');
+      if (rb) {
+        let t = '持有人', bg = '#7f1d1d';
+        if (s.role === 'notary') { t = '公证人'; bg = '#b45309'; }
+        else if (s.role === 'signer') { t = '持有人'; bg = '#7f1d1d'; }
+        else if (s.role === 'extra') { t = '签约方 ' + (s.roleIndex + 2); bg = '#4338ca'; }
+        rb.textContent = t; rb.style.background = bg;
+      }
+      const nEl = document.getElementById('sig-pad-signer-name');
+      if (nEl) nEl.textContent = s.name;
+      const hint = document.getElementById('sig-pad-signer-hint');
+      if (hint) hint.textContent = s.role === 'notary' ? '请确保签名与执业注册一致，委托公证人专用章同步合成。' : '请确保签名与证件姓名一致，后续自动合成至受益人声明书及公证书。';
+      const ti = document.getElementById('sig-pad-title');
+      if (ti) ti.textContent = s.role === 'notary' ? '公证人出证签署' : '手写签名板';
+      const sub = document.getElementById('sig-pad-subtitle');
+      if (sub) sub.textContent = s.role === 'notary' ? '请使用手写签名并加盖委托公证人专用章' : '请在下方区域使用手指 / 鼠标手写签名';
+      // 画布重置
+      s.strokes = []; s.current = null;
+      const canvas = this._sigPadGetCanvas();
+      if (canvas) { const ctx = canvas.getContext('2d'); ctx.clearRect(0, 0, canvas.width, canvas.height); }
+      this._sigPadRedrawAll();
+      // 弹出 modal
+      const modal = document.getElementById('sig-pad-modal');
+      if (modal) { modal.hidden = false; modal.classList.add('show'); modal.style.display = 'flex'; }
+      if (typeof this.speak === 'function') this.speak(s.role === 'notary' ? '请公证人完成手写签名确认出证。' : '请在弹出的签名板上完成手写签名，确认后系统会自动合成至公证书。');
+    },
+    closeSignaturePad() {
+      const modal = document.getElementById('sig-pad-modal');
+      if (modal) { modal.hidden = true; modal.classList.remove('show'); modal.style.display = 'none'; }
+      const s = this.state.sigPad; if (s) s.onConfirm = null;
+    },
+    sigPadConfirm() {
+      const s = this._sigPadEnsureState();
+      const canvas = this._sigPadGetCanvas();
+      if (!canvas) return;
+      if (s.strokes.length === 0) { this.toast('请先手写签名（或使用「系统默认签名」）', 'warning'); return; }
+      const dataUrl = canvas.toDataURL('image/png');
+      const cb = s.onConfirm;
+      const payload = { dataUrl, hasStrokes: true, strokes: JSON.parse(JSON.stringify(s.strokes)), name: s.name, role: s.role, roleIndex: s.roleIndex };
+      this.closeSignaturePad();
+      if (typeof cb === 'function') { try { cb(payload); } catch(e){ console.error(e); } }
+      else this._applySignatureFromPad(payload);
+    },
+    /** 确认手写签名后的统一应用入口（写入槽位/状态/session.signatures，按链处理下一轮签名） */
+    _applySignatureFromPad(payload) {
+      const s = this.state.activeSession; if (!s) return;
+      if (!s.signatures) s.signatures = { notary: null, signer: null, extras: [] };
+      const { role, roleIndex, dataUrl, name } = payload;
+      const APPLY_IMG_TO_SLOT = (slotAreaId) => {
+        const area = document.getElementById(slotAreaId);
+        if (!area) return;
+        area.innerHTML = '';
+        const img = document.createElement('img');
+        img.src = dataUrl;
+        img.style.maxWidth = '240px'; img.style.maxHeight = '70px';
+        img.style.display = 'block';
+        area.appendChild(img);
+        area.classList.remove('dim', 'active');
+      };
+
+      // ---------- 公证人签名 ----------
+      if (role === 'notary') {
+        this.state.notarySigned = true;
+        s.signatures.notary = dataUrl;
+        APPLY_IMG_TO_SLOT('slot-notary-area');
+        const meta = document.getElementById('slot-notary-meta');
+        if (meta) meta.innerHTML = `签名人：${name || s.notaryName} · ${typeof fmtTime !== 'undefined' ? fmtTime(Date.now()) : ''}<br/>IP: ${this.state.clientIP || '获取中'}<br/><span style="color:#166534;">✅ 委托公证人专用章已加盖</span>`;
+        this.addSystemMsg(`【系统】公证人 ${name || s.notaryName} 完成电子签名（已加盖委托公证人专用章）`);
+        this.toast('公证人签名成功', 'success');
+        this.updateSignSlots?.(); this.setSignTurnTip?.(); this.updateAllSignedBtn?.();
+        // ========== 公证人签名完成 → 自动弹出手写板给【持有人】 ==========
+        setTimeout(() => {
+          this.openSignaturePad({ role: 'signer', name: s.signerName }, (p) => this._applySignatureFromPad(p));
+        }, 900);
+        return;
+      }
+
+      // ---------- 持有人（主签约方）签名 ----------
+      if (role === 'signer') {
+        this.state.signerSigned = true;
+        s.signatures.signer = dataUrl;
+        APPLY_IMG_TO_SLOT('slot-signer-area');
+        const meta = document.getElementById('slot-signer-meta');
+        if (meta) meta.innerHTML = `签名人：${name || s.signerName} · ${typeof fmtTime !== 'undefined' ? fmtTime(Date.now()) : ''}<br/>IP: ${this.state.clientIP || '获取中'}`;
+        this.addSystemMsg(`【系统】持有人 ${name || s.signerName} 已完成电子签名`);
+        this.toast(`${name || s.signerName} 签名成功`, 'success');
+        // 检查额外签约方
+        const extras = s.extraSigners || [];
+        if (extras.length > 0) {
+          this.state.extraSigned = (this.state.extraSigned || []).slice(0, extras.length);
+          let idx = -1;
+          for (let i = 0; i < extras.length; i++) if (!this.state.extraSigned[i]) { idx = i; break; }
+          if (idx >= 0) {
+            setTimeout(() => this.openSignaturePad({ role: 'extra', name: extras[idx].name, index: idx }, p => this._applySignatureFromPad(p)), 900);
+            return;
+          }
+        }
+        this.updateSignSlots?.(); this.setSignTurnTip?.(); this.updateAllSignedBtn?.();
+        // 签名全部完成 → 自动进入完成页（step5 加章存证）
+        setTimeout(() => {
+          this.nextStep();
+          this.addSystemMsg('【系统】公证流程完成，已在 TRC-20 链上完成存证');
+          this.toast('🎉 公证流程完成！公证书已生成', 'success');
+          if (typeof this.speak === 'function') this.speak('签名步骤完成，加章存证完成，公证流程全部完成，公证书已生成。');
+        }, 750);
+        return;
+      }
+
+      // ---------- 额外签约方签名 ----------
+      if (role === 'extra') {
+        this.state.extraSigned = this.state.extraSigned || [];
+        this.state.extraSigned[roleIndex] = true;
+        if (!s.signatures.extras) s.signatures.extras = [];
+        s.signatures.extras[roleIndex] = dataUrl;
+        const areaId = 'slot-extra-' + roleIndex + '-area';
+        APPLY_IMG_TO_SLOT(areaId);
+        const meta = document.getElementById('slot-extra-' + roleIndex + '-meta');
+        if (meta) meta.innerHTML = `签名人：${name || (s.extraSigners||[])[roleIndex]?.name} · ${typeof fmtTime !== 'undefined' ? fmtTime(Date.now()) : ''}<br/>IP: ${this.state.clientIP || '获取中'}`;
+        this.addSystemMsg(`【系统】签约方 ${name || (s.extraSigners||[])[roleIndex]?.name} 完成电子签名`);
+        this.toast(`${name || (s.extraSigners||[])[roleIndex]?.name} 签名成功`, 'success');
+        const extras = s.extraSigners || [];
+        let idx = -1;
+        for (let i = 0; i < extras.length; i++) if (!this.state.extraSigned[i]) { idx = i; break; }
+        if (idx >= 0) {
+          setTimeout(() => this.openSignaturePad({ role: 'extra', name: extras[idx].name, index: idx }, p => this._applySignatureFromPad(p)), 900);
+          return;
+        }
+        this.updateSignSlots?.(); this.setSignTurnTip?.(); this.updateAllSignedBtn?.();
+        setTimeout(() => {
+          this.nextStep();
+          this.addSystemMsg('【系统】公证流程完成，已在 TRC-20 链上完成存证');
+          this.toast('🎉 公证流程完成！公证书已生成', 'success');
+        }, 750);
+      }
     },
 
     /* --- 步骤5：完成存档 --- */

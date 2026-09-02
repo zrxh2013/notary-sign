@@ -758,8 +758,8 @@
                 <div id="extra-slots-container" style="display:none;"></div>
               </div>
 
-              <!-- 签名板弹窗（内嵌） -->
-              <div class="sign-pad-area" id="sign-pad-area">
+              <!-- 内嵌签名板已改为自动弹出独立手写板（隐藏） -->
+              <div class="sign-pad-area" id="sign-pad-area" style="display:none;">
                 <div class="pad-head">
                   <span>请在下方签名区域手写签名</span>
                   <button class="btn-text" onclick="App.clearPad()">清除笔迹</button>
@@ -974,14 +974,14 @@
         <!-- 公证费说明 + 清单（动态填充） -->
         <div id="pay-fee-breakdown" style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:12px 16px;margin-bottom:16px;font-size:12px;color:#475569;line-height:1.7;"></div>
 
-        <!-- 缴费方式（仅保留 TRC-20 USDT，已移除银行对公账户） -->
-        <div style="font-size:13px;font-weight:600;margin-bottom:10px;">缴费方式：⛓️ TRC-20 USDT（波场公链 · 信托结算专用存证通道）</div>
+        <!-- 缴费方式：TRC-20 USDT 链上通道 -->
+        <div style="font-size:13px;font-weight:600;margin-bottom:10px;">缴费方式：⛓️ TRC-20 USDT（本次链上公证专用收款通道）</div>
         <div style="display:grid;grid-template-columns:1fr;gap:12px;margin-bottom:16px;">
           <!-- 唯一通道：TRC-20 区块链 -->
           <div class="pay-channel" id="pay-channel-trc20" onclick="App.selectPayChannel('trc20')" style="border:2px solid #991b1b;border-radius:10px;padding:16px 18px;cursor:pointer;transition:all .2s;background:linear-gradient(135deg,#fff1f2,#ffe4e6);">
             <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
               <input type="radio" name="pay-channel" value="trc20" checked />
-              <span style="font-size:15px;font-weight:700;color:#7f1d1d;">⛓️ TRC-20 USDT（信托结算专用链上通道）</span>
+              <span style="font-size:15px;font-weight:700;color:#7f1d1d;">⛓️ TRC-20 USDT（本次链上公证专用收款通道）</span>
             </div>
             <div style="font-size:12px;color:#6b7280;line-height:1.8;">
               <div><b>网络：</b>Tron Network (TRC-20)</div>
@@ -1007,7 +1007,7 @@
           </button>
         </div>
 
-        <!-- 银行对公账户通道已按要求移除 -->
+        <!-- 支付通道：仅保留 TRC-20 USDT（链上公证专用） -->
       </div>
       <div class="modal-foot">
         <button class="btn-ghost" onclick="App.closeModal('pay-modal'); App.openModal('create-modal')">返回</button>
@@ -1262,6 +1262,74 @@
       <div class="modal-foot">
         <span class="muted small">💡 可直接打印或"另存为 PDF"导出；也可点击「保存 HTML」在本地随时打开查看。</span>
         <button class="btn-primary" onclick="App.previewCertPrint()">🖨️ 打印 / 另存为 PDF</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============== 独立手写板 Modal（视频到出证签署步骤自动弹出） ============== -->
+  <div class="modal-mask" id="sig-pad-modal" hidden style="z-index:99999;">
+    <div class="modal-box" style="max-width:520px;width:calc(100% - 24px);padding:0;border-radius:18px;overflow:hidden;box-shadow:0 30px 80px rgba(30,27,75,.55);">
+      <!-- 顶栏 -->
+      <div id="sig-pad-head" style="background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;padding:16px 20px;display:flex;align-items:center;gap:10px;">
+        <div style="font-size:22px;">✍️</div>
+        <div style="flex:1 1 auto;min-width:0;">
+          <div id="sig-pad-title" style="font-size:16px;font-weight:800;letter-spacing:0.2px;">手写签名板</div>
+          <div id="sig-pad-subtitle" style="font-size:12px;opacity:0.92;margin-top:2px;">请在下方区域使用手指/鼠标手写签名</div>
+        </div>
+        <button class="btn-text" id="sig-pad-close" onclick="App.closeSignaturePad()" style="color:#fff;font-size:18px;padding:4px 10px;">×</button>
+      </div>
+      <!-- 主体 -->
+      <div style="padding:18px 20px 14px;background:#fff;">
+        <!-- 签名人信息条 -->
+        <div id="sig-pad-signer-info" style="background:linear-gradient(135deg,#eff6ff,#eef2ff);border:1px solid #c7d2fe;border-radius:10px;padding:10px 14px;margin-bottom:14px;display:flex;align-items:center;gap:12px;">
+          <div id="sig-pad-role-badge" style="background:#4338ca;color:#fff;font-size:11px;font-weight:700;padding:3px 10px;border-radius:6px;letter-spacing:0.3px;">公证人</div>
+          <div style="flex:1 1 auto;min-width:0;">
+            <div id="sig-pad-signer-name" style="font-size:14px;font-weight:700;color:#1e1b4b;">邓达明</div>
+            <div id="sig-pad-signer-hint" style="font-size:11px;color:#6366f1;margin-top:2px;">请确保签名与证件姓名一致，后续用于公证书合成</div>
+          </div>
+        </div>
+        <!-- 画布容器（触屏优化+最大尺寸移动端375px铺满） -->
+        <div id="sig-pad-canvas-wrap" style="position:relative;background:#fff;
+              border:2px dashed #c7d2fe;border-radius:14px;padding:0;overflow:hidden;
+              touch-action:none;
+              max-width:100%;
+              margin-bottom:12px;">
+          <!-- 格子线背景（作为签名参考底线） -->
+          <div style="position:absolute;left:0;right:0;bottom:18%;height:1px;background:#fecaca;z-index:1;"></div>
+          <canvas id="sig-pad-canvas" width="840" height="520" style="display:block;width:100%;height:260px;max-height:42vh;cursor:crosshair;background:
+              linear-gradient(#fff,#fff) top/100% 82% no-repeat,
+              repeating-linear-gradient(0deg,transparent,transparent 26px,rgba(226,232,240,0.6) 26px,rgba(226,232,240,0.6) 27px);"></canvas>
+          <!-- 空状态提示 -->
+          <div id="sig-pad-empty-tip" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;color:#a5b4fc;font-weight:600;font-size:14px;letter-spacing:0.5px;">
+            ✋ 请在此区域手写签名（不要使用打印字体）
+          </div>
+        </div>
+        <!-- 工具栏：颜色 / 粗细 -->
+        <div style="display:flex;align-items:center;gap:14px;margin-bottom:12px;flex-wrap:wrap;">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span style="font-size:12px;font-weight:700;color:#475569;">颜色</span>
+            <button data-color="#0f172a" onclick="App.sigPadSetColor(this,'#0f172a')" style="width:24px;height:24px;border-radius:50%;background:#0f172a;border:3px solid #e5e7eb;cursor:pointer;padding:0;"></button>
+            <button data-color="#7f1d1d" onclick="App.sigPadSetColor(this,'#7f1d1d')" style="width:24px;height:24px;border-radius:50%;background:#7f1d1d;border:3px solid #6366f1;cursor:pointer;padding:0;"></button>
+            <button data-color="#1e3a8a" onclick="App.sigPadSetColor(this,'#1e3a8a')" style="width:24px;height:24px;border-radius:50%;background:#1e3a8a;border:3px solid #e5e7eb;cursor:pointer;padding:0;"></button>
+          </div>
+          <div style="width:1px;height:18px;background:#e5e7eb;"></div>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span style="font-size:12px;font-weight:700;color:#475569;">粗细</span>
+            <button data-width="2" onclick="App.sigPadSetWidth(this,2)" style="width:32px;height:32px;border-radius:8px;border:2px solid #e5e7eb;background:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;"><span style="width:12px;height:2px;background:#0f172a;border-radius:2px;display:block;"></span></button>
+            <button data-width="3.2" onclick="App.sigPadSetWidth(this,3.2)" style="width:32px;height:32px;border-radius:8px;border:2px solid #6366f1;background:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;"><span style="width:12px;height:3px;background:#0f172a;border-radius:3px;display:block;"></span></button>
+            <button data-width="4.5" onclick="App.sigPadSetWidth(this,4.5)" style="width:32px;height:32px;border-radius:8px;border:2px solid #e5e7eb;background:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;"><span style="width:12px;height:4.5px;background:#0f172a;border-radius:4.5px;display:block;"></span></button>
+          </div>
+        </div>
+        <!-- 操作按钮组 -->
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;">
+          <button class="btn-ghost" onclick="App.sigPadUndo()" style="font-size:13px;">↶ 撤销</button>
+          <button class="btn-ghost" onclick="App.sigPadClear()" style="font-size:13px;">🧹 全部清除</button>
+          <button class="btn-ghost" onclick="App.sigPadUseDefault()" style="font-size:13px;">🖋 系统默认签名</button>
+          <button class="btn-primary" id="sig-pad-confirm-btn" onclick="App.sigPadConfirm()" style="font-size:13px;font-weight:700;letter-spacing:0.2px;">✅ 确认使用此签名</button>
+        </div>
+        <div style="font-size:11px;color:#94a3b8;margin-top:10px;text-align:center;line-height:1.7;">
+          ※ 请使用清晰可辨认的手写签名；一经确认，将自动合成至受益人声明书、公证书及区块链存证凭证。
+        </div>
       </div>
     </div>
   </div>
