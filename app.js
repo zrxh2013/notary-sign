@@ -1085,19 +1085,21 @@
       this.state.tempFiles = [];
       this.state.extraSigners = [];
       this.renderExtraSigners();
-      // ====== 通用：主题下拉框可编辑，默认借款合同（如果 forceTopic 指定则用 forceTopic） ======
+      // ====== 通用：主题下拉框可编辑，默认「受益人声明书公证」（如果 forceTopic 指定则用 forceTopic 覆盖） ======
       const topicSel = $('#cm-topic');
+      const DEFAULT_TOPIC = '受益人声明书公证';
       if (topicSel) {
         topicSel.disabled = false;
         topicSel.style.opacity = '1';
         topicSel.style.pointerEvents = 'auto';
         const wrap = topicSel.closest ? (topicSel.closest('.field') || topicSel.parentElement) : topicSel.parentElement;
         if (wrap) wrap.style.display = 'block';
-        if (forceTopic) {
-          for (let i = 0; i < topicSel.options.length; i++) {
-            if (topicSel.options[i].value === forceTopic) { topicSel.selectedIndex = i; break; }
-          }
+        const target = forceTopic || DEFAULT_TOPIC;
+        let matched = false;
+        for (let i = 0; i < topicSel.options.length; i++) {
+          if (topicSel.options[i].value === target) { topicSel.selectedIndex = i; matched = true; break; }
         }
+        if (!matched && topicSel.options.length > 0) topicSel.selectedIndex = 3; // 兜底：HTML 顺序第 4 项就是受益人声明书公证（索引 3）
       }
       // 恢复已确认缴费勾选：显示 + 默认不选（通用流程）
       const feeCb = document.getElementById('cm-fee-paid');
