@@ -1067,7 +1067,7 @@
       this._renderGuestNotice();
       this._renderQuickSlots();
     },
-    // 主题切换：PTAHDAO 信托专用字段显示 + Label 调整 + 费用更新
+    // 主题切换：PTAHDAO 信托专用字段显示 + Label 调整 + 费用更新 + 固定只读标题卡
     onTopicChange() {
       const topic = $('#cm-topic')?.value || '';
       const isPtah = topic.indexOf('PTAHDAO') >= 0;
@@ -1080,6 +1080,45 @@
       if (nl) nl.innerHTML = isPtah ? '持有人姓名 <span class="req">*</span>' : '签约方姓名 <span class="req">*</span>';
       if (pl) pl.innerHTML = isPtah ? '持有人手机 <span class="req">*</span>' : '签约方手机号 <span class="req">*</span>';
       if (il) il.textContent = isPtah ? '持有人证件号' : '签约方身份证号';
+      // ===== PTAHDAO 专属：固定只读标题卡 + 隐藏原主题下拉框（对齐URL入口UI）=====
+      const FIXED_PTAH_TOPIC = 'PTAHDAO信托结算用户签署【受益人声明书】公证申请表';
+      const topicSel = $('#cm-topic');
+      if (topicSel) {
+        const topicWrap = topicSel.closest ? (topicSel.closest('.field') || topicSel.parentElement) : topicSel.parentElement;
+        if (isPtah) {
+          // 隐藏主题下拉框
+          if (topicWrap) topicWrap.style.display = 'none';
+          // 插入只读固定标题卡片（如果不存在）
+          if (ptahBox && !document.getElementById('ptah-topic-readonly')) {
+            const ro = document.createElement('div');
+            ro.id = 'ptah-topic-readonly';
+            ro.style.cssText = 'background:linear-gradient(135deg,#eef2ff,#e0e7ff);border:1px solid #6366f1;border-radius:10px;padding:12px 14px;margin-bottom:12px;';
+            ro.innerHTML = '<div style="font-size:12px;color:#4338ca;font-weight:600;margin-bottom:4px;">📝 签约事项（PTAHDAO专用 · 固定）</div>' +
+              '<div style="font-size:14px;color:#1e1b4b;font-weight:700;line-height:1.5;">' + FIXED_PTAH_TOPIC + '</div>';
+            ptahBox.parentElement.insertBefore(ro, ptahBox);
+          }
+          // ====== 一次性从付费到签署（免中间弹窗点击）：隐藏已确认缴费勾选 + 强制选中 ======
+          const feeCb = document.getElementById('cm-fee-paid');
+          if (feeCb) {
+            feeCb.checked = true;
+            feeCb.dispatchEvent(new Event('change', { bubbles: true }));
+            const feeLabel = feeCb.closest ? feeCb.closest('label') : feeCb.parentElement;
+            if (feeLabel) feeLabel.style.display = 'none';
+          }
+        } else {
+          // 恢复主题下拉框
+          if (topicWrap) topicWrap.style.display = '';
+          // 移除只读标题卡片
+          const ro = document.getElementById('ptah-topic-readonly');
+          if (ro) ro.remove();
+          // 恢复已确认缴费勾选
+          const feeCb = document.getElementById('cm-fee-paid');
+          if (feeCb) {
+            const feeLabel = feeCb.closest ? feeCb.closest('label') : feeCb.parentElement;
+            if (feeLabel) feeLabel.style.display = '';
+          }
+        }
+      }
       this.updateCreateFee();
     },
     // 访客模式提示
@@ -1193,9 +1232,18 @@
       if (detail) detail.textContent = `${isHK ? '依据香港公证人协会指引' : '依据发改价格[2008]157号'} · ${topic}基础费`;
     },
     updateCreateBtn() {
-      const paid = $('#cm-fee-paid')?.checked;
+      const topic = $('#cm-topic')?.value || '';
+      const isPtah = topic.indexOf('PTAHDAO') >= 0;
       const btn = $('#cm-submit-btn');
       if (!btn) return;
+      if (isPtah) {
+        // PTAHDAO 一次性流程：付费→签约一气呵成，不用手动管勾选状态
+        btn.textContent = '💰 确认缴费并立即签署';
+        btn.disabled = false;
+        btn.style.opacity = '1';
+        return;
+      }
+      const paid = $('#cm-fee-paid')?.checked;
       if (paid) {
         btn.textContent = '确认缴费并创建会议';
         btn.disabled = false;
@@ -1207,7 +1255,9 @@
     },
     // ---- 缴费流程 ----
     tryCreate() {
-      const paid = $('#cm-fee-paid')?.checked;
+      const topic = $('#cm-topic')?.value || '';
+      const isPtah = topic.indexOf('PTAHDAO') >= 0;
+      const paid = isPtah ? true : !!($('#cm-fee-paid')?.checked); // PTAHDAO 始终走「先缴费再签约」一次性路径
       if (paid) {
         // 需要先缴费：关闭创建弹窗，打开缴费弹窗
         this.closeModal('create-modal');
@@ -1596,6 +1646,31 @@
       // 打开弹窗
       this.openModal('pay-success-modal');
       this.speak('缴费成功！会议室入口链接已生成，24小时内有效，请点击进入会议室。');
+      // ====== PTAHDAO 一次性流程：付完费 1.2 秒倒计时后自动跳入签约房间，用户无需手动点按钮 ======
+      const isPtahFlow = s._ptahdao || /PTAHDAO|受益人声明书|信托/.test(s.topic || '') || (s.trustAccount && s.settlementNo);
+      if (isPtahFlow && typeof this.enterRoomFromPaySuccess === 'function') {
+        const self3 = this;
+        const modalBody = document.getElementById('pay-success-modal')?.querySelector('.modal-body');
+        let tipNode = document.getElementById('pay-success-entry-hint');
+        if (!tipNode && modalBody) {
+          tipNode = document.createElement('div');
+          tipNode.id = 'pay-success-entry-hint';
+          tipNode.style.cssText = 'margin-top:14px;padding:12px 14px;background:linear-gradient(135deg,#dcfce7,#bbf7d0);border:1px solid #86efac;border-radius:10px;text-align:center;color:#065f46;font-weight:700;font-size:13px;letter-spacing:0.2px;';
+          tipNode.innerHTML = '🚀 缴费成功，正在进入签约房间… <span id="pay-success-countdown" style="font-family:monospace;font-size:15px;">1.2</span> 秒后自动进入';
+          modalBody.appendChild(tipNode);
+        }
+        const cdNode = document.getElementById('pay-success-countdown');
+        let remain = 1.2;
+        const cdTimer = cdNode ? setInterval(function () {
+          remain = Math.max(0, +(remain - 0.1).toFixed(2));
+          cdNode.textContent = remain.toFixed(1);
+          if (remain <= 0) clearInterval(cdTimer);
+        }, 100) : null;
+        setTimeout(function () {
+          if (cdTimer) clearInterval(cdTimer);
+          self3.enterRoomFromPaySuccess();
+        }, 1200);
+      }
     },
     // 复制入会链接
     copyPaySuccessLink() {
@@ -3510,8 +3585,49 @@ ${bodyFragment}
         } catch (e) {}
       }
       if (!s) {
-        this.toast(`会议号 ${sid} 不存在或未在本机创建。请使用对方发送的完整深链（?join=...&d=...）打开。`, 'warning');
-        return;
+        // ===== Scene 6：仅凭会议号（无d参数/无本地session）+ 姓名/手机 远程加入 =====
+        // 兼容第三方平台嵌入或跨设备访客场景：对方只分享了会议号，本地无法还原完整session时，
+        // 以用户当前填写的姓名/手机为基础重建一个占位session，允许其进入视频房间。
+        const realName = (name || '').trim();
+        const realPhone = (phone || '').trim();
+        if (realName && realPhone) {
+          const now = Date.now();
+          const placeholder = {
+            id: sid,
+            topic: sid,
+            docTitle: '会议号 ' + sid + ' · 远程加入签约',
+            docKey: '',
+            status: 'pending',
+            feePaid: true,
+            fee: '—',
+            signerName: realName,
+            signerPhone: realPhone,
+            signerIdcard: '',
+            appointAt: new Date().toISOString().slice(0, 16).replace('T', ' '),
+            duration: 30,
+            guestCreated: true,
+            autoNotary: true,
+            apiCreated: false,
+            notaryId: DEFAULT_NOTARY.id,
+            notaryName: DEFAULT_NOTARY.name,
+            notaryOrg: DEFAULT_NOTARY.org,
+            notaryCertNo: DEFAULT_NOTARY.certNo,
+            files: [],
+            extraSigners: [],
+            joinToken: randHex(24),
+            joinTokenExp: now + 24 * 3600 * 1000,
+            _rebuiltFromMeetingNo: true,
+            _caseNo: 'CASE-' + sid,
+          };
+          const all = Store.get('sessions', []);
+          all.unshift(placeholder);
+          Store.set('sessions', all);
+          s = placeholder;
+          this.toast(`会议号 ${sid} 已按您输入的信息重建，正在进入签约房间…`, 'info');
+        } else {
+          this.toast(`会议号 ${sid} 不存在或未在本机创建，请先填写姓名与手机再尝试，或使用对方发送的完整深链（?join=...&d=...）打开。`, 'warning');
+          return;
+        }
       }
       // 自动登录为签约方（用会议里的信息匹配）
       const realName = (name || s.signerName || '').trim();
