@@ -17,7 +17,7 @@
         <span>信签云</span>
       </div>
     </div>
-    <div class="nav-center" id="nav-role-label">公证人工作台</div>
+    <div class="nav-center" id="nav-role-label">信签云 · 公证人视频签约平台</div>
     <div class="nav-right">
       <button class="btn-text kb-hint" id="lang-toggle-btn" onclick="App.toggleLang()" title="三语切换：简体→繁体→English→简体">
         <span id="lang-label">简</span>
@@ -739,6 +739,49 @@
                 <div class="sign-tip muted" id="sign-turn-tip">请 <b class="blue">公证人</b> 先签名</div>
               </div>
 
+              <!-- ================ 📢 信托持有人口读承诺录音（强制前置，持有人签署前必须完成） ================= -->
+              <div id="sign-commitment-card" style="display:none;background:linear-gradient(135deg,#ecfdf5,#d1fae5);border:1px solid #10b981;border-radius:12px;padding:14px 16px;margin-bottom:16px;">
+                <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap;">
+                  <div style="font-size:20px;">📢</div>
+                  <div style="font-size:15px;font-weight:800;color:#065f46;">信托持有人口读承诺 · 链上存证录音凭证</div>
+                  <div style="flex:1;"></div>
+                  <span id="commitment-status-chip" style="background:#fee2e2;color:#991b1b;padding:3px 9px;border-radius:6px;font-size:11px;font-weight:700;">⏳ 未录音</span>
+                </div>
+                <!-- 承诺文本 -->
+                <div id="commitment-text-box" style="background:#fff;border:1px solid #6ee7b7;border-radius:10px;padding:12px 14px;line-height:1.95;font-size:13.5px;color:#0f766e;margin-bottom:12px;">
+                  我，<b id="commit-holder-name" style="color:#15803d;font-size:15px;">【信托账户持有人】</b>，谨此郑重承诺：<br/>
+                  1. 我是本信托账户的<b>合法持有人</b>，对信托账户内所列资产享有完整的受益权；<br/>
+                  2. 本次向叶谢邓律师行（香港）邓达明公证人（CAO-HK-D0468）提交的《受益人声明书》内容真实无误；<br/>
+                  3. 本声明书内容系本人真实意思表示，本人自愿承担由此产生的一切法律后果；<br/>
+                  4. 本人同意本次办理全流程（口读承诺录音 + 视频录像 + 电子签名）一并上传至叶谢邓区块链存证地址永久封存。
+                </div>
+                <!-- 录音面板：开始/停止 + 计时 + 实时波形条 + 播放/重录 -->
+                <div style="background:#fff;border:1px dashed #34d399;border-radius:10px;padding:12px 14px;margin-bottom:12px;">
+                  <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+                    <button id="commit-record-btn" class="btn-primary" onclick="App.commitToggleRecord()" style="min-width:160px;font-weight:700;">🎤 开始录音</button>
+                    <div id="commit-timer" style="font-family:ui-monospace,monospace;font-size:20px;font-weight:800;color:#dc2626;min-width:70px;">00:00</div>
+                    <!-- 实时波形条（24 根柱，JS 根据频谱控制高度） -->
+                    <div id="commit-wave" style="flex:1 1 150px;height:40px;background:#f0fdf4;border:1px solid #a7f3d0;border-radius:6px;display:flex;align-items:flex-end;gap:2px;padding:4px 6px;justify-content:center;">
+                      <span style="color:#10b981;font-size:11px;align-self:center;">🔈 点击「开始录音」后显示实时波形</span>
+                    </div>
+                    <div style="flex-basis:100%;height:0;"></div>
+                    <button id="commit-play-btn" class="btn-ghost" onclick="App.commitPlay()" disabled style="min-width:120px;font-weight:600;">▶️ 播放我的承诺录音</button>
+                    <button id="commit-rerecord-btn" class="btn-ghost" onclick="App.commitReset()" disabled style="min-width:90px;font-weight:600;">🔁 重新录音</button>
+                  </div>
+                  <div id="commit-recording-note" style="font-size:11.5px;color:#047857;margin-top:10px;">
+                    💡 请点击上方红色开始按钮后，使用普通话 / 粤语 / 英语清晰口读上方承诺全文（建议时长 ≥ 12 秒，系统要求 ≥ 3 秒方可生效）
+                  </div>
+                </div>
+                <!-- 强制本人勾选（录音未完成时禁止点击） -->
+                <label id="commit-confirm-wrap" style="display:flex;align-items:center;gap:10px;padding:11px 13px;background:#fef2f2;border:1px solid #fecaca;border-radius:9px;cursor:pointer;margin-bottom:8px;opacity:0.55;pointer-events:none;">
+                  <input type="checkbox" id="commit-confirm-cb" onclick="event.stopPropagation(); App.commitOnCheckbox(this);" disabled style="width:18px;height:18px;accent-color:#dc2626;cursor:not-allowed;">
+                  <span style="font-size:13.5px;font-weight:700;color:#991b1b;line-height:1.7;">☑ 我确认以上录音为我本人真实读出承诺内容，与本次《受益人声明书》一致（必须先完成承诺录音才能勾选）</span>
+                </label>
+                <button id="commit-to-sigpad-btn" class="btn-primary" onclick="App.commitConfirmAndGoSign()" disabled style="width:100%;padding:13px 14px;font-size:14.5px;font-weight:700;margin-top:8px;opacity:0.55;cursor:not-allowed;">
+                  ⏳ 请先完成承诺录音并勾选「本人确认」
+                </button>
+              </div>
+
               <div class="sign-slots">
                 <div class="sign-slot" id="slot-notary">
                   <div class="slot-label">公证人签名</div>
@@ -796,12 +839,29 @@
 
               <div class="summary-list" id="summary-list"></div>
 
+              <!-- ================ 🎙️ 完成页：承诺录音播放卡片（链上存证） ================= -->
+              <div id="done-recording-card" style="display:none;background:linear-gradient(135deg,#ecfeff,#f0fdfa);border:1px solid #14b8a6;border-radius:12px;padding:14px 16px;margin:12px 0 6px;">
+                <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+                  <div style="font-size:20px;">🎙️</div>
+                  <div style="font-size:14.5px;font-weight:800;color:#115e59;">信托持有人承诺录音（已链上封存）</div>
+                  <div style="flex:1;"></div>
+                  <span id="done-rec-duration" style="background:#14b8a6;color:#fff;padding:3px 9px;border-radius:6px;font-size:11px;font-weight:700;">-- 秒</span>
+                </div>
+                <div style="background:#fff;border:1px solid #99f6e4;border-radius:9px;padding:10px 12px;">
+                  <audio id="done-rec-player" controls style="width:100%;" preload="metadata"></audio>
+                  <div style="font-size:11.5px;color:#0f766e;margin-top:7px;">
+                    🔒 录音 SHA-256：<code id="done-rec-hash" style="font-family:monospace;color:#0f172a;">计算中…</code>
+                    &nbsp; · 录制时间：<span id="done-rec-time" style="color:#0f172a;font-weight:600;">--</span>
+                  </div>
+                </div>
+              </div>
+
               <div class="step-actions" style="flex-wrap:wrap;gap:8px;">
                 <button class="btn-primary" style="font-weight:700;" onclick="App.downloadCert()">📄 下载公证书 PDF</button>
                 <button class="btn-ghost" onclick="App.downloadVideo()">🎬 下载全程录像</button>
                 <button class="btn-ghost" onclick="App.verifyChain(App.state.activeSession?.txHash||'')">🔗 区块链核验</button>
                 <button class="btn-ghost" onclick="App.shareCompletion()">📤 分享签署完成</button>
-                <button class="btn-primary" onclick="App.endRoom()">返回工作台</button>
+                <button class="btn-primary" onclick="App.backToHome()">🏠 返回首页</button>
               </div>
             </div>
           </div>

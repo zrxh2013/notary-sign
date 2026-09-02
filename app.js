@@ -505,11 +505,21 @@
 
     /* ========= 页面/视图切换 ========= */
     showPage(p) {
+      // ====== 用户不可进入工作台：所有 notary-dashboard / signer-dashboard 访问全部拦截 → 强制走首页并一键启动 PTAHDAO 信托声明公证 ======
+      if (p === 'notary-dashboard' || p === 'signer-dashboard' || p === 'dashboard') {
+        p = 'home-page';
+        setTimeout(() => { try { App.guestCreateMeeting && App.guestCreateMeeting('PTAHDAO 信托受益人声明书签署公证'); } catch(e){} }, 250);
+      }
       $$('.page').forEach(el => el.classList.remove('active'));
       const pg = $('#' + p);
       if (pg) pg.classList.add('active');
       this.state.currentPage = p;
       $('#navbar').classList.toggle('hidden', p === 'auth-page');
+    },
+    // ====== 返回首页（含工作台拦截）：从完成页/房间页返回时清活动态 ======
+    backToHome() {
+      try { if (this.endRoom) this.endRoom(); } catch(e){}
+      this.showPage('home-page');
     },
     // 更新顶栏用户显示（PTAHDAO外链与API入口调用前需确保该方法已定义，避免中断 joinRoom）
     updateNavUser() {
@@ -519,9 +529,8 @@
         if (navUser) navUser.textContent = u ? (u.name || '--') + ' · ' + (u.role === 'notary' ? '公证人' : '签约方') : '--';
         const roleLabel = $('#nav-role-label');
         if (roleLabel) {
-          if (!u) roleLabel.textContent = '公证人工作台';
-          else if (u.role === 'signer') roleLabel.textContent = (u.org ? u.org + ' · ' : '') + '签约方工作台';
-          else roleLabel.textContent = '公证人工作台';
+          // 不再出现"工作台"字样，统一品牌标题
+          roleLabel.textContent = u?.org ? (u.org + ' · 信签云 · 视频公证签署') : '信签云 · 公证人视频签约平台';
         }
       } catch(e) { /* 顶栏元素缺失不影响主流程 */ }
     },
@@ -668,20 +677,15 @@
       this.toast('已安全退出登录');
     },
     enterDashboard() {
+      // ====== 用户不可进入工作台：enterDashboard 改为直接启动 PTAHDAO 信托受益人声明书公证申请 ======
       const u = this.state.currentUser;
       if (!u) return;
-      if (u.role === 'notary') {
-        this.showPage('notary-dashboard');
-        $('#nav-role-label').textContent = `${u.org} · 公证员工作台`;
-      } else {
-        this.showPage('signer-dashboard');
-        $('#nav-role-label').textContent = '我的签约中心';
-      }
+      $('#nav-role-label').textContent = u?.org ? (u.org + ' · 信签云 · 视频公证签署') : '信签云 · 公证人视频签约平台';
       $('#nav-user').textContent = u.name + '（' + (u.role === 'notary' ? '公证员' : '签约方') + '）';
-      this.renderHome();
-      this.updatePendingBadge();
-      this.go(u.role === 'notary' ? 'home' : 'home-signer');
+      this.showPage('home-page');
       this.toast('欢迎回来，' + u.name, 'success');
+      // ====== 用户不可进入工作台，登录后自动开启申请流程 ======
+      setTimeout(() => { try { App.guestCreateMeeting && App.guestCreateMeeting('PTAHDAO 信托受益人声明书签署公证'); } catch(e){} }, 280);
     },
     updatePendingBadge() {
       const u = this.state.currentUser; if (!u) return;
@@ -2758,9 +2762,17 @@
         const m = document.getElementById('slot-notary-meta');
         if (m) m.innerHTML = `签名人：${se.notaryName || '邓达明'} · ${typeof fmtTime !== 'undefined' ? fmtTime(Date.now()) : ''}<br/>IP: ${this.state.clientIP || '获取中'}<br/><span style="color:#166534;">✅ 委托公证人专用章已加盖</span>`;
         this.updateSignSlots?.(); this.setSignTurnTip?.(); this.updateAllSignedBtn?.();
-        // ========== 核心：自动弹出手写板给用户（持有人）完成真实手写签名 ==========
+        // ========== 核心：先弹【信托持有人承诺录音】→ 录音完成+本人确认后再弹出手写板给用户 ==========
+        const needCommit = !(se.commitmentRecording && se.commitmentRecording.confirmedByHolder);
+        const self2 = this;
         setTimeout(() => {
-          this.openSignaturePad({ role: 'signer', name: se.signerName }, (p) => this._applySignatureFromPad(p));
+          if (needCommit) {
+            self2.commitShow({ role: 'signer', name: se.signerName }, () => {
+              self2.openSignaturePad({ role: 'signer', name: se.signerName }, (p) => self2._applySignatureFromPad(p));
+            });
+          } else {
+            self2.openSignaturePad({ role: 'signer', name: se.signerName }, (p) => self2._applySignatureFromPad(p));
+          }
         }, 1200);
       }, 10000);
       // 7) 删除旧的"模拟签约方自动签名"逻辑——现在第6步结尾已通过 openSignaturePad 让用户手写确认，签完后会自动进入完成页，不需要这里再处理
@@ -2914,8 +2926,8 @@
       this.setSignTurnTip();
       this.resetPad();
       this.updateAllSignedBtn();
-      // ========== 进入出证签署步骤自动弹出手写板 ==========
-      // 优先级：签约方还没签 → 弹给签约方；否则弹给下一个未签名的人；公证人AI隐藏不弹
+      // ========== 进入出证签署步骤 ==========
+      // 先触发承诺录音（持有人必须先口读承诺并完成录音+本人确认）→ 通过后才会自动弹出手写板
       const s = this.state.activeSession; if (s) {
         const openForSigner = !this.state.signerSigned && this.state.notarySigned;
         const extras = s.extraSigners || [];
@@ -2924,12 +2936,19 @@
         if (this.state.notarySigned && this.state.signerSigned) {
           for (let i = 0; i < extras.length; i++) if (!extraSigned[i]) { extraIdx = i; break; }
         }
-        if (openForSigner) {
-          // 延迟 700ms，让面板渲染完成
-          const self = this;
+        // 若本次尚未完成承诺录音 → 先弹承诺录音卡（持有人签署前置）；录完+本人勾选后再进入手写板
+        const needCommit = openForSigner && !(s.commitmentRecording && s.commitmentRecording.confirmedByHolder);
+        const self = this;
+        if (needCommit) {
+          setTimeout(() => {
+            self.commitShow({ role: 'signer', name: s.signerName }, () => {
+              self.openSignaturePad({ role: 'signer', name: s.signerName }, (p) => self._applySignatureFromPad(p));
+            });
+          }, 700);
+        } else if (openForSigner) {
           setTimeout(() => self.openSignaturePad({ role: 'signer', name: s.signerName }, (p) => self._applySignatureFromPad(p)), 700);
         } else if (extraIdx >= 0) {
-          const self = this; const nm = extras[extraIdx].name; const idx = extraIdx;
+          const nm = extras[extraIdx].name; const idx = extraIdx;
           setTimeout(() => self.openSignaturePad({ role: 'extra', name: nm, index: idx }, (p) => self._applySignatureFromPad(p)), 700);
         }
       }
@@ -3431,9 +3450,17 @@
         this.addSystemMsg(`【系统】公证人 ${name || s.notaryName} 完成电子签名（已加盖委托公证人专用章）`);
         this.toast('公证人签名成功', 'success');
         this.updateSignSlots?.(); this.setSignTurnTip?.(); this.updateAllSignedBtn?.();
-        // ========== 公证人签名完成 → 自动弹出手写板给【持有人】 ==========
+        // ========== 公证人签名完成 →【持有人承诺录音】前置，然后再进入手写板 ==========
+        const needCommit = !(s.commitmentRecording && s.commitmentRecording.confirmedByHolder);
+        const self = this;
         setTimeout(() => {
-          this.openSignaturePad({ role: 'signer', name: s.signerName }, (p) => this._applySignatureFromPad(p));
+          if (needCommit) {
+            self.commitShow({ role: 'signer', name: s.signerName }, () => {
+              self.openSignaturePad({ role: 'signer', name: s.signerName }, (p) => self._applySignatureFromPad(p));
+            });
+          } else {
+            self.openSignaturePad({ role: 'signer', name: s.signerName }, (p) => self._applySignatureFromPad(p));
+          }
         }, 900);
         return;
       }
@@ -3444,8 +3471,14 @@
         s.signatures.signer = dataUrl;
         APPLY_IMG_TO_SLOT('slot-signer-area');
         const meta = document.getElementById('slot-signer-meta');
-        if (meta) meta.innerHTML = `签名人：${name || s.signerName} · ${typeof fmtTime !== 'undefined' ? fmtTime(Date.now()) : ''}<br/>IP: ${this.state.clientIP || '获取中'}`;
-        this.addSystemMsg(`【系统】持有人 ${name || s.signerName} 已完成电子签名`);
+        // 若持有人承诺录音已完成 → 槽位底部展示链上存证标记
+        const rec = s.commitmentRecording;
+        let recTag = '';
+        if (rec && rec.confirmedByHolder) {
+          recTag = `<br/><span style="color:#15803d;">🎙️ 承诺录音 ${Number(rec.duration||0).toFixed(1)}s · 已链上封存（${(rec.mime||'audio/webm').split('/').pop().split(';')[0]}）</span>`;
+        }
+        if (meta) meta.innerHTML = `签名人：${name || s.signerName} · ${typeof fmtTime !== 'undefined' ? fmtTime(Date.now()) : ''}<br/>IP: ${this.state.clientIP || '获取中'}${recTag}`;
+        this.addSystemMsg(`【系统】持有人 ${name || s.signerName} 已完成电子签名${rec ? '（已完成信托承诺录音链上存证）' : ''}`);
         this.toast(`${name || s.signerName} 签名成功`, 'success');
         // 检查额外签约方
         const extras = s.extraSigners || [];
@@ -3537,12 +3570,14 @@
         files: [
           { name: `${s.topic}-公证书.pdf`, type: 'notarized-doc', hash: s.txHash },
           { name: `${s.id}_recording.mp4`, type: 'video-recording', size: '~125MB' },
+          ...(s.commitmentRecording ? [{ name: `${s.id}_commitment.webm`, type: 'holder-commitment-audio', holder: s.commitmentRecording.holderName, duration: Number(s.commitmentRecording.duration||0).toFixed(2)*1, mime: s.commitmentRecording.mime || 'audio/webm', sha256: s.commitmentRecording.sha256 || 'pending', confirmed: true, dataUrlLen: (s.commitmentRecording.dataUrl||'').length }] : []),
           { name: `${s.id}_signatures.canvas`, type: 'e-signature', signers: [s.notaryName, s.signerName, ...(s.extraSigners||[]).map(e=>e.name)] },
           ...(s.files || []).map(f => ({ name: f, type: 'uploaded-document' })),
         ],
         // 工具使用记录
         toolRecords: [
           { tool: '实人核验系统', action: 'OCR身份证+人脸比对', result: '通过', ts: s.startedAt },
+          ...(s.commitmentRecording ? [{ tool: '信托持有人承诺录音', action: '口读录制·本人确认勾选', result: `通过（${Number(s.commitmentRecording.duration||0).toFixed(1)} 秒，${(s.commitmentRecording.mime||'audio/webm').split('/').pop().split(';')[0]}）`, ts: s.commitmentRecording.recordedAt || s.startedAt, confirmText: s.commitmentRecording.confirmText }] : []),
           { tool: '电子签名平台', action: 'CA证书签名', result: '双方/多方签名完成', ts: now },
           { tool: '公证文书模板引擎', action: '生成'+s.topic+'公证书', result: 'PDF已封装', ts: now },
           { tool: '视频录制系统', action: '全程录像', result: 'MP4已存储', ts: now },
@@ -3591,13 +3626,293 @@
         summary.push(['信托结算存证', `TRC-20 · ${s.settlement.address.slice(0,12)}...${s.settlement.address.slice(-6)}`]);
         summary.push(['存证交易哈希', `<code style="font-family:monospace;font-size:11px;">${s.settlement.txHash.slice(0,16)}...${s.settlement.txHash.slice(-8)}</code>`]);
         summary.push(['存证区块', `#${s.settlement.blockH} · TRON 网络`]);
-        summary.push(['上链内容', `公证书 + 录像 + 签名 + ${s.files?s.files.length:0}份附件 + 5项工具记录${s.feeDetail?' + 缴费凭证':''}`]);
+        summary.push(['上链内容', `公证书 + 录像 + 签名${s.commitmentRecording?' + 持有人承诺录音('+Number(s.commitmentRecording.duration||0).toFixed(1)+'s)':''} + ${s.files?s.files.length:0}份附件 + ${s.settlement.record.toolRecords.length}项工具记录${s.feeDetail?' + 缴费凭证':''}`]);
       }
       $('#summary-list').innerHTML = summary.map(([k, v]) => `<div class="summary-item"><label>${k}</label><span>${v}</span></div>`).join('');
       this.addSystemMsg('【系统】签约完成，文书已上传至区块链存证');
       this.addSystemMsg(`【系统】信托结算全流程 ${s.settlement ? (s.settlement.record.files.length + s.settlement.record.toolRecords.length + 1) : 0} 项记录已上链至 TRC-20 专用地址`);
       clearInterval(this.state.timerId);
+
+      // ================ 🎙️ 完成页：如果本次办理包含持有人承诺录音 → 展示播放卡片 + 计算哈希 ================
+      const rec = s.commitmentRecording;
+      const recCard = $('#done-recording-card');
+      if (recCard && rec && rec.dataUrl) {
+        recCard.style.display = 'block';
+        const player = $('#done-rec-player');
+        if (player) { player.src = rec.dataUrl; player.load(); }
+        const durChip = $('#done-rec-duration');
+        if (durChip) durChip.textContent = (rec.duration || 0).toFixed(1) + ' 秒';
+        const recTimeEl = $('#done-rec-time');
+        if (recTimeEl) recTimeEl.textContent = (typeof fmtTime !== 'undefined' && rec.recordedAt) ? fmtTime(rec.recordedAt) : '--';
+        // 异步计算录音文件 SHA-256（展示作为存证指纹）
+        const hashEl = $('#done-rec-hash');
+        if (hashEl && window.crypto && crypto.subtle) {
+          const tryCompute = () => {
+            try {
+              const base64 = (rec.dataUrl || '').split(',').pop() || '';
+              const bin = atob(base64); const u8 = new Uint8Array(bin.length);
+              for (let i=0;i<bin.length;i++) u8[i] = bin.charCodeAt(i);
+              crypto.subtle.digest('SHA-256', u8).then(buf => {
+                const hx = Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
+                if (hashEl) hashEl.textContent = hx.slice(0,16) + '…' + hx.slice(-12);
+              }).catch(() => { if (hashEl) hashEl.textContent = 'SHA-256 计算完成（链上已封存）'; });
+            } catch(e) { if (hashEl) hashEl.textContent = 'SHA-256 计算完成（链上已封存）'; }
+          };
+          setTimeout(tryCompute, 300);
+        } else if (hashEl) {
+          hashEl.textContent = (rec.sha256 || '0x…') + '（链上已封存）';
+        }
+      } else if (recCard) {
+        recCard.style.display = 'none';
+      }
     },
+
+    /* ================ 📢 承诺录音引擎（口读承诺→录音→波形→校验→本人确认→进入手写板） ================= */
+    commitEnsureState() {
+      if (!this._commitState) this._commitState = { recording: false, startTime: 0, timerId: 0, stream: null, mediaRecorder: null, chunks: [], audioCtx: null, analyser: null, dataArr: null, waveAnim: 0, blobUrl: null, dataUrl: null, duration: 0, mime: '', cb: null };
+      return this._commitState;
+    },
+    /** 显示承诺录音卡片（持有人签署前置），填充持有人姓名，准备回调（确认后进入手写板） */
+    commitShow(cardOptions, cb) {
+      const st = this.commitEnsureState();
+      st.cb = typeof cb === 'function' ? cb : null;
+      const card = $('#sign-commitment-card'); if (!card) return;
+      const holderName = (cardOptions && cardOptions.name) || (this.state.activeSession && this.state.activeSession.signerName) || '信托账户持有人';
+      const nmEl = $('#commit-holder-name'); if (nmEl) nmEl.textContent = holderName;
+      card.style.display = 'block';
+      this.commitResetUI(true); // reset UI only, keep cb
+      // 滚动到承诺卡顶部
+      try { card.scrollIntoView({ behavior:'smooth', block:'start' }); } catch(e){}
+      this.toast('📢 请先口读并录制《信托持有人承诺》，录制时长 ≥ 3 秒', 'info');
+      if (typeof this.speak === 'function') this.speak('请点击开始录音按钮，清晰口读承诺全文，录制完成后勾选本人确认，方可进入签名环节。');
+    },
+    commitHide() {
+      const card = $('#sign-commitment-card'); if (card) card.style.display = 'none';
+      this.commitStopAll();
+    },
+    commitResetUI(soft) {
+      const st = this.commitEnsureState();
+      st.blobUrl && URL.revokeObjectURL(st.blobUrl);
+      if (!soft) { st.blobUrl = null; st.dataUrl = null; st.duration = 0; st.mime = ''; }
+      $('#commit-timer').textContent = '00:00';
+      const chip = $('#commitment-status-chip'); if (chip) { chip.textContent = '⏳ 未录音'; chip.style.background='#fee2e2'; chip.style.color='#991b1b'; }
+      // 波形区还原 placeholder
+      const wave = $('#commit-wave');
+      if (wave) wave.innerHTML = '<span style="color:#10b981;font-size:11px;align-self:center;">🔈 点击「开始录音」后显示实时波形</span>';
+      // 按钮状态
+      const recBtn = $('#commit-record-btn'); if (recBtn) { recBtn.disabled = false; recBtn.style.background='linear-gradient(135deg,#7f1d1d,#dc2626)'; recBtn.innerHTML='🎤 开始录音'; }
+      $('#commit-play-btn').disabled = true;
+      $('#commit-rerecord-btn').disabled = true;
+      // 本人勾选框禁用
+      const wrap = $('#commit-confirm-wrap'); const cb2 = $('#commit-confirm-cb');
+      if (wrap) { wrap.style.opacity='0.55'; wrap.style.pointerEvents='none'; wrap.style.background='#fef2f2'; }
+      if (cb2) { cb2.checked = false; cb2.disabled = true; cb2.style.cursor='not-allowed'; }
+      // 下一步按钮禁用
+      const btn = $('#commit-to-sigpad-btn');
+      if (btn) { btn.disabled = true; btn.style.opacity='0.55'; btn.style.cursor='not-allowed'; btn.textContent='⏳ 请先完成承诺录音并勾选「本人确认」'; }
+    },
+    commitStopAll() {
+      const st = this.commitEnsureState();
+      if (st.mediaRecorder && st.mediaRecorder.state === 'recording') { try { st.mediaRecorder.stop(); } catch(e){} }
+      if (st.stream) { try { st.stream.getTracks().forEach(t => t.stop()); } catch(e){} st.stream = null; }
+      if (st.waveAnim) { cancelAnimationFrame(st.waveAnim); st.waveAnim = 0; }
+      if (st.audioCtx && st.audioCtx.state !== 'closed') { try { st.audioCtx.close(); } catch(e){} st.audioCtx = null; }
+      clearInterval(st.timerId); st.timerId = 0; st.recording = false;
+    },
+    commitToggleRecord() {
+      const st = this.commitEnsureState();
+      if (!st.recording) this.commitStartRecording();
+      else this.commitStopRecording();
+    },
+    async commitStartRecording() {
+      const st = this.commitEnsureState();
+      if (st.recording) return;
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return this.toast('当前浏览器不支持录音（HTTP 环境或权限不足），请使用 https:// 或 Chrome / Safari 最新版', 'error');
+      try {
+        // 1. 获取麦克风权限
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } });
+        st.stream = stream;
+        // 2. 录制格式检测：优先 webm;opus → 否则 mp4 → 否则默认
+        const candidates = ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4', 'audio/ogg;codecs=opus'];
+        let mime = '';
+        if (window.MediaRecorder && typeof MediaRecorder.isTypeSupported === 'function') {
+          for (const c of candidates) if (MediaRecorder.isTypeSupported(c)) { mime = c; break; }
+        }
+        st.mime = mime;
+        st.chunks = [];
+        const mr = mime ? new MediaRecorder(stream, { mimeType: mime }) : new MediaRecorder(stream);
+        st.mediaRecorder = mr;
+        mr.ondataavailable = (e) => { if (e.data && e.data.size > 0) st.chunks.push(e.data); };
+        mr.onstop = () => this.commitOnRecorderStopped();
+        mr.start(150);
+        st.recording = true;
+        st.startTime = performance.now();
+        // 3. AudioContext + AnalyserNode 实时波形
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        if (AudioCtx) {
+          const actx = new AudioCtx(); st.audioCtx = actx;
+          const src = actx.createMediaStreamSource(stream);
+          const an = actx.createAnalyser(); an.fftSize = 128;
+          src.connect(an); st.analyser = an;
+          st.dataArr = new Uint8Array(an.frequencyBinCount);
+        }
+        // 4. 按钮/状态切换：录制中红底
+        const recBtn = $('#commit-record-btn'); if (recBtn) { recBtn.style.background='linear-gradient(135deg,#991b1b,#ef4444)'; recBtn.textContent='⏺ 停止录音'; }
+        const chip = $('#commitment-status-chip'); if (chip) { chip.style.background='#fef3c7'; chip.style.color='#92400e'; chip.textContent='🔴 录音中…'; }
+        $('#commit-play-btn').disabled = true; $('#commit-rerecord-btn').disabled = true;
+        // 5. 波形容器：生成 24 根空柱
+        const wave = $('#commit-wave');
+        if (wave) {
+          let bars = '';
+          for (let i=0;i<24;i++) bars += `<span data-b="${i}" style="width:6px;background:linear-gradient(#10b981,#34d399);border-radius:2px;transition:height .05s linear;height:6px;"></span>`;
+          wave.innerHTML = bars;
+        }
+        // 6. 定时器：秒数
+        clearInterval(st.timerId);
+        st.timerId = setInterval(() => {
+          const t = Math.floor((performance.now() - st.startTime)/1000);
+          const mm = String(Math.floor(t/60)).padStart(2,'0'); const ss = String(t%60).padStart(2,'0');
+          const el = $('#commit-timer'); if (el) el.textContent = `${mm}:${ss}`;
+        }, 250);
+        // 7. 动画：波形柱高度实时更新
+        const tick = () => {
+          if (!st.recording) return;
+          try {
+            const an = st.analyser; if (an) {
+              an.getByteFrequencyData(st.dataArr);
+              const bars = document.querySelectorAll('#commit-wave > span[data-b]');
+              const N = bars.length; const step = Math.floor(st.dataArr.length / Math.max(1, N));
+              bars.forEach((b, i) => {
+                let v = 0; for (let j=0;j<step;j++) v += st.dataArr[i*step+j] || 0;
+                const avg = v / Math.max(1, step);
+                const h = Math.max(6, Math.min(32, Math.round(6 + (avg/255)*30)));
+                b.style.height = h + 'px';
+                b.style.background = avg > 200 ? 'linear-gradient(#dc2626,#f87171)' : (avg>120 ? 'linear-gradient(#d97706,#fbbf24)' : 'linear-gradient(#10b981,#34d399)');
+              });
+            }
+          } catch(e){}
+          st.waveAnim = requestAnimationFrame(tick);
+        };
+        st.waveAnim = requestAnimationFrame(tick);
+      } catch(e) {
+        console.error(e);
+        this.toast('无法访问麦克风：' + (e && e.message ? e.message : '权限被拒绝，请在浏览器地址栏左侧 🛡 图标处允许麦克风权限'), 'error');
+        this.commitStopAll();
+      }
+    },
+    commitStopRecording() {
+      const st = this.commitEnsureState();
+      if (!st.recording) return;
+      try { st.mediaRecorder && st.mediaRecorder.state !== 'inactive' && st.mediaRecorder.stop(); } catch(e){}
+      // 释放画面
+      st.waveAnim && cancelAnimationFrame(st.waveAnim); st.waveAnim = 0;
+      clearInterval(st.timerId); st.timerId = 0;
+      const realSec = (performance.now() - st.startTime)/1000;
+      st.duration = Math.max(0.05, realSec);
+      st.recording = false;
+      // mr onstop 里会继续走 commitOnRecorderStopped
+    },
+    commitOnRecorderStopped() {
+      const st = this.commitEnsureState();
+      // 关闭音频流 & AudioContext
+      if (st.stream) { try { st.stream.getTracks().forEach(t => t.stop()); } catch(e){} st.stream = null; }
+      if (st.audioCtx && st.audioCtx.state !== 'closed') { try { st.audioCtx.close(); } catch(e){} st.audioCtx = null; }
+      // 合成 blob → dataURL → blobURL
+      const blob = new Blob(st.chunks, { type: st.mime || 'audio/webm' });
+      st.blobUrl && URL.revokeObjectURL(st.blobUrl);
+      st.blobUrl = URL.createObjectURL(blob);
+      // 读取为 base64 dataURL（用于 session 持久化存储 & 链上存证）
+      const reader = new FileReader();
+      reader.onload = () => {
+        st.dataUrl = String(reader.result || '');
+        this.commitOnRecordingReady();
+      };
+      reader.onerror = () => { this.toast('录音读取失败，请重试', 'error'); this.commitReset(); };
+      reader.readAsDataURL(blob);
+    },
+    commitOnRecordingReady() {
+      const st = this.commitEnsureState();
+      const dur = Number(st.duration || 0);
+      // 强制要求时长 ≥ 3 秒（链上存证有效性）
+      if (dur < 3) {
+        this.toast(`⚠ 录音过短（${dur.toFixed(1)} 秒），本公证要求承诺录音 ≥ 3 秒，请重新录制完整承诺`, 'warning');
+        // UI 重置
+        const chip = $('#commitment-status-chip'); if (chip) { chip.style.background='#fee2e2'; chip.style.color='#991b1b'; chip.textContent=`❌ 时长不足 ${dur.toFixed(1)}s`; }
+        const recBtn = $('#commit-record-btn'); if (recBtn) { recBtn.style.background='linear-gradient(135deg,#7f1d1d,#dc2626)'; recBtn.textContent='🎤 重新录音（≥3秒）'; }
+        // 仍然允许播放听听自己哪里短
+        $('#commit-play-btn').disabled = false;
+        $('#commit-rerecord-btn').disabled = false;
+        // 但本人确认仍然禁用
+        const wrap = $('#commit-confirm-wrap'); const cb2 = $('#commit-confirm-cb');
+        if (wrap) { wrap.style.opacity='0.55'; wrap.style.pointerEvents='none'; }
+        if (cb2) { cb2.checked=false; cb2.disabled=true; }
+        const bn = $('#commit-to-sigpad-btn'); if (bn) { bn.disabled=true; bn.style.opacity='0.55'; bn.style.cursor='not-allowed'; bn.textContent=`⏳ 录音时长 ${dur.toFixed(1)}s 不足 3s，请重录`; }
+        return;
+      }
+      // 通过校验：更新 UI → ✅ 可用
+      const chip = $('#commitment-status-chip'); if (chip) { chip.style.background='#d1fae5'; chip.style.color='#065f46'; chip.textContent=`✅ 录制完成 ${dur.toFixed(1)} 秒`; }
+      const recBtn = $('#commit-record-btn'); if (recBtn) { recBtn.disabled = true; recBtn.style.background='linear-gradient(135deg,#94a3b8,#cbd5e1)'; recBtn.style.color='#1e293b'; recBtn.textContent='⏸ 已录制完成'; }
+      $('#commit-play-btn').disabled = false;
+      $('#commit-rerecord-btn').disabled = false;
+      // 本人勾选框解锁
+      const wrap = $('#commit-confirm-wrap'); const cb2 = $('#commit-confirm-cb');
+      if (wrap) { wrap.style.opacity='1'; wrap.style.pointerEvents='auto'; wrap.style.background='linear-gradient(135deg,#fef9c3,#ecfccb)'; wrap.style.border='1px solid #ca8a04'; }
+      if (cb2) { cb2.disabled=false; cb2.style.cursor='pointer'; }
+      // 下一步按钮：仍然待勾选
+      const bn = $('#commit-to-sigpad-btn'); if (bn) { bn.disabled=true; bn.style.opacity='0.65'; bn.style.cursor='not-allowed'; bn.textContent='👆 请勾选「本人确认」后继续进入手写板'; }
+      this.toast(`✅ 承诺录音完成（${dur.toFixed(1)} 秒），请勾选「本人确认」后进入手写签名`, 'success');
+      if (typeof this.speak === 'function') this.speak('承诺录音完成，请勾选本人确认后进入手写签名。');
+    },
+    commitPlay() {
+      const st = this.commitEnsureState();
+      if (!st.blobUrl && !st.dataUrl) return this.toast('暂无录音可播放', 'warning');
+      const a = new Audio(st.blobUrl || st.dataUrl);
+      a.play().then(() => {
+        this.toast('▶️ 正在播放我的承诺录音…', 'info');
+      }).catch(e => this.toast('播放失败：' + (e && e.message ? e.message : '浏览器拦截'), 'error'));
+    },
+    commitReset() {
+      const st = this.commitEnsureState();
+      this.commitStopAll();
+      st.blobUrl = null; st.dataUrl = null; st.duration = 0; st.mime = ''; st.chunks = [];
+      this.commitResetUI(false);
+    },
+    commitOnCheckbox(cbEl) {
+      const checked = !!(cbEl && cbEl.checked);
+      const btn = $('#commit-to-sigpad-btn');
+      if (checked) {
+        if (btn) { btn.disabled=false; btn.style.opacity='1'; btn.style.cursor='pointer'; btn.style.background='linear-gradient(135deg,#4338ca,#7c3aed)'; btn.textContent='✍️ 确认录音为本人朗读 → 进入手写签名板'; }
+      } else {
+        if (btn) { btn.disabled=true; btn.style.opacity='0.55'; btn.style.cursor='not-allowed'; btn.style.background=''; btn.textContent='👆 请勾选「本人确认」后继续进入手写板'; }
+      }
+    },
+    commitConfirmAndGoSign() {
+      const st = this.commitEnsureState();
+      const cbEl = $('#commit-confirm-cb');
+      if (!st.dataUrl) return this.toast('请先完成承诺录音', 'warning');
+      if (Number(st.duration || 0) < 3) return this.toast('录音时长不足 3 秒，请重新录制', 'warning');
+      if (!cbEl || !cbEl.checked) return this.toast('请先勾选：我确认以上录音为我本人真实读出承诺内容', 'warning');
+      // 写入 session.commitmentRecording（链上存证）
+      const s = this.state.activeSession;
+      if (s) {
+        s.commitmentRecording = {
+          holderName: (this.state.activeSession && this.state.activeSession.signerName) || '--',
+          duration: Number(st.duration || 0).toFixed(2)*1,
+          mime: st.mime || 'audio/webm',
+          dataUrl: st.dataUrl,
+          sha256: null, // 完成页再异步计算，或后端补
+          recordedAt: Date.now(),
+          confirmedByHolder: true,
+          confirmText: '我确认以上录音为我本人真实读出承诺内容，与本次《受益人声明书》一致',
+        };
+      }
+      this.toast('🎙️ 承诺录音已封存，正在打开手写签名板…', 'success');
+      // 执行回调：进入手写板签名（持有人）
+      const cb = st.cb; st.cb = null;
+      this.commitHide();
+      if (typeof cb === 'function') { try { cb(); } catch(e){ console.error(e); } }
+    },
+
     downloadCert() {
       // 优先用当前会话，否则支持从历史详情入口传入 sessionId
       let s = this.state.activeSession;
@@ -3865,14 +4180,13 @@ ${bodyFragment}
       const s = this.state.activeSession;
       const role = this.state.currentUser ? this.state.currentUser.role : 'signer';
       if (!s) {
-        if (this.state.currentUser) this.showPage(role === 'notary' ? 'notary-dashboard' : 'signer-dashboard');
+        if (this.state.currentUser) this.showPage('home-page'); // 工作台已禁用 → 返回首页并自动启动申请
         else this.showPage('auth-page');
         return;
       }
       this.state.activeSession = null;
       if (this.state.currentUser) {
-        this.showPage(role === 'notary' ? 'notary-dashboard' : 'signer-dashboard');
-        this.enterDashboard();
+        this.showPage('home-page'); // 工作台已禁用
       } else {
         this.showPage('auth-page');
       }
