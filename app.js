@@ -1452,9 +1452,19 @@
         this.state.pendingFee = feeDetail;
         this.state.pendingTxHash = null;
         this.state.pendingTxVerified = null;
-        // 延迟入房，保证用户看到成功提示（与 paid=1 入口一致：350ms）
-        var pid = pending.id;
-        setTimeout(function(){ App.joinRoom(pid); }, 350);
+        // 缴费成功 → 生成入会链接弹窗（不再直接 joinRoom）
+        var sid = pending.id;
+        var sess = Store.get('sessions', []).find(function(x){ return x.id === sid; });
+        if (sess) {
+          // 设置 24 小时有效期
+          sess.joinTokenExp = Date.now() + 24 * 60 * 60 * 1000;
+          Store.set('sessions', Store.get('sessions', []));
+          this._lastPaidSessionId = sid;
+          this.showPaySuccessLink(sess);
+        } else {
+          // 兜底：找不到 session 直接入房
+          setTimeout(function(){ App.joinRoom(sid); }, 350);
+        }
         return;
       }
 
@@ -1486,6 +1496,74 @@
       this.speak('\u7F34\u8D39\u786E\u8BA4\u6210\u529F\uFF0C\u6B63\u5728\u521B\u5EFA\u4F1A\u8BAE\u3002');
       this._emitSdkEvent('pay', { method: s.pendingFee.method, amount: s.pendingFee.amount, hkd: s.pendingFee.hkd, txHash: s.pendingFee.txHash });
       setTimeout(function(){ App.submitCreate(); }, 800);
+    },
+    // ============ 缴费成功 · 生成入会链接弹窗 ============
+    showPaySuccessLink(s) {
+      // 生成会议入口链接（跨设备自包含，含 session 数据）
+      const link = this.buildSignerLink(s);
+      const caseLink = this.buildCaseNoLink(s);
+      // 填充弹窗
+      const topicEl = $('#pay-success-topic');
+      if (topicEl) topicEl.textContent = s.topic || s.docTitle || '--';
+      const sidEl = $('#pay-success-sid');
+      if (sidEl) sidEl.textContent = s.id;
+      const whenEl = $('#pay-success-when');
+      if (whenEl) whenEl.textContent = '预约 ' + (typeof fmtTime === 'function' ? fmtTime(s.appointAt) : (s.date + ' ' + s.time));
+      const signerEl = $('#pay-success-signer');
+      if (signerEl) signerEl.textContent = s.signerName || '--';
+      const amtEl = $('#pay-success-amount');
+      if (amtEl) amtEl.textContent = s.fee || (s.feeDetail ? s.feeDetail.amount : '--');
+      const urlEl = $('#pay-success-url');
+      if (urlEl) urlEl.value = link;
+      // 二维码
+      const qrEl = $('#pay-success-qr');
+      if (qrEl && typeof this._renderQrSvg === 'function') qrEl.innerHTML = this._renderQrSvg(link, 96);
+      // 缓存 session ID 供按钮使用
+      this._paySuccessSessionId = s.id;
+      this._paySuccessLink = link;
+      this._paySuccessCaseLink = caseLink;
+      // 打开弹窗
+      this.openModal('pay-success-modal');
+      this.speak('缴费成功！会议室入口链接已生成，24小时内有效，请点击进入会议室。');
+    },
+    // 复制入会链接
+    copyPaySuccessLink() {
+      const inp = $('#pay-success-url');
+      if (!inp || !inp.value) return this.toast('链接未生成', 'warning');
+      const url = inp.value;
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(url).then(() => this.toast('链接已复制到剪贴板', 'success'));
+      } else {
+        inp.select();
+        try { document.execCommand('copy'); this.toast('链接已复制', 'success'); }
+        catch(e) { this.toast('复制失败，请手动选中复制', 'warning'); }
+      }
+    },
+    // 从缴费成功弹窗直接进入会议室
+    enterRoomFromPaySuccess() {
+      const sid = this._paySuccessSessionId;
+      if (!sid) return this.toast('会议信息丢失，请重新操作', 'error');
+      this.closeModal('pay-success-modal');
+      // 确保用户已登录（分支A已设置 currentUser，这里做容错）
+      if (!this.state.currentUser) {
+        const sess = Store.get('sessions', []).find(x => x.id === sid);
+        if (sess) {
+          this.state.currentUser = {
+            id: 'signer_' + sid,
+            name: sess.signerName,
+            phone: sess.signerPhone,
+            idcard: sess.signerIdcard || '',
+            role: 'signer',
+            org: sess._ptahdao ? 'PTAHDAO信托' : '',
+            guest: true,
+          };
+          Store.set('currentUser', this.state.currentUser);
+        }
+      }
+      const nav = $('#navbar');
+      if (nav) nav.classList.remove('hidden');
+      this.updateNavUser();
+      setTimeout(() => this.joinRoom(sid), 200);
     },
     addExtraSigner() {
       if (!this.state.extraSigners) this.state.extraSigners = [];

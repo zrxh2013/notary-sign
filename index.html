@@ -1278,6 +1278,69 @@
     </div>
   </div>
 
+  <!-- ============== 缴费成功·入会链接弹窗 ============== -->
+  <div class="modal-mask" id="pay-success-modal">
+    <div class="modal-box" style="max-width:480px;">
+      <div class="modal-head">
+        <h3>✅ 缴费成功 · 会议室入口</h3>
+        <button class="btn-text" onclick="App.closeModal('pay-success-modal')">×</button>
+      </div>
+      <div class="modal-body" style="padding:20px;">
+        <!-- 成功提示 -->
+        <div style="text-align:center;margin-bottom:16px;">
+          <div style="width:56px;height:56px;margin:0 auto 10px;border-radius:50%;background:linear-gradient(135deg,#22c55e,#16a34a);display:flex;align-items:center;justify-content:center;">
+            <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="#fff" stroke-width="3"><path d="M5 13l4 4L19 7"/></svg>
+          </div>
+          <div style="font-size:16px;font-weight:700;color:#15803d;">公证费缴纳成功</div>
+          <div id="pay-success-amount" style="font-size:13px;color:#64748b;margin-top:4px;">--</div>
+        </div>
+
+        <!-- 会议信息 -->
+        <div id="pay-success-info" style="background:linear-gradient(135deg,#eff6ff,#f0fdf4);border:1px solid #bfdbfe;border-radius:10px;padding:14px 16px;margin-bottom:16px;">
+          <div style="font-size:12px;color:#64748b;">签约事项</div>
+          <div id="pay-success-topic" style="font-size:13px;font-weight:700;color:#1e3a8a;margin-top:2px;line-height:1.5;">--</div>
+          <div style="display:flex;justify-content:space-between;margin-top:8px;font-size:12px;color:#475569;">
+            <span>会议编号：<code id="pay-success-sid" style="font-family:monospace;font-weight:700;color:#1e40af;">--</code></span>
+            <span id="pay-success-when">--</span>
+          </div>
+          <div style="margin-top:4px;font-size:12px;color:#475569;">签约人：<b id="pay-success-signer">--</b></div>
+        </div>
+
+        <!-- 入口链接 -->
+        <label style="font-size:13px;font-weight:600;display:block;margin-bottom:8px;">🔗 会议室入口链接</label>
+        <div style="display:flex;gap:8px;align-items:stretch;margin-bottom:12px;">
+          <input type="text" id="pay-success-url" readonly
+            style="flex:1;padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-family:monospace;font-size:10px;background:#f8fafc;color:#1e293b;" />
+          <button class="btn-primary" onclick="App.copyPaySuccessLink()" style="white-space:nowrap;">📋 复制</button>
+        </div>
+
+        <!-- 二维码 + 说明 -->
+        <div style="display:grid;grid-template-columns:110px 1fr;gap:14px;align-items:center;margin-bottom:14px;">
+          <div id="pay-success-qr" style="background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:6px;display:flex;justify-content:center;"></div>
+          <div style="font-size:12px;color:#475569;line-height:1.7;">
+            <div style="font-weight:600;color:#0f172a;margin-bottom:4px;">📱 扫码或点击链接进入</div>
+            <div>· 凭此链接直接进入视频签约房间</div>
+            <div>· 无需账号密码，自动登录</div>
+            <div>· 移动端 / PC 端通用</div>
+            <div style="color:#dc2626;font-weight:600;margin-top:4px;">⏰ 链接 24 小时内有效</div>
+          </div>
+        </div>
+
+        <!-- 操作按钮 -->
+        <div style="display:flex;gap:10px;">
+          <button class="btn-primary" style="flex:1;padding:12px;font-size:14px;font-weight:700;"
+            onclick="App.enterRoomFromPaySuccess()">
+            🎥 立即进入会议室
+          </button>
+        </div>
+      </div>
+      <div class="modal-foot">
+        <span class="muted small">💡 可复制链接到其他设备打开，24 小时内有效</span>
+        <button class="btn-ghost" onclick="App.closeModal('pay-success-modal')">稍后进入</button>
+      </div>
+    </div>
+  </div>
+
   <!-- ============== 公证书预览弹窗（页内，不依赖新标签页） ============== -->
   <div class="modal-mask" id="cert-preview-modal">
     <div class="modal-box" style="max-width:860px;">
