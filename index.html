@@ -30,6 +30,10 @@
         <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 1l4 4-4 4M3 11V9a4 4 0 014-4h14M7 23l-4-4 4-4M21 13v2a4 4 0 01-4 4H3"/></svg>
         切换视角
       </button>
+      <button class="btn-text kb-hint" onclick="App.openJoinById()" title="凭会议号加入签约">
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M8 10h.01M12 10h.01M16 10h.01M8 14h8"/></svg>
+        加入会议
+      </button>
       <div class="notif-wrap">
         <button class="btn-text notif-bell" onclick="App.toggleNotif(event)" title="站内通知">
           <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8a6 6 0 10-12 0c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 01-3.46 0"/></svg>
@@ -77,6 +81,21 @@
           ⚡ 立即创建会议（免登录）
         </button>
         <p style="text-align:center;font-size:11px;color:#94a3b8;margin-top:8px;">访客可直接选时间 + 付费 + 生成会议号</p>
+        <!-- 凭会议号加入 -->
+        <div style="margin-top:14px;padding:12px;border:1px dashed #cbd5e1;border-radius:10px;background:#f8fafc;">
+          <div style="font-size:12px;color:#64748b;margin-bottom:8px;">📋 已有会议号，直接加入</div>
+          <div style="display:flex;gap:6px;">
+            <input type="text" id="home-join-sid" placeholder="输入会议号（如 GZ54114024）"
+              style="flex:1;padding:8px 10px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;outline:none;"
+              onkeydown="if(event.key==='Enter') App.joinById(document.getElementById('home-join-sid').value, document.getElementById('home-join-name').value, document.getElementById('home-join-phone').value)" />
+          </div>
+          <div style="display:flex;gap:6px;margin-top:6px;">
+            <input type="text" id="home-join-name" placeholder="您的姓名（签署人）" style="flex:1;padding:7px 10px;border:1px solid #e2e8f0;border-radius:8px;font-size:12px;outline:none;" />
+            <input type="text" id="home-join-phone" placeholder="手机号" style="flex:1;padding:7px 10px;border:1px solid #e2e8f0;border-radius:8px;font-size:12px;outline:none;" />
+          </div>
+          <button class="btn-primary small" style="width:100%;margin-top:8px;padding:8px;"
+            onclick="App.joinById(document.getElementById('home-join-sid').value, document.getElementById('home-join-name').value, document.getElementById('home-join-phone').value)">进入视频签约</button>
+        </div>
       </div>
       <div class="auth-card">
         <div class="tabs">
@@ -616,10 +635,13 @@
       <!-- 左侧：视频区 -->
       <div class="video-area">
         <div class="video-main" id="video-main">
-          <div class="video-placeholder">
+          <!-- 远端视频（对方）：主画面 -->
+          <video id="main-video" autoplay muted playsinline style="display:none;width:100%;height:100%;object-fit:cover;border-radius:12px;"></video>
+          <div class="video-placeholder" id="main-placeholder">
             <div class="avatar-huge" id="main-avatar">公</div>
             <div class="video-name" id="main-name">公证人画面</div>
             <div class="video-status-live"><span class="pulse"></span>高清 · 在线</div>
+            <div class="camera-warn" id="main-camera-warn" style="display:none;margin-top:12px;font-size:11px;color:#fbbf24;">📷 对方摄像头未共享，显示头像占位</div>
           </div>
           <div class="video-controls-bottom">
             <button class="vc-btn" id="mic-btn" onclick="App.toggleMedia('mic')" title="麦克风">
@@ -640,7 +662,9 @@
           </div>
         </div>
         <div class="video-pip" id="video-pip">
-          <div class="video-placeholder small">
+          <!-- 本地视频（自己）：小画面 -->
+          <video id="pip-video" autoplay muted playsinline style="display:none;width:100%;height:100%;object-fit:cover;border-radius:10px;background:#000;"></video>
+          <div class="video-placeholder small" id="pip-placeholder">
             <div class="avatar-med" id="pip-avatar">签</div>
             <div class="video-name" id="pip-name">签约方</div>
           </div>

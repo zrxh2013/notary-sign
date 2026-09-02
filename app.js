@@ -2061,6 +2061,19 @@
         $('#pip-avatar').textContent = s.signerName.slice(0, 1);
         $('#pip-name').textContent = s.signerName + '（签约方）';
       }
+      // 状态初始化
+      this.state.camOn = false;
+      this.state.micOn = true;
+      $('#cam-btn').classList.remove('off');
+      $('#mic-btn').classList.remove('off');
+      // 重置视频元素状态
+      const pipVideo = $('#pip-video'), mainVideo = $('#main-video');
+      if (pipVideo) { pipVideo.style.display = 'none'; pipVideo.srcObject = null; }
+      if (mainVideo) { mainVideo.style.display = 'none'; mainVideo.srcObject = null; }
+      $('#pip-placeholder').style.display = 'grid';
+      $('#main-placeholder').style.display = 'grid';
+      // 自动开启本地摄像头（真实 getUserMedia）
+      this.startLocalCamera();
       // 启动计时器
       this.state.startTime = Date.now() - (s.startedAt ? (Date.now() - s.startedAt) : 0);
       clearInterval(this.state.timerId);
@@ -2939,31 +2952,208 @@ ${bodyFragment}
 
 
     endRoom() {
-      const s = this.state.activeSession;
-      if (!s) { this.showPage(this.state.currentUser.role === 'notary' ? 'notary-dashboard' : 'signer-dashboard'); return; }
-      // 如果还未完成，但用户退出
+      // 关闭摄像头和屏幕共享，释放 track（防止摄像头灯一直亮）
+      this.stopLocalCamera();
       clearInterval(this.state.timerId);
-      if (s.status === 'ongoing') {
-        // 不算完成，保留进行中状态？这里简单处理，若没到第5步就保留ongoing
+      const s = this.state.activeSession;
+      const role = this.state.currentUser ? this.state.currentUser.role : 'signer';
+      if (!s) {
+        if (this.state.currentUser) this.showPage(role === 'notary' ? 'notary-dashboard' : 'signer-dashboard');
+        else this.showPage('auth-page');
+        return;
       }
       this.state.activeSession = null;
-      this.showPage(this.state.currentUser.role === 'notary' ? 'notary-dashboard' : 'signer-dashboard');
-      this.enterDashboard();
-    },
-
-    /* ========= 视频控制 ========= */
-    toggleMedia(kind) {
-      if (kind === 'mic') {
-        this.state.micOn = !this.state.micOn;
-        $('#mic-btn').classList.toggle('off', !this.state.micOn);
-        this.toast(this.state.micOn ? '麦克风已开启' : '麦克风已静音', this.state.micOn ? '' : 'warning');
+      if (this.state.currentUser) {
+        this.showPage(role === 'notary' ? 'notary-dashboard' : 'signer-dashboard');
+        this.enterDashboard();
       } else {
-        this.state.camOn = !this.state.camOn;
-        $('#cam-btn').classList.toggle('off', !this.state.camOn);
-        this.toast(this.state.camOn ? '摄像头已开启' : '摄像头已关闭', this.state.camOn ? '' : 'warning');
+        this.showPage('auth-page');
       }
     },
-    shareScreen() { this.toast('屏幕共享已启动（演示模式）', 'success'); },
+    /* ========= 凭会议号加入 ========= */
+    openJoinById() {
+      // 先显示 auth-page 再填会议号
+      this.showPage('auth-page');
+      setTimeout(() => {
+        const inp = $('#home-join-sid');
+        if (inp) { inp.focus(); inp.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
+      }, 100);
+    },
+    joinById(sid, name, phone) {
+      sid = (sid || '').trim().toUpperCase();
+      if (!sid) { this.toast('请输入会议号', 'warning'); return; }
+      // 找 session：当前浏览器 Store，或从 URL d参数哈希中还原
+      let s = Store.get('sessions', []).find(x => x.id.toUpperCase() === sid);
+      if (!s) {
+        // 没找到的话，先尝试从 localStorage 里的 sessions（不同存储键）
+        s = Store.get('signer-sessions', []).find(x => (x.id || '').toUpperCase() === sid);
+      }
+      if (!s) {
+        // 再尝试：如果浏览器里有 deep link 缓存，也可找
+        const reg = new RegExp(`"id"\\s*:\\s*"${sid}"`);
+        // 遍历所有 Store 键
+        try {
+          for (let i = 0; i < localStorage.length; i++) {
+            const k = localStorage.key(i);
+            if (!/sessions|signer|cache|meeting/i.test(k)) continue;
+            const v = localStorage.getItem(k);
+            if (v && reg.test(v)) {
+              try {
+                const arr = JSON.parse(v);
+                if (Array.isArray(arr)) {
+                  const match = arr.find(x => (x.id || '').toUpperCase() === sid);
+                  if (match) { s = match; break; }
+                }
+              } catch (e) {}
+            }
+          }
+        } catch (e) {}
+      }
+      if (!s) {
+        this.toast(`会议号 ${sid} 不存在或未在本机创建。请使用对方发送的完整深链（?join=...&d=...）打开。`, 'warning');
+        return;
+      }
+      // 自动登录为签约方（用会议里的信息匹配）
+      const realName = (name || s.signerName || '').trim();
+      const realPhone = (phone || s.signerPhone || '').trim();
+      if (!this.state.currentUser) {
+        // 未登录：自动创建临时签约方身份
+        this.state.currentUser = {
+          id: 'guest-signer-' + randHex(8),
+          name: realName || s.signerName || '签约人',
+          phone: realPhone || s.signerPhone || '',
+          idcard: s.signerIdcard || '',
+          role: 'signer',
+          guest: true,
+        };
+        const nav = $('#navbar'); if (nav) nav.classList.remove('hidden');
+        this.updateNavUser();
+      } else {
+        // 已登录但不是 signer → 切换角色
+        this.state.currentUser.role = 'signer';
+        this.state.currentUser.name = realName || this.state.currentUser.name;
+        this.state.currentUser.phone = realPhone || this.state.currentUser.phone;
+        if (s.signerIdcard) this.state.currentUser.idcard = s.signerIdcard;
+      }
+      // 进入房间：AI公证流程自动启动条件保留（autoNotary / PTAHDAO + guestCreated + signer 角色）
+      this.joinRoom(s.id);
+    },
+
+    /* ========= 视频控制（真实摄像头 + 屏幕共享） ========= */
+    async startLocalCamera() {
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        this.toast('⚠ 浏览器不支持 getUserMedia 或非 HTTPS，将使用头像占位模式', 'warning');
+        return;
+      }
+      try {
+        // 申请摄像头 + 麦克风权限（1280x720 高清）
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: 'user' },
+          audio: { echoCancellation: true, noiseSuppression: true }
+        });
+        this.state.camStream = stream;
+        // 绑定到本地小画面 pip-video（真实显示自己的影像）
+        const pipVideo = $('#pip-video');
+        if (pipVideo) {
+          pipVideo.srcObject = stream;
+          pipVideo.style.display = 'block';
+          $('#pip-placeholder').style.display = 'none';
+        }
+        this.state.camOn = true;
+        this.state.micOn = true;
+        $('#cam-btn').classList.remove('off');
+        $('#mic-btn').classList.remove('off');
+        this.toast('🎥 摄像头已接入（本地小画面已显示实时影像）', 'success');
+      } catch (e) {
+        this.toast('📷 无法访问摄像头：' + (e.message || e) + '（请允许权限或使用 HTTPS）', 'warning');
+      }
+    },
+    stopLocalCamera() {
+      const stream = this.state.camStream;
+      if (stream) {
+        try { stream.getTracks().forEach(t => t.stop()); } catch (e) {}
+        this.state.camStream = null;
+      }
+      const screenStream = this.state.screenStream;
+      if (screenStream) {
+        try { screenStream.getTracks().forEach(t => t.stop()); } catch (e) {}
+        this.state.screenStream = null;
+      }
+      const pipVideo = $('#pip-video'), mainVideo = $('#main-video');
+      if (pipVideo) { pipVideo.srcObject = null; pipVideo.style.display = 'none'; }
+      if (mainVideo) { mainVideo.srcObject = null; mainVideo.style.display = 'none'; }
+      const pp = $('#pip-placeholder'); if (pp) pp.style.display = 'grid';
+      const mp = $('#main-placeholder'); if (mp) mp.style.display = 'grid';
+      this.state.camOn = false;
+      this.state.micOn = false;
+    },
+    toggleMedia(kind) {
+      if (kind === 'mic') {
+        const stream = this.state.camStream;
+        const audioTracks = stream ? stream.getAudioTracks() : [];
+        if (!stream || audioTracks.length === 0) {
+          this.toast('⚠ 当前无麦克风设备，请先授权摄像头', 'warning');
+          return;
+        }
+        this.state.micOn = !this.state.micOn;
+        $('#mic-btn').classList.toggle('off', !this.state.micOn);
+        audioTracks.forEach(t => { t.enabled = this.state.micOn; });
+        this.toast(this.state.micOn ? '🎙️ 麦克风已开启' : '🔇 麦克风已静音', this.state.micOn ? '' : 'warning');
+      } else {
+        if (this.state.camOn) {
+          // 关闭：禁用 track，隐藏 video，显示头像占位
+          const stream = this.state.camStream;
+          if (stream) stream.getVideoTracks().forEach(t => { t.enabled = false; });
+          const pv = $('#pip-video'); if (pv) pv.style.display = 'none';
+          const pp = $('#pip-placeholder'); if (pp) pp.style.display = 'grid';
+          this.state.camOn = false;
+          $('#cam-btn').classList.add('off');
+          this.toast('📷 摄像头已关闭', 'warning');
+        } else {
+          // 开启
+          if (this.state.camStream) {
+            this.state.camStream.getVideoTracks().forEach(t => { t.enabled = true; });
+            const pv = $('#pip-video'); if (pv) pv.style.display = 'block';
+            const pp = $('#pip-placeholder'); if (pp) pp.style.display = 'none';
+            this.state.camOn = true;
+            $('#cam-btn').classList.remove('off');
+            this.toast('🎥 摄像头已开启', 'success');
+          } else {
+            // 流还没有，重新申请
+            this.startLocalCamera();
+          }
+        }
+      }
+    },
+    async shareScreen() {
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getDisplayMedia) {
+        this.toast('⚠ 当前浏览器不支持 getDisplayMedia（需 HTTPS + 现代浏览器）', 'warning');
+        return;
+      }
+      try {
+        const stream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: false });
+        this.state.screenStream = stream;
+        const mv = $('#main-video');
+        if (mv) {
+          mv.srcObject = stream;
+          mv.style.display = 'block';
+          $('#main-placeholder').style.display = 'none';
+        }
+        this.toast('🖥️ 屏幕共享已启动（主画面显示屏幕内容）', 'success');
+        // 共享结束回调
+        stream.getVideoTracks()[0].onended = () => {
+          if (this.state.screenStream === stream) {
+            this.state.screenStream = null;
+            const mv = $('#main-video'); if (mv) { mv.srcObject = null; mv.style.display = 'none'; }
+            const mp = $('#main-placeholder'); if (mp) mp.style.display = 'grid';
+            this.toast('屏幕共享已结束', 'info');
+          }
+        };
+      } catch (e) {
+        if (String(e).includes('denied')) this.toast('用户取消了屏幕共享', 'warning');
+        else this.toast('共享失败：' + (e.message || e), 'warning');
+      }
+    },
 
     /* ========= 聊天 ========= */
     initChat(s) {
