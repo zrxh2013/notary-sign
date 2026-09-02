@@ -1000,23 +1000,12 @@
           <label>备注说明</label>
           <textarea id="cm-remark" rows="2" placeholder="可填写签约注意事项或补充说明"></textarea>
         </div>
-        <!-- 费用预览 -->
-        <div class="field">
-          <label>费用预览</label>
-          <div id="cm-fee-preview" style="background:#f8fafc;border:1px solid var(--border);border-radius:10px;padding:12px 16px;">
-            <div style="display:flex;justify-content:space-between;align-items:center;">
-              <span style="font-size:13px;color:#6b7280;">公证费（基础费）</span>
-              <b id="cm-fee-amount" style="font-size:16px;color:var(--primary);">¥200</b>
-            </div>
-            <div id="cm-fee-detail" style="font-size:11px;color:#9ca3af;margin-top:4px;">依据发改价格[2008]157号 · 声明书公证基础费</div>
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;padding-top:8px;border-top:1px dashed #e5e7eb;">
-              <span style="font-size:13px;font-weight:600;">合计应付</span>
-              <b id="cm-fee-total" style="font-size:20px;color:#991b1b;">¥200</b>
-            </div>
-            <label style="display:flex;align-items:center;gap:6px;margin-top:8px;font-size:12px;cursor:pointer;">
-              <input type="checkbox" id="cm-fee-paid" checked onchange="App.updateCreateBtn()" /> 已确认缴费，签署完成后出具公证书
-            </label>
-          </div>
+        <!-- 申请资料填写页已去除「费用展示」，仅保留缴费确认复选框（用于按钮分支控制） -->
+        <div class="field" style="padding:0 4px;">
+          <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;background:#f8fafc;border:1px solid var(--border);border-radius:10px;padding:12px 16px;">
+            <input type="checkbox" id="cm-fee-paid" checked onchange="App.updateCreateBtn()" />
+            <span style="line-height:1.6;color:#1f2937;">我已确认缴费，签署完成后出具公证书<span style="display:block;font-size:11.5px;color:#64748b;font-weight:400;margin-top:2px;">（缴费详情在「确认缴费并生成会议号」支付弹窗内查看）</span></span>
+          </label>
         </div>
       </div>
       <div class="modal-foot">
