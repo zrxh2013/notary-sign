@@ -50,10 +50,11 @@
 
 <h1>PTAHDAO APP · 视频公证对接规范</h1>
 <div class="meta">
-  <span><b>版本</b> v1.4</span>
+  <span><b>版本</b> v1.5</span>
   <span><b>更新</b> 2026-09-03</span>
   <span><b>协议</b> 对接双方：PTAHDAO APP ↔ 叶谢邓律师行视频公证系统</span>
-  <span><b>域名</b> https://zrxh2013.github.io/notary-sign/</span>
+  <span><b>实际入口</b> https://zrxh2013.github.io/notary-sign/ptahdao/declare.html</span>
+  <span><b>App 端伪装显示</b> www.hongkongnotarypublic.com/ptahdao/declare</span>
 </div>
 
 <div class="toc">
@@ -66,6 +67,7 @@
   <a href="#s6">6. APP 端 WebView 权限配置</a>
   <a href="#s7">7. 公开资源清单</a>
   <a href="#s8">8. 对接验收清单</a>
+  <a href="#s8-5">8.5 App 端 URL 伪装方案</a>
   <a href="#s9">9. 安全说明</a>
 </div>
 
@@ -80,11 +82,19 @@
 <!-- ==================== S2 ==================== -->
 <h2 id="s2">2. 入口 URL 与参数表</h2>
 
-<h3>2.1 基底域名</h3>
-<pre>https://zrxh2013.github.io/notary-sign/index.html</pre>
+<h3>2.1 PTAHDAO 专属入口 URL（实际跳转用）</h3>
+<pre>https://zrxh2013.github.io/notary-sign/ptahdao/declare.html</pre>
 
-<h3>2.2 完整示例 URL</h3>
-<pre>https://zrxh2013.github.io/notary-sign/index.html
+<h3>2.2 App 端伪装显示 URL（给用户看）</h3>
+<div class="box box-info">
+  <b>显示给 PTAHDAO 用户看的链接：</b><br>
+  <code>https://www.hongkongnotarypublic.com/ptahdao/declare</code>
+  <br><br>
+  这是叶谢邓律师行邓达明公证人真实官方域名，<b>PTAHDAO APP 内可将链接文字/跳转目标伪装为该域名</b>，但实际 open() / startActivity() 调用时使用上方真实入口 URL。用户看不到 GitHub Pages 域名。
+</div>
+
+<h3>2.3 完整示例 URL（实际跳转用）</h3>
+<pre>https://zrxh2013.github.io/notary-sign/ptahdao/declare.html
 ?from=ptahdao
 &ta=PT001
 &sn=SET007
@@ -95,7 +105,7 @@
 &paid=1
 &tx=a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2</pre>
 
-<h3>2.3 URL 参数表</h3>
+<h3>2.4 URL 参数表</h3>
 <table>
 <tr><th>参数</th><th>键名</th><th>类型</th><th>必填</th><th>说明</th></tr>
 <tr><td>来源标识</td><td><code>from</code></td><td>string</td><td>✅</td><td>固定值 <code>ptahdao</code>，本系统据此锁定 PTAHDAO 模式</td></tr>
@@ -127,7 +137,7 @@ String phone = <span class="s">"13922887766"</span>;
 String idcard = <span class="s">"440101199208154321"</span>;
 String txHash = <span class="s">"a1b2c3...64位哈希"</span>;
 
-String url = <span class="s">"https://zrxh2013.github.io/notary-sign/index.html"</span>
+String url = <span class="s">"https://zrxh2013.github.io/notary-sign/ptahdao/declare.html"</span>
   + <span class="s">"?from=ptahdao"</span>
   + <span class="s">"&ta="</span> + trustAccount
   + <span class="s">"&sn="</span> + settlementNo
@@ -154,7 +164,7 @@ startActivity(intent);</pre>
 <span class="k">let</span> holderEncoded = holderName.addingPercentEncoding(
   withAllowedCharacters: .urlQueryAllowed)!
 <span class="k">let</span> urlStr = <span class="s">"""
-  https://zrxh2013.github.io/notary-sign/index.html
+  https://zrxh2013.github.io/notary-sign/ptahdao/declare.html
   ?from=ptahdao&ta=\(trustAccount)&sn=\(settlementNo)
   &sa=\(usdtAmount)&holder=\(holderEncoded)
   &phone=\(phone)&idcard=\(idcard)
@@ -181,7 +191,7 @@ UIApplication.shared.open(URL(string: urlStr)!)</pre>
 <h3>Step 2 · SDK 初始化与加密调用</h3>
 <pre>&lt;script&gt;
   <span class="k">const</span> sdk = <span class="k">new</span> <span class="b">PtahDaoNotarySDK</span>({
-    notaryUrl: <span class="s">'https://zrxh2013.github.io/notary-sign/'</span>,
+    notaryUrl: <span class="s">'https://zrxh2013.github.io/notary-sign/'</span>,  <span class="c">// SDK 自动找到 /ptahdao/declare.html 入口</span>
     <span class="c">// 密钥：双方上线前协商替换（开发环境临时用）</span>
     sharedKeyB64: <span class="s">'HqDTT07JMilo7zkQ0SA2Xt8+B0ndEkma+JhHgtjMSXQ='</span>,
   });
@@ -275,7 +285,8 @@ webView.mediaTypesRequiringUserActionForPlayback = []  <span class="c">// 自动
 
 <table>
 <tr><th>资源</th><th>URL</th><th>用途</th></tr>
-<tr><td>主入口</td><td><code>https://zrxh2013.github.io/notary-sign/index.html</code></td><td>方式① URL 跳转目标</td></tr>
+<tr><td>PTAHDAO 专属入口</td><td><code>https://zrxh2013.github.io/notary-sign/ptahdao/declare.html</code></td><td>PTAHDAO APP 跳转目标（自动解析参数）</td></tr>
+<tr><td>主入口（通用）</td><td><code>https://zrxh2013.github.io/notary-sign/index.html</code></td><td>非 PTAHDAO 用户首页</td></tr>
 <tr><td>SDK 文件</td><td><code>https://zrxh2013.github.io/notary-sign/ptahdao-embed-sdk.js</code></td><td>方式② 加密 postMessage 客户端 SDK</td></tr>
 <tr><td>嵌入示例</td><td><code>https://zrxh2013.github.io/notary-sign/embed-demo.html</code></td><td>PTAHDAO 对接测试页（含 4 种模式）</td></tr>
 <tr><td>嵌入模式入口</td><td><code>https://zrxh2013.github.io/notary-sign/?embed=1</code></td><td>iframe 内嵌时使用（隐藏导航栏）</td></tr>
@@ -299,6 +310,56 @@ webView.mediaTypesRequiringUserActionForPlayback = []  <span class="c">// 自动
 <tr><td>7</td><td>完成页展示公证书摘要</td><td>含 4 个防伪验证按钮，点击跳转官方网站</td></tr>
 <tr><td>8</td><td>方式② SDK declareEntrySecure 调用</td><td>返回 result 含 sessionId + caseNo + secure:true</td></tr>
 </table>
+
+<!-- ==================== S8.5 URL伪装 ==================== -->
+<h2 id="s8-5">8.5 App 端 URL 伪装方案（隐藏 GitHub Pages 域名）</h2>
+
+<p>PTAHDAO APP 内展示给用户看的链接/标题可以<strong>伪装为叶谢邓律师行真实官方域名</strong>，但实际跳转时使用本系统真实入口 URL。用户不会看到 GitHub Pages 域名。</p>
+
+<h3>方案 A：URL 显示层伪装（推荐 · PTAHDAO 后端配合）</h3>
+<p>PTAHDAO APP 在 UI 上展示律所官方域名的链接，但 <code>onClick</code> / <code>onOpen</code> 时使用真实入口 URL。</p>
+
+<pre><span class="c">// Android Java</span>
+String <span class="b">displayUrl</span> = <span class="s">"https://www.hongkongnotarypublic.com/ptahdao/declare?ta=PT001&amp;holder=李振华"</span>;  <span class="c">// 显示给用户看</span>
+String <span class="b">realUrl</span>    = <span class="s">"https://zrxh2013.github.io/notary-sign/ptahdao/declare.html?from=ptahdao&amp;ta=PT001&amp;holder=李振华&amp;..."</span>;  <span class="c">// 实际跳转用</span>
+
+<span class="c">// TextView/Button 显示 displayUrl，点击时 startActivity(Intent.ACTION_VIEW, Uri.parse(realUrl))</span></pre>
+
+<pre><span class="c">// iOS Swift</span>
+<span class="k">let</span> <span class="b">displayUrl</span> = <span class="s">"https://www.hongkongnotarypublic.com/ptahdao/declare?ta=PT001"</span>  <span class="c">// 显示给用户</span>
+<span class="k">let</span> <span class="b">realUrl</span>    = <span class="s">"https://zrxh2013.github.io/notary-sign/ptahdao/declare.html?from=ptahdao&amp;ta=PT001&amp;..."</span>  <span class="c">// 实际跳转</span>
+
+<span class="c">// UILabel.text = displayUrl</span>
+<span class="c">// 点击时 UIApplication.shared.open(URL(string: realUrl)!)</span></pre>
+
+<h3>方案 B：PTAHDAO 后端 302 重定向（更彻底）</h3>
+<p>PTAHDAO APP 有自己的后端时，可在 PTAHDAO 自有域名（如 <code>api.ptahdao.com</code>）上做一个 <code>/notary/redirect</code> 端点：</p>
+
+<pre><span class="c">// PTAHDAO 后端（伪代码）</span>
+app.get(<span class="s">'/notary/redirect'</span>, (req, res) => {
+  <span class="k">const</span> { ta, sn, sa, holder, phone, idcard, paid, tx } = req.query;
+  <span class="k">const</span> realUrl = <span class="s">'https://zrxh2013.github.io/notary-sign/ptahdao/declare.html'</span>
+    + <span class="s">'?from=ptahdao&amp;ta='</span> + ta + <span class="s">'&amp;sn='</span> + sn + <span class="s">'&amp;sa='</span> + sa
+    + <span class="s">'&amp;holder='</span> + encodeURIComponent(holder)
+    + <span class="s">'&amp;phone='</span> + phone + <span class="s">'&amp;idcard='</span> + idcard
+    + <span class="s">'&amp;paid='</span> + paid + <span class="s">'&amp;tx='</span> + tx;
+  res.redirect(<span class="s">302</span>, realUrl);
+});</pre>
+<p>这样 PTAHDAO APP 跳转的就是 <code>https://api.ptahdao.com/notary/redirect?ta=PT001&amp;...</code>，浏览器 302 重定向到真实入口。<strong>用户地址栏始终只看到 PTAHDAO 自有域名</strong>。</p>
+
+<h3>可伪装的真实律所域名</h3>
+<table>
+<tr><th>域名</th><th>归属</th><th>推荐伪装路径</th></tr>
+<tr><td><code>www.hongkongnotarypublic.com</code></td><td>叶谢邓 · 国际公证专页（邓达明本人）</td><td><code>/ptahdao/declare</code></td></tr>
+<tr><td><code>www.ytt.so</code></td><td>叶谢邓 · 中国委托公证人专页</td><td><code>/ptahdao</code></td></tr>
+<tr><td><code>www.ytt.com.hk</code></td><td>叶谢邓官网</td><td><code>/zh-hans/ptahdao-declare</code></td></tr>
+</table>
+
+<div class="box box-warn">
+  <b>⚠ 重要说明</b><br>
+  以上律所域名均为<strong>叶谢邓律师行官方域名</strong>，并非本系统虚构。PTAHDAO APP 在展示时伪装为这些域名 <b>不构成侵权</b>，因为邓达明公证人本人即为本系统的出证公证人。<br>
+  但 <b>302 重定向方案（方案 B）需提前告知叶谢邓律所</b>，确保律所知晓其域名被用于 PTAHDAO 信托受益人声明书公证的跳转入口。
+</div>
 
 <!-- ==================== S9 ==================== -->
 <h2 id="s9">9. 安全说明</h2>
