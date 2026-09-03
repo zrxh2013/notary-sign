@@ -2888,7 +2888,7 @@
       } catch(e) {}
       // 自动公证：双保险触发（payload的autoNotary标记 或 PTAHDAO访客创建 或 通用guestCreated=自助申请签署）
       if ((s.autoNotary || s.guestCreated) && u.role === 'signer') {
-        setTimeout(() => this._startAutoNotaryFlow(), 600);
+        setTimeout(() => this._startAutoNotaryFlow(), 300);
       }
       // 通知第三方平台：已进入签约房间
       this._emitSdkEvent('join', { sessionId: s.id, topic: s.topic, role: u.role, notaryName: s.notaryName, signerName: s.signerName });
@@ -2896,18 +2896,19 @@
     // 内部公证人自动流程
     _startAutoNotaryFlow() {
       // ================ 📹 视频连线签名总时长控制在 3-5 分钟（180-300s） ================
-      // 节奏优化（v2026.09）：PACE 26s/步，身份证核验延长至 6s（用户充分看清）
-      // AI 自动推进 5 步 × 26s = 130s + 后续承诺录音 30-45s + 手写签名 40-60s + 链上存证 20s ≈ 220-255s（3分40秒~4分15秒）✅ 落在 3-5 分钟
+      // 节奏优化 v2（v2026.09）：合并欢迎+身份证扫描为同一时间点，压缩冷启动空等
+      // T+0.5s 并发启动欢迎播报 + 身份证扫描，避免用户感知到 2-3s 无反应
+      // AI 自动推进 5 步 × 26s ≈ 128s + 承诺录音 30-45s + 手写签名 40-60s + 链上存证 20s ≈ 218-253s（3分38秒~4分13秒）✅ 落在 3-5 分钟
       const PACE_MS = 26000;          // 每一步给用户阅读 + 确认 + 语音播报的时间（26s / 步）
-      const T_AI_0_START  = 2000;     // T+2s    欢迎 + 材料初审
-      const T_AI_1_ID     = T_AI_0_START + 6000;   // T+8s    身份证核验 (6s 给用户充分看清信息)
-      const T_AI_1_FACE   = T_AI_1_ID + PACE_MS;   // T+34s   人脸活体比对 (给够用户把脸对准镜头 26s)
-      const T_AI_1_PASS   = T_AI_1_FACE + PACE_MS; // T+60s   实人核验通过 (人脸比对 26s)
-      const T_AI_2_NOTICE = T_AI_1_PASS + PACE_MS; // T+86s   法律告知已确认 (告知 26s)
-      const T_AI_3_DOC    = T_AI_2_NOTICE + PACE_MS; // T+112s 文书核查 (26s)
-      const T_AI_4_NOTARY = T_AI_3_DOC + PACE_MS;   // T+138s 公证人出证签署 (26s)
-      const T_AI_5_COMMIT = T_AI_4_NOTARY + 1500;   // T+139.5s 公证人签完→弹承诺录音（紧凑，不再空等）
-      // 目标：到达承诺录音卡片弹出时间 ≈ 2分20秒（给用户录30-45s + 签40-60s + 存证20s = 约3分50秒完成）
+      const T_AI_0_START  = 500;      // T+0.5s  欢迎 + 身份证扫描合并启动（用户进入后立即反馈）
+      const T_AI_1_ID     = T_AI_0_START;              // T+0.5s  身份证核验（与欢迎播报同步启动）
+      const T_AI_1_FACE   = T_AI_1_ID + 6000 + PACE_MS; // T+32.5s 人脸活体比对 (6s 给用户看清身份证 + 26s 阅读时间)
+      const T_AI_1_PASS   = T_AI_1_FACE + PACE_MS;       // T+58.5s 实人核验通过 (人脸比对 26s)
+      const T_AI_2_NOTICE = T_AI_1_PASS + PACE_MS;      // T+84.5s 法律告知已确认 (告知 26s)
+      const T_AI_3_DOC    = T_AI_2_NOTICE + PACE_MS;     // T+110.5s 文书核查 (26s)
+      const T_AI_4_NOTARY = T_AI_3_DOC + PACE_MS;        // T+136.5s 公证人出证签署 (26s)
+      const T_AI_5_COMMIT = T_AI_4_NOTARY + 1000;        // T+137.5s 公证人签完→弹承诺录音（更紧凑）
+      // 目标：到达承诺录音卡片弹出时间 ≈ 2分18秒（给用户录30-45s + 签40-60s + 存证20s = 约3分48秒完成）
 
       // 写入起点用于 ETA 计算（避免被重入覆盖：一次性写入保护）
       if (!this.state._autoNotaryStartedAt) {
@@ -2915,21 +2916,20 @@
       } else {
         return; // 不重复触发（双保险：已启动过则直接退出）
       }
-      // ETA：总预计 4 分钟（240s）→ 每 5 秒更新一次 "预计剩余 N 分钟"
+      // ETA：总预计 4分20秒（260s）→ 每 5 秒更新一次 "预计剩余 N 分钟"
       this.state._etaTimerId = setInterval(() => this._updateEta(), 5000);
       this._updateEta();
 
       const s = this.state.activeSession;
       if (!s) return;
-      this.addSystemMsg('【公证人】已开始本次公证流程，正在进行材料初审与实人核验...');
+      // 合并播报：欢迎语 + 身份证扫描说明一次性讲完，避免两条 speak 冲突
+      this.addSystemMsg('【公证人】已开始本次公证流程，正在读取身份证件并核验主体资格...');
       this.toast('📹 视频连线预计总时长 3-5 分钟（法定流程5步+承诺录音+手写签名+链上存证）', 'info');
-      this.speak('欢迎进入视频签约会议室。温馨提示：本次公证办理全程预计3至5分钟，请保持端坐、网络畅通、不要离开镜头，我们会按法定步骤推进。');
+      this.speak('欢迎进入视频签约会议室，本次办理全程预计3至5分钟。现在开始为您读取身份证件信息，请确认与本人一致。');
       this._setAutoStep = (n, label) => { /* 内部状态，无 UI */ };
 
-      // 1) 材料初审 + 实人核验：自动扫描身份证 + 人脸比对
+      // 1) 材料初审 + 实人核验：身份证扫描 + 人脸比对（与欢迎语同时启动，T+0.5s）
       setTimeout(() => {
-        this.addSystemMsg('【公证人】读取身份证件信息，核验申请人主体资格...');
-        this.speak('正在进行身份证件核验，请确认身份证信息与本人一致。');
         this.startIDScan();
         this._updateEta();
       }, T_AI_0_START);
@@ -3010,7 +3010,7 @@
           } else {
             self2.openSignaturePad({ role: 'signer', name: se.signerName }, (p) => self2._applySignatureFromPad(p));
           }
-        }, 1200);
+        }, 1000);
       }, T_AI_4_NOTARY);
       // 7) 删除旧的"模拟签约方自动签名"逻辑——现在第6步结尾已通过 openSignaturePad 让用户手写确认，签完后会自动进入完成页，不需要这里再处理
     },
