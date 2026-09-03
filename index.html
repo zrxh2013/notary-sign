@@ -1318,25 +1318,9 @@
           <div style="margin-top:4px;font-size:12px;color:#475569;">签约人：<b id="pay-success-signer">--</b></div>
         </div>
 
-        <!-- 入口链接 -->
-        <label style="font-size:13px;font-weight:600;display:block;margin-bottom:8px;">🔗 会议室入口链接</label>
-        <div style="display:flex;gap:8px;align-items:stretch;margin-bottom:12px;">
-          <input type="text" id="pay-success-url" readonly
-            style="flex:1;padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-family:monospace;font-size:10px;background:#f8fafc;color:#1e293b;" />
-          <button class="btn-primary" onclick="App.copyPaySuccessLink()" style="white-space:nowrap;">📋 复制</button>
-        </div>
-
-        <!-- 二维码 + 说明 -->
-        <div style="display:grid;grid-template-columns:110px 1fr;gap:14px;align-items:center;margin-bottom:14px;">
-          <div id="pay-success-qr" style="background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:6px;display:flex;justify-content:center;"></div>
-          <div style="font-size:12px;color:#475569;line-height:1.7;">
-            <div style="font-weight:600;color:#0f172a;margin-bottom:4px;">📱 扫码或点击链接进入</div>
-            <div>· 凭此链接直接进入视频签约房间</div>
-            <div>· 无需账号密码，自动登录</div>
-            <div>· 移动端 / PC 端通用</div>
-            <div style="color:#dc2626;font-weight:600;margin-top:4px;">⏰ 链接 24 小时内有效</div>
-          </div>
-        </div>
+        <!-- 注：付费成功后不再展示入口链接/二维码，仅凭会议号即可进入会议室。
+             会议号会在上方 pay-success-meetingno-big 区块以超大字号展示（含一键复制按钮）。
+             凭会议号进入会议室的功能在首页右卡「凭会议号进入视频签约室」实现，支持跨设备。 -->
 
         <!-- 操作按钮 -->
         <div style="display:flex;gap:10px;">
@@ -1347,7 +1331,7 @@
         </div>
       </div>
       <div class="modal-foot">
-        <span class="muted small">💡 可复制链接到其他设备打开，24 小时内有效</span>
+        <span class="muted small">💡 凭会议号即可进入，无需链接；首页右侧「凭会议号进入」卡片支持跨设备使用</span>
         <button class="btn-ghost" onclick="App.closeModal('pay-success-modal')">稍后进入</button>
       </div>
     </div>

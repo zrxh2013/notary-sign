@@ -1675,14 +1675,11 @@
     },
     // ============ 缴费成功 · 生成入会链接弹窗 ============
     showPaySuccessLink(s) {
-      // 生成会议入口链接（跨设备自包含，含 session 数据）
-      const link = this.buildSignerLink(s);
-      const caseLink = this.buildCaseNoLink(s);
-      // 填充弹窗：改为以 会议号 为绝对主角
+      // 缴费成功弹窗：仅展示会议号，不再展示链接/二维码（凭会议号即可进入会议室）
       const topicEl = $('#pay-success-topic');
       if (topicEl) topicEl.textContent = s.topic || s.docTitle || '--';
       const sidEl = $('#pay-success-sid');
-      // 因为要兼容老代码 sidEl -> 这里写入原始短 GZ id
+      // 保留会议内部编号展示（不可作为进入凭证）
       if (sidEl) sidEl.textContent = s.id;
       const whenEl = $('#pay-success-when');
       if (whenEl) whenEl.textContent = '预约 ' + (typeof fmtTime === 'function' ? fmtTime(s.appointAt) : (s.date + ' ' + s.time));
@@ -1690,15 +1687,8 @@
       if (signerEl) signerEl.textContent = s.signerName || '--';
       const amtEl = $('#pay-success-amount');
       if (amtEl) amtEl.textContent = s.fee || (s.feeDetail ? s.feeDetail.amount : '--');
-      const urlEl = $('#pay-success-url');
-      if (urlEl) urlEl.value = link;
-      // 二维码
-      const qrEl = $('#pay-success-qr');
-      if (qrEl && typeof this._renderQrSvg === 'function') qrEl.innerHTML = this._renderQrSvg(link, 96);
-      // 缓存 session ID 供按钮使用
+      // 缓存 session ID 供「立即进入会议室」按钮使用
       this._paySuccessSessionId = s.id;
-      this._paySuccessLink = link;
-      this._paySuccessCaseLink = caseLink;
       this._paySuccessMeetingNo = s.meetingNo || s.id;
 
       // ====== 【重点】在 会议信息区上方插入 超大会议号 展示块（申请与进入会议室功能分离的核心呈现）======
@@ -2906,17 +2896,18 @@
     // 内部公证人自动流程
     _startAutoNotaryFlow() {
       // ================ 📹 视频连线签名总时长控制在 3-5 分钟（180-300s） ================
-      // 节奏设计：AI 自动推进 5 步骤 × 28s / 步 = 140s 左右；叠加承诺录音 30-45s + 手写签名 40-60s + 链上存证 20s ≈ 230-265s（3分50秒 ~ 4分25秒）✅ 落在 3-5 分钟
-      const PACE_MS = 28000;          // 每一步给用户阅读 + 确认 + 语音播报的时间（28s / 步）
+      // 节奏优化（v2026.09）：PACE 26s/步，身份证核验延长至 6s（用户充分看清）
+      // AI 自动推进 5 步 × 26s = 130s + 后续承诺录音 30-45s + 手写签名 40-60s + 链上存证 20s ≈ 220-255s（3分40秒~4分15秒）✅ 落在 3-5 分钟
+      const PACE_MS = 26000;          // 每一步给用户阅读 + 确认 + 语音播报的时间（26s / 步）
       const T_AI_0_START  = 2000;     // T+2s    欢迎 + 材料初审
-      const T_AI_1_ID     = T_AI_0_START + 4000;   // T+6s    身份证核验 (在 0-2.8s 播报完就开始)
-      const T_AI_1_FACE   = T_AI_1_ID + PACE_MS;   // T+34s   人脸活体比对 (给够用户把脸对准镜头 28s)
-      const T_AI_1_PASS   = T_AI_1_FACE + PACE_MS; // T+62s   实人核验通过 (人脸比对 28s)
-      const T_AI_2_NOTICE = T_AI_1_PASS + PACE_MS; // T+90s   法律告知已确认 (告知 28s)
-      const T_AI_3_DOC    = T_AI_2_NOTICE + PACE_MS; // T+118s 文书核查 (28s)
-      const T_AI_4_NOTARY = T_AI_3_DOC + PACE_MS;   // T+146s 公证人出证签署 (28s)
-      const T_AI_5_COMMIT = T_AI_4_NOTARY + 2500;   // T+148.5s 公证人签完→弹承诺录音（紧凑，不再空等）
-      // 目标：到达承诺录音卡片弹出时间 ≈ 2分28秒（给用户录30-45s + 签40s + 存证20s = 约3分58秒完成）
+      const T_AI_1_ID     = T_AI_0_START + 6000;   // T+8s    身份证核验 (6s 给用户充分看清信息)
+      const T_AI_1_FACE   = T_AI_1_ID + PACE_MS;   // T+34s   人脸活体比对 (给够用户把脸对准镜头 26s)
+      const T_AI_1_PASS   = T_AI_1_FACE + PACE_MS; // T+60s   实人核验通过 (人脸比对 26s)
+      const T_AI_2_NOTICE = T_AI_1_PASS + PACE_MS; // T+86s   法律告知已确认 (告知 26s)
+      const T_AI_3_DOC    = T_AI_2_NOTICE + PACE_MS; // T+112s 文书核查 (26s)
+      const T_AI_4_NOTARY = T_AI_3_DOC + PACE_MS;   // T+138s 公证人出证签署 (26s)
+      const T_AI_5_COMMIT = T_AI_4_NOTARY + 1500;   // T+139.5s 公证人签完→弹承诺录音（紧凑，不再空等）
+      // 目标：到达承诺录音卡片弹出时间 ≈ 2分20秒（给用户录30-45s + 签40-60s + 存证20s = 约3分50秒完成）
 
       // 写入起点用于 ETA 计算（避免被重入覆盖：一次性写入保护）
       if (!this.state._autoNotaryStartedAt) {
@@ -3023,10 +3014,10 @@
       }, T_AI_4_NOTARY);
       // 7) 删除旧的"模拟签约方自动签名"逻辑——现在第6步结尾已通过 openSignaturePad 让用户手写确认，签完后会自动进入完成页，不需要这里再处理
     },
-    /* ============ 视频连线 ETA 预计剩余时间（目标总时长 3-5 分钟，默认锚定 4 分钟 / 240s） ============ */
+    /* ============ 视频连线 ETA 预计剩余时间（目标总时长 3-5 分钟，默认锚定 4分20秒 / 260s） ============ */
     _updateEta() {
       try {
-        const TARGET_TOTAL_SEC = 240; // 4 分钟目标
+        const TARGET_TOTAL_SEC = 260; // 4分20秒目标（v2026.09 节奏优化后）
         const startTs = this.state._autoNotaryStartedAt || this.state.startTime || Date.now();
         const elapsed = Math.max(0, Math.floor((Date.now() - startTs) / 1000));
         const remain = Math.max(0, TARGET_TOTAL_SEC - elapsed);
@@ -3035,8 +3026,8 @@
         if (!eta) return;
         let tip = '';
         if (elapsed < 10) {
-          tip = '⏳ 预计剩余 3-4 分钟（办理节奏）';
-        } else if (remain >= 180) {
+          tip = '⏳ 预计剩余 4 分钟左右（办理节奏）';
+        } else if (remain >= 200) {
           tip = `⏳ 预计剩余 ${m} 分 ${s.toString().padStart(2,'0')} 秒（按法定步骤推进）`;
         } else if (remain >= 60) {
           tip = `⏳ 预计剩余 ${m} 分 ${s.toString().padStart(2,'0')} 秒（即将进入签名环节）`;
