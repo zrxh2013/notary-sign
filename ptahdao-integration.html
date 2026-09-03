@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PTAHDAO APP · 视频公证对接规范 v1.4</title>
+<style>
+  * { box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Microsoft YaHei', sans-serif; margin: 0; padding: 40px 60px; color: #1e293b; background: #fff; line-height: 1.7; }
+  @media print { body { padding: 0; } .no-print { display: none !important; } }
+  h1 { font-size: 26px; color: #4c1d95; border-bottom: 3px solid #7c3aed; padding-bottom: 12px; margin-top: 0; }
+  h2 { font-size: 19px; color: #6d28d9; border-left: 4px solid #7c3aed; padding-left: 12px; margin-top: 36px; }
+  h3 { font-size: 15px; color: #7c3aed; margin-top: 24px; }
+  .meta { display: flex; gap: 24px; flex-wrap: wrap; font-size: 12.5px; color: #64748b; margin-top: 8px; }
+  .meta span { background: #f1f5f9; padding: 3px 10px; border-radius: 12px; }
+  table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 13px; }
+  th { background: #ede9fe; color: #4c1d95; text-align: left; padding: 8px 12px; border: 1px solid #ddd6fe; }
+  td { padding: 7px 12px; border: 1px solid #e2e8f0; }
+  tr:nth-child(even) td { background: #faf9ff; }
+  code { background: #f1f5f9; padding: 2px 6px; border-radius: 4px; font-family: 'SF Mono', 'Consolas', monospace; font-size: 12px; color: #4338ca; }
+  pre { background: #0f172a; color: #e2e8f0; padding: 14px 16px; border-radius: 8px; overflow-x: auto; font-size: 12px; line-height: 1.6; margin: 10px 0; border: 1px solid #334155; }
+  pre .c { color: #64748b; } pre .k { color: #f472b6; } pre .s { color: #4ade80; } pre .n { color: #fbbf24; } pre .b { color: #60a5fa; }
+  .box { background: #fef3c7; border: 1px solid #fde68a; border-radius: 8px; padding: 12px 16px; margin: 12px 0; font-size: 13px; color: #78350f; }
+  .box-info { background: #dbeafe; border-color: #bfdbfe; color: #1e40af; }
+  .box-warn { background: #fee2e2; border-color: #fecaca; color: #991b1b; }
+  .toc { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px 24px; margin: 20px 0; }
+  .toc h3 { margin-top: 0; color: #4c1d95; }
+  .toc a { color: #7c3aed; text-decoration: none; font-size: 13px; display: block; padding: 2px 0; }
+  .toc a:hover { text-decoration: underline; }
+  .flow-step { display: flex; gap: 12px; margin: 8px 0; font-size: 13px; }
+  .flow-num { width: 26px; height: 26px; background: #7c3aed; color: #fff; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; flex-shrink: 0; }
+  .flow-body { flex: 1; padding-top: 3px; }
+  .print-bar { position: fixed; top: 20px; right: 20px; z-index: 999; }
+  .print-bar button { background: #7c3aed; color: #fff; border: none; padding: 10px 20px; border-radius: 8px; font-size: 14px; cursor: pointer; box-shadow: 0 4px 12px rgba(124,58,237,.3); }
+  .print-bar button:hover { background: #6d28d9; }
+  .print-bar .hint { font-size: 11px; color: #64748b; margin-top: 4px; text-align: center; }
+  .footer { margin-top: 60px; padding-top: 20px; border-top: 1px solid #e2e8f0; font-size: 12px; color: #94a3b8; text-align: center; }
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 600; margin-right: 4px; }
+  .badge-v { background: #ddd6fe; color: #6d28d9; }
+  .badge-s { background: #dcfce7; color: #166534; }
+  .badge-w { background: #fef3c7; color: #92400e; }
+</style>
+</head>
+<body>
+
+<div class="print-bar no-print">
+  <button onclick="window.print()">🖨️ 打印 / 导出 PDF</button>
+  <div class="hint">浏览器打印 → 目标选「另存为 PDF」</div>
+</div>
+
+<h1>PTAHDAO APP · 视频公证对接规范</h1>
+<div class="meta">
+  <span><b>版本</b> v1.4</span>
+  <span><b>更新</b> 2026-09-03</span>
+  <span><b>协议</b> 对接双方：PTAHDAO APP ↔ 叶谢邓律师行视频公证系统</span>
+  <span><b>域名</b> https://zrxh2013.github.io/notary-sign/</span>
+</div>
+
+<div class="toc">
+  <h3>目录</h3>
+  <a href="#s1">1. 对接概述</a>
+  <a href="#s2">2. 入口 URL 与参数表</a>
+  <a href="#s3">3. 方式① · URL 跳转集成（最简）</a>
+  <a href="#s4">4. 方式② · WebView iframe + 加密 postMessage（推荐生产）</a>
+  <a href="#s5">5. 本系统自动执行流程</a>
+  <a href="#s6">6. APP 端 WebView 权限配置</a>
+  <a href="#s7">7. 公开资源清单</a>
+  <a href="#s8">8. 对接验收清单</a>
+  <a href="#s9">9. 安全说明</a>
+</div>
+
+<!-- ==================== S1 ==================== -->
+<h2 id="s1">1. 对接概述</h2>
+<p>PTAHDAO 信托持有人在 APP 内完成结算后，点击「公证处」或「签署受益人声明书」入口，跳转至本视频公证系统完成 <b>受益人声明书签署公证</b>。全程 3-5 分钟，包含法定 5 步流程 + 承诺录音 + 手写签名 + 链上存证。</p>
+
+<div class="box box-info">
+  <b>核心能力：</b>本系统自动锁定 PTAHDAO 模式 → 预填信托字段 → AI 公证员自动推进法定流程 → 持有人口读承诺录音 → 手写签名 → 区块链存证 → 生成公证书 + 防伪验证通道
+</div>
+
+<!-- ==================== S2 ==================== -->
+<h2 id="s2">2. 入口 URL 与参数表</h2>
+
+<h3>2.1 基底域名</h3>
+<pre>https://zrxh2013.github.io/notary-sign/index.html</pre>
+
+<h3>2.2 完整示例 URL</h3>
+<pre>https://zrxh2013.github.io/notary-sign/index.html
+?from=ptahdao
+&ta=PT001
+&sn=SET007
+&sa=125000
+&holder=<span class="c">李振华（URL编码）</span>
+&phone=13922887766
+&idcard=440101199208154321
+&paid=1
+&tx=a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2</pre>
+
+<h3>2.3 URL 参数表</h3>
+<table>
+<tr><th>参数</th><th>键名</th><th>类型</th><th>必填</th><th>说明</th></tr>
+<tr><td>来源标识</td><td><code>from</code></td><td>string</td><td>✅</td><td>固定值 <code>ptahdao</code>，本系统据此锁定 PTAHDAO 模式</td></tr>
+<tr><td>信托账户编号</td><td><code>ta</code></td><td>string</td><td>✅</td><td>如 <code>PT-2026-008251</code></td></tr>
+<tr><td>结算编号</td><td><code>sn</code></td><td>string</td><td>✅</td><td>如 <code>SET-20260902-007</code></td></tr>
+<tr><td>结算资产 USDT</td><td><code>sa</code></td><td>string</td><td>✅</td><td>如 <code>125000</code></td></tr>
+<tr><td>持有人姓名</td><td><code>holder</code></td><td>string</td><td>✅</td><td>中文需 URL 编码</td></tr>
+<tr><td>持有人手机号</td><td><code>phone</code></td><td>string</td><td>✅</td><td>如 <code>13922887766</code></td></tr>
+<tr><td>持有人证件号</td><td><code>idcard</code></td><td>string</td><td>✅</td><td>身份证或护照号</td></tr>
+<tr><td>缴费状态</td><td><code>paid</code></td><td>string</td><td>❌</td><td><code>1</code>=PTAHDAO 已代扣，直接进房间；不传或 <code>0</code>=用户在本系统支付</td></tr>
+<tr><td>交易哈希</td><td><code>tx</code></td><td>string</td><td>paid=1 时必填</td><td>64 位十六进制，TRON 链上缴费哈希</td></tr>
+</table>
+
+<div class="box">
+  <b>中文编码示例：</b>持有人姓名「李振华」URL 编码后为 <code>%E6%9D%8E%E6%8C%AF%E5%8D%8E</code>，完整链接中 <code>&holder=%E6%9D%8E%E6%8C%AF%E5%8D%8E</code>
+</div>
+
+<!-- ==================== S3 ==================== -->
+<h2 id="s3">3. 方式① · URL 跳转集成（最简）</h2>
+<p>PTAHDAO APP 端构造完整 URL，通过系统浏览器或 WebView 打开。<span class="badge badge-v">推荐</span> <span class="badge badge-s">最简</span></p>
+
+<h3>Android (Java)</h3>
+<pre><span class="c">// PTAHDAO APP 端构造跳转 URL</span>
+String trustAccount = <span class="s">"PT-2026-008251"</span>;
+String settlementNo = <span class="s">"SET-20260902-007"</span>;
+String usdtAmount = <span class="s">"125000"</span>;
+String holderName = <span class="s">"李振华"</span>;
+String phone = <span class="s">"13922887766"</span>;
+String idcard = <span class="s">"440101199208154321"</span>;
+String txHash = <span class="s">"a1b2c3...64位哈希"</span>;
+
+String url = <span class="s">"https://zrxh2013.github.io/notary-sign/index.html"</span>
+  + <span class="s">"?from=ptahdao"</span>
+  + <span class="s">"&ta="</span> + trustAccount
+  + <span class="s">"&sn="</span> + settlementNo
+  + <span class="s">"&sa="</span> + usdtAmount
+  + <span class="s">"&holder="</span> + URLEncoder.encode(holderName, <span class="s">"UTF-8"</span>)
+  + <span class="s">"&phone="</span> + phone
+  + <span class="s">"&idcard="</span> + idcard
+  + <span class="s">"&paid=1"</span>
+  + <span class="s">"&tx="</span> + txHash;
+
+<span class="c">// 系统浏览器打开</span>
+Intent intent = <span class="k">new</span> Intent(Intent.ACTION_VIEW, Uri.parse(url));
+startActivity(intent);</pre>
+
+<h3>iOS (Swift)</h3>
+<pre><span class="k">let</span> trustAccount = <span class="s">"PT-2026-008251"</span>
+<span class="k">let</span> settlementNo = <span class="s">"SET-20260902-007"</span>
+<span class="k">let</span> usdtAmount = <span class="s">"125000"</span>
+<span class="k">let</span> holderName = <span class="s">"李振华"</span>
+<span class="k">let</span> phone = <span class="s">"13922887766"</span>
+<span class="k">let</span> idcard = <span class="s">"440101199208154321"</span>
+<span class="k">let</span> txHash = <span class="s">"a1b2c3...64位哈希"</span>
+
+<span class="k">let</span> holderEncoded = holderName.addingPercentEncoding(
+  withAllowedCharacters: .urlQueryAllowed)!
+<span class="k">let</span> urlStr = <span class="s">"""
+  https://zrxh2013.github.io/notary-sign/index.html
+  ?from=ptahdao&ta=\(trustAccount)&sn=\(settlementNo)
+  &sa=\(usdtAmount)&holder=\(holderEncoded)
+  &phone=\(phone)&idcard=\(idcard)
+  &paid=1&tx=\(txHash)
+"""</span>.replacingOccurrences(of: <span class="s">"\n  "</span>, with: <span class="s">""</span>)
+
+<span class="c">// 系统浏览器打开</span>
+UIApplication.shared.open(URL(string: urlStr)!)</pre>
+
+<!-- ==================== S4 ==================== -->
+<h2 id="s4">4. 方式② · WebView iframe + 加密 postMessage（推荐生产）</h2>
+<p>通过 iframe 内嵌本系统，持有人敏感信息经 <b>AES-256-GCM 加密</b>后传递，<b>防篡改 + 防重放 + origin 白名单</b>三重防护。<span class="badge badge-w">安全</span></p>
+
+<h3>Step 1 · 引入 SDK</h3>
+<pre><span class="c"><!-- PTAHDAO APP 内嵌 WebView 的 HTML 页面中 --></span>
+&lt;script src=<span class="s">"https://zrxh2013.github.io/notary-sign/ptahdao-embed-sdk.js"</span>&gt;&lt;/script&gt;
+
+<span class="c"><!-- 嵌入本系统 --></span>
+&lt;iframe id=<span class="s">"notary-iframe"</span>
+  src=<span class="s">"https://zrxh2013.github.io/notary-sign/?embed=1"</span>
+  allow=<span class="s">"camera; microphone; fullscreen"</span>
+  style=<span class="s">"width:100%;height:100%;border:0;"</span>&gt;&lt;/iframe&gt;</pre>
+
+<h3>Step 2 · SDK 初始化与加密调用</h3>
+<pre>&lt;script&gt;
+  <span class="k">const</span> sdk = <span class="k">new</span> <span class="b">PtahDaoNotarySDK</span>({
+    notaryUrl: <span class="s">'https://zrxh2013.github.io/notary-sign/'</span>,
+    <span class="c">// 密钥：双方上线前协商替换（开发环境临时用）</span>
+    sharedKeyB64: <span class="s">'HqDTT07JMilo7zkQ0SA2Xt8+B0ndEkma+JhHgtjMSXQ='</span>,
+  });
+
+  <span class="c">// 等待 iframe 加载完成</span>
+  <span class="k">await</span> sdk.mount(document.getElementById(<span class="s">'notary-iframe'</span>));
+
+  <span class="c">// 加密调用（AES-256-GCM，自动注入时间戳防重放）</span>
+  <span class="k">const</span> result = <span class="k">await</span> sdk.declareEntrySecure({
+    trustAccount:   <span class="s">'PT-2026-008251'</span>,
+    settlementNo:   <span class="s">'SET-20260902-007'</span>,
+    settlementAmount: <span class="s">'125000'</span>,
+    holder:         <span class="s">'李振华'</span>,
+    signerName:     <span class="s">'李振华'</span>,
+    signerPhone:    <span class="s">'13922887766'</span>,
+    signerIdcard:   <span class="s">'440101199208154321'</span>,
+    paid:           <span class="k">true</span>,
+    txHash:         <span class="s">'a1b2c3d4e5f6...64位哈希'</span>,
+  });
+
+  <span class="c">// result 结构</span>
+  console.log(result);
+  <span class="c">/* {
+    sessionId:   'GZ54114024',
+    caseNo:      'YT-2026-048371',
+    declareLink: 'https://...',
+    entered:     true,
+    paymentOpened: false,
+    secure:      true
+  } */</span>
+&lt;/script&gt;</pre>
+
+<h3>SDK API 完整表</h3>
+<table>
+<tr><th>方法</th><th>参数</th><th>返回</th><th>说明</th></tr>
+<tr><td><code>new PtahDaoNotarySDK(opts)</code></td><td>notaryUrl, sharedKeyB64</td><td>SDK 实例</td><td>初始化</td></tr>
+<tr><td><code>await sdk.mount(iframe)</code></td><td>iframe DOM 元素</td><td>Promise</td><td>挂载 iframe，等待 notary-ready</td></tr>
+<tr><td><code>await sdk.declareEntrySecure(opts)</code></td><td>见上方</td><td>result 对象</td><td>加密进入（推荐生产）</td></tr>
+<tr><td><code>await sdk.declareEntry(opts)</code></td><td>同 declareEntrySecure</td><td>result 对象</td><td>明文进入（仅测试用）</td></tr>
+<tr><td><code>sdk.onEvent(fn)</code></td><td>回调 (event, payload) => {}</td><td>—</td><td>监听事件：join, payment, step, complete</td></tr>
+<tr><td><code>sdk.destroy()</code></td><td>—</td><td>—</td><td>清理 postMessage 监听器</td></tr>
+</table>
+
+<!-- ==================== S5 ==================== -->
+<h2 id="s5">5. 本系统自动执行流程</h2>
+
+<div class="flow-step"><div class="flow-num">1</div><div class="flow-body"><b>PTAHDAO APP</b> 点击「公证处 / 签署受益人声明书」入口</div></div>
+<div class="flow-step"><div class="flow-num">2</div><div class="flow-body"><b>跳转 URL / SDK</b> 调用 → 本系统自动锁定 PTAHDAO 模式</div></div>
+<div class="flow-step"><div class="flow-num">3</div><div class="flow-body"><b>自动预填</b> 信托账户 / 结算编号 / USDT / 持有人信息 / 证件号</div></div>
+<div class="flow-step"><div class="flow-num">4</div><div class="flow-body"><b>paid=1</b> → 跳过支付弹窗，直接进入视频房间<br><b>paid=0</b> → 弹出 TRC-20 USDT 支付窗，验证哈希后进入</div></div>
+<div class="flow-step"><div class="flow-num">5</div><div class="flow-body"><b>进入房间 0.8s 内启动</b>：欢迎播报 + 身份证扫描（合并启动，无空等）</div></div>
+<div class="flow-step"><div class="flow-num">6</div><div class="flow-body"><b>AI 公证员自动推进 5 步法定流程</b>（总时长约 2分17秒）：<br>
+  ① 材料初审 + 实人核验 → ② 身份证核验（6s） → ③ 人脸活体比对（26s） → ④ 法律告知（26s） → ⑤ 文书核查（26s） → ⑥ 公证人出证（26s）</div></div>
+<div class="flow-step"><div class="flow-num">7</div><div class="flow-body"><b>承诺录音</b>：持有人口读承诺全文（30-45s），自动录音生成 WebM</div></div>
+<div class="flow-step"><div class="flow-num">8</div><div class="flow-body"><b>手写签名</b>：弹出手写板，持有人手写签名（40-60s），确认后自动进入完成页</div></div>
+<div class="flow-step"><div class="flow-num">9</div><div class="flow-body"><b>链上存证</b>：TRON 区块链存证（20s）</div></div>
+<div class="flow-step"><div class="flow-num">10</div><div class="flow-body"><b>完成页</b>：展示公证书摘要 + 4 大防伪验证通道按钮（司法部 / 12348 / CAAO / 区块链）</div></div>
+
+<div class="box box-info">
+  <b>总时长预估：3分47秒 ~ 4分23秒</b>（落在 3-5 分钟区间，符合法定流程节奏要求）
+</div>
+
+<!-- ==================== S6 ==================== -->
+<h2 id="s6">6. APP 端 WebView 权限配置</h2>
+
+<h3>Android WebView 配置</h3>
+<pre>WebView webView = findViewById(R.id.webview);
+WebSettings s = webView.getSettings();
+s.setJavaScriptEnabled(<span class="k">true</span>);
+s.setDomStorageEnabled(<span class="k">true</span>);
+s.setMediaPlaybackRequiresUserGesture(<span class="k">false</span>);  <span class="c">// 自动播放音频</span>
+
+<span class="c">// 相机 + 麦克风权限</span>
+webView.setWebChromeClient(<span class="k">new</span> WebChromeClient() {
+  <span class="k">@Override</span>
+  <span class="k">public void</span> onPermissionRequest(PermissionRequest request) {
+    request.grant(request.getResources());
+  }
+});</pre>
+
+<h3>iOS WKWebView 配置</h3>
+<pre><span class="k">let</span> config = WKWebViewConfiguration()
+config.preferences.javaScriptCanOpenWindowsAutomatically = <span class="k">true</span>
+
+<span class="k">let</span> webView = WKWebView(frame: .zero, configuration: config)
+webView.allowsInlineMediaPlayback = <span class="k">true</span>    <span class="c">// 内联播放</span>
+webView.mediaTypesRequiringUserActionForPlayback = []  <span class="c">// 自动播放</span></pre>
+
+<!-- ==================== S7 ==================== -->
+<h2 id="s7">7. 公开资源清单</h2>
+
+<table>
+<tr><th>资源</th><th>URL</th><th>用途</th></tr>
+<tr><td>主入口</td><td><code>https://zrxh2013.github.io/notary-sign/index.html</code></td><td>方式① URL 跳转目标</td></tr>
+<tr><td>SDK 文件</td><td><code>https://zrxh2013.github.io/notary-sign/ptahdao-embed-sdk.js</code></td><td>方式② 加密 postMessage 客户端 SDK</td></tr>
+<tr><td>嵌入示例</td><td><code>https://zrxh2013.github.io/notary-sign/embed-demo.html</code></td><td>PTAHDAO 对接测试页（含 4 种模式）</td></tr>
+<tr><td>嵌入模式入口</td><td><code>https://zrxh2013.github.io/notary-sign/?embed=1</code></td><td>iframe 内嵌时使用（隐藏导航栏）</td></tr>
+<tr><td>受益人声明书模板</td><td><code>https://zrxh2013.github.io/notary-sign/beneficiary-declaration-official.html</code></td><td>正式公证书打印版</td></tr>
+<tr><td>公证人信息</td><td>叶谢邓律师行 · 邓达明 中国委托公证人 CAO-HK-D0468</td><td>—</td></tr>
+<tr><td>官方防伪通道</td><td>① 司法部 clshkl.moj.gov.cn ② 12348 zwfw.12348.gov.cn ③ CAAO caao.org.hk ④ TRONSCAN tronscan.io</td><td>公证书真伪验证</td></tr>
+</table>
+
+<!-- ==================== S8 ==================== -->
+<h2 id="s8">8. 对接验收清单</h2>
+
+<h3>✅ PTAHDAO APP 端自测项</h3>
+<table>
+<tr><th>#</th><th>测试场景</th><th>预期结果</th></tr>
+<tr><td>1</td><td>点击「公证处」入口，系统浏览器打开 URL</td><td>页面加载 200 OK，主题自动显示 PTAHDAO 受益人声明书</td></tr>
+<tr><td>2</td><td>URL 携带 paid=1 + 合法 tx 哈希</td><td>跳过支付弹窗，直接进入视频房间</td></tr>
+<tr><td>3</td><td>URL 不带 paid 或 paid=0</td><td>弹出 TRC-20 USDT 支付窗，哈希验证通过后进入</td></tr>
+<tr><td>4</td><td>持有人姓名含中文（已 URL 编码）</td><td>本系统正确解码预填，不出现乱码</td></tr>
+<tr><td>5</td><td>进入视频房间 1 秒内</td><td>听到欢迎播报 + 看到身份证扫描动作启动</td></tr>
+<tr><td>6</td><td>手机横屏切换</td><td>页面自适应，不出现布局错乱</td></tr>
+<tr><td>7</td><td>完成页展示公证书摘要</td><td>含 4 个防伪验证按钮，点击跳转官方网站</td></tr>
+<tr><td>8</td><td>方式② SDK declareEntrySecure 调用</td><td>返回 result 含 sessionId + caseNo + secure:true</td></tr>
+</table>
+
+<!-- ==================== S9 ==================== -->
+<h2 id="s9">9. 安全说明</h2>
+
+<div class="box box-warn">
+  <b>9.1 生产密钥必须更换</b><br>
+  当前 SDK 内置的 <code>HqDTT07JMilo7zkQ0SA2Xt8+B0ndEkma+JhHgtjMSXQ=</code> 为开发环境密钥。上线前 PTAHDAO 与本系统双方需协商新的 32 字节 AES-256-GCM 密钥，各持一份，<b>不得通过 URL / postMessage / 任何通信渠道传输密钥本身</b>。
+</div>
+
+<div class="box">
+  <b>9.2 URL 跳转模式的局限</b><br>
+  方式① URL 跳转模式下，持有人姓名/手机/证件号以 URL 参数形式传输，可能在浏览器历史记录、服务器访问日志中留下痕迹。<b>生产环境建议使用方式② 加密 postMessage</b>，AES-256-GCM 加密的 payload 仅在 iframe 内部传递，不经过 URL、不写入历史记录。
+</div>
+
+<div class="box">
+  <b>9.3 APP 端 origin 白名单</b><br>
+  方式② 加密 postMessage 接收端会校验 <code>e.origin</code>。PTAHDAO APP WebView 的实际 origin（如 <code>https://app.ptahdao.com</code>）需提前告知本系统方，加入 <code>_PTAHDAO_ALLOWED_ORIGINS</code> 白名单。
+</div>
+
+<div class="box box-info">
+  <b>9.4 防伪通道</b><br>
+  本系统生成的公证书真伪验证通道全部为<b>官方真实可访问</b>：司法部核查系统 clshkl.moj.gov.cn / 12348 法网 zwfw.12348.gov.cn / CAAO 协会 caao.org.hk / TRONSCAN 区块链 tronscan.io。PTAHDAO 可放心引用，无需担心虚构链接。
+</div>
+
+<div class="footer">
+  <b>PTAHDAO APP · 视频公证对接规范 v1.4</b> · 叶谢邓律师行（CAO-HK-D0468）<br>
+  公证热线：(852) 6888-9999 · 广州代表处：(86) 020-2881 6688<br>
+  2026-09-03 定稿 · 下次复检周期 2027-03
+</div>
+
+</body>
+</html>
