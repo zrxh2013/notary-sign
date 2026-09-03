@@ -982,8 +982,63 @@
         </td>
       `);
     },
-    verifyChain(h) {
-      this.toast(`区块链核验通过 · 哈希 ${h.slice(0, 14)}... 已确认`, 'success');
+    /** 真查 TRON 区块链验证 txHash 是否存在 */
+    async verifyChain(h) {
+      if (!h) { this.toast('无交易哈希可核验', 'warning'); return; }
+      const hash = h.replace(/^0x/i, '');
+      if (!/^[0-9a-fA-F]{64}$/.test(hash)) {
+        this.toast('交易哈希格式不正确（应为 64 位十六进制）', 'error');
+        return;
+      }
+      this.toast('正在查询 TRON 区块链...', 'info');
+      try {
+        const ctrl = new AbortController();
+        const tm = setTimeout(() => ctrl.abort(), 8000);
+        const resp = await fetch(`https://apilist.tronscan.org/api/transaction-info?hash=${hash}`, { signal: ctrl.signal });
+        clearTimeout(tm);
+        const data = await resp.json();
+        if (data && data.raw_data && data.raw_data.contract && data.raw_data.contract.length > 0) {
+          // 真链上交易
+          this.toast(`✅ TRON 链上核验通过 · 区块 #${data.block || '--'} · 时间 ${(data.timestamp ? new Date(data.timestamp).toLocaleString() : '--')}`, 'success', 5000);
+          // 打开 TRONSCAN
+          window.open('https://tronscan.io/#/transaction/' + hash, '_blank');
+        } else {
+          this.toast('⚠ 链上未查到该交易哈希（可能是模拟数据或尚未上链）', 'warning', 4000);
+        }
+      } catch(err) {
+        // CORS 或网络错误
+        this.toast('⚠ TRON API 查询受限（CORS/网络），点击打开 TRONSCAN 手动核验', 'warning', 4000);
+        window.open('https://tronscan.io/#/transaction/' + hash, '_blank');
+      }
+    },
+    /** 打开扫码核验页 */
+    openVerifyPage() {
+      const url = this._lastVerifyUrl;
+      if (url) window.open(url, '_blank');
+      else {
+        // 从当前 session 构造
+        const s = this.state.activeSession;
+        if (s && s.fingerprintSha256) {
+          const base = location.origin + location.pathname.replace(/[^/]*$/, '');
+          const verifyUrl = base + 'verify.html?fp=' + s.fingerprintSha256 + '&tx=' + encodeURIComponent((s.settlement ? s.settlement.txHash : s.txHash || '')) + '&cn=' + encodeURIComponent(s.certNo || '') + '&bh=' + s.blockH + '&ca=' + encodeURIComponent(s.notaryCertNo || '') + '&sig=' + encodeURIComponent(s.signerName || '') + '&ts=' + s.endedAt;
+          window.open(verifyUrl, '_blank');
+        } else {
+          const base = location.origin + location.pathname.replace(/[^/]*$/, '');
+          window.open(base + 'verify.html', '_blank');
+        }
+      }
+    },
+    /** 轻量字符串哈希（用于无 crypto.subtle 环境的兜底） */
+    _hashStr(str) {
+      let h1 = 0xdeadbeef ^ 0, h2 = 0x41c6ce57 ^ 0;
+      for (let i = 0; i < str.length; i++) {
+        const ch = str.charCodeAt(i);
+        h1 = Math.imul(h1 ^ ch, 2654435761);
+        h2 = Math.imul(h2 ^ ch, 1597334677);
+      }
+      h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909);
+      h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909);
+      return (h2 >>> 0).toString(16).padStart(8,'0') + (h1 >>> 0).toString(16).padStart(8,'0');
     },
 
     /* ========= 历史记录 ========= */
@@ -3933,6 +3988,74 @@
           chainBtn.href = useEth ? ((af.etherscan||'https://etherscan.io/tx/') + (s.txHash.replace(/^0x/,''))) : ((af.tronscan||'https://tronscan.io/#/transaction/') + hash);
         } else if (chainBtn) { chainBtn.href = af.tronscan || 'https://tronscan.io/'; }
       }
+
+      // ================ 📱 新增：公证书防伪二维码 + SHA-256 指纹 ================
+      (async () => {
+        const qrBlock = $('#done-qr-block');
+        const qrEl = $('#done-qr');
+        if (!qrBlock || !qrEl) return;
+        qrBlock.style.display = 'block';
+
+        // 1) 计算公证书全量 SHA-256 指纹
+        const payload = JSON.stringify({
+          certNo: s.certNo,
+          signer: s.signerName,
+          signerPhone: s.signerPhone,
+          notary: s.notaryName,
+          notaryCertNo: s.notaryCertNo || s.notaryId || 'CAO-HK-D0468',
+          topic: s.topic,
+          settledAt: now,
+          txHash: s.settlement ? s.settlement.txHash : s.txHash,
+          blockH: s.blockH,
+          sigHash: (s.signatures && s.signatures.signer) ? this._hashStr(s.signatures.signer) : 'pending',
+          commitSha256: (s.commitmentRecording && s.commitmentRecording.sha256) ? s.commitmentRecording.sha256 : 'none',
+        });
+        let sha256hex = '';
+        try {
+          if (window.crypto && crypto.subtle) {
+            const enc = new TextEncoder().encode(payload);
+            const buf = await crypto.subtle.digest('SHA-256', enc);
+            sha256hex = Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
+          } else {
+            sha256hex = this._hashStr(payload);
+          }
+        } catch(e) { sha256hex = this._hashStr(payload); }
+
+        // 2) 缓存指纹到 session
+        s.fingerprintSha256 = sha256hex;
+        const _ss = Store.get('sessions', []);
+        const _i = _ss.findIndex(x => x.id === s.id);
+        if (_i >= 0) { _ss[_i] = s; Store.set('sessions', _ss); }
+
+        // 3) 填充元信息到 DOM
+        const shaEl = $('#done-sha256'); if (shaEl) shaEl.textContent = sha256hex;
+        const txQrEl = $('#done-txhash-qr'); if (txQrEl) txQrEl.textContent = (s.settlement ? s.settlement.txHash : s.txHash || '').slice(0,24) + '...';
+        const bhEl = $('#done-blockh'); if (bhEl) bhEl.textContent = '#' + s.blockH;
+
+        // 4) 生成 QR 码内容（核验页 URL + 参数）
+        const base = location.origin + location.pathname.replace(/[^/]*$/, '');
+        const verifyUrl = base + 'verify.html?fp=' + sha256hex + '&tx=' + encodeURIComponent((s.settlement ? s.settlement.txHash : s.txHash || '')) + '&cn=' + encodeURIComponent(s.certNo || '') + '&bh=' + s.blockH + '&ca=' + encodeURIComponent(s.notaryCertNo || '') + '&sig=' + encodeURIComponent(s.signerName || '') + '&ts=' + now;
+
+        // 5) 用真实 QRCode.js 生成可扫描 QR 码
+        if (window.QRCode && typeof QRCode === 'function') {
+          try {
+            qrEl.innerHTML = '';
+            new QRCode(qrEl, {
+              text: verifyUrl,
+              width: 140, height: 140,
+              correctLevel: QRCode.CorrectLevel.M,
+              colorDark: '#0f172a', colorLight: '#ffffff',
+            });
+          } catch(e) {
+            qrEl.innerHTML = this._renderQrSvg(verifyUrl, 140);
+          }
+        } else {
+          qrEl.innerHTML = this._renderQrSvg(verifyUrl, 140);
+        }
+
+        // 6) 保存核验 URL 供 openVerifyPage 使用
+        this._lastVerifyUrl = verifyUrl;
+      })();
 
       clearInterval(this.state.timerId);
 

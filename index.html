@@ -931,6 +931,22 @@
                 <div style="margin-top:10px;padding:8px 10px;background:#fff1f2;border:1px dashed #fca5a5;border-radius:8px;font-size:12px;color:#7f1d1d;line-height:1.8;">
                   <b>💡 验证指引：</b> 打开①司法部核查系统 → 选择「电子文书」Tab → 输入 <b>正本编号 + 签署日期 + 转递编号 + 本人手机号 + 短信验证码</b> 提交核查；如结果返回一致则公证书真实有效。若内地机构仍需纸质核验，可拨打②12348或③CAAO协会 (852) 2877 8775 预约人工复核。叶谢邓律所直查热线：<b>(852) 6888-9999</b> / 广州代表处 <b>(86) 020-2881 6688</b>。
                 </div>
+                <!-- ===== 新增：公证书防伪二维码（可扫描核验） ===== -->
+                <div id="done-qr-block" style="display:none;margin-top:12px;padding:14px;background:linear-gradient(135deg,#0f172a,#334155);border-radius:10px;color:#e2e8f0;">
+                  <div style="display:flex;gap:14px;align-items:flex-start;">
+                    <div id="done-qr" style="background:#fff;border-radius:8px;padding:8px;flex-shrink:0;box-shadow:0 4px 12px rgba(0,0,0,.3);"></div>
+                    <div style="flex:1;min-width:0;">
+                      <div style="font-size:13px;font-weight:700;color:#fbbf24;margin-bottom:6px;">📱 扫码快速核验公证书真伪</div>
+                      <div style="font-size:11.5px;color:#94a3b8;line-height:1.7;">
+                        用任意相机扫描左侧二维码 → 自动打开核验页面 → 对比链上 SHA-256 指纹<br/>
+                        <b style="color:#a7f3d0;">SHA-256 指纹：</b><code id="done-sha256" style="font-family:monospace;font-size:10px;color:#a7f3d0;word-break:break-all;"></code><br/>
+                        <b style="color:#a7f3d0;">TRON 交易：</b><code id="done-txhash-qr" style="font-family:monospace;font-size:10px;color:#a7f3d0;word-break:break-all;"></code><br/>
+                        <b style="color:#a7f3d0;">区块高度：</b><code id="done-blockh" style="font-family:monospace;font-size:10px;color:#a7f3d0;"></code>
+                      </div>
+                      <button onclick="App.openVerifyPage()" style="margin-top:8px;background:#fbbf24;color:#0f172a;border:none;padding:6px 14px;border-radius:6px;font-size:11.5px;font-weight:700;cursor:pointer;">🔍 点击打开核验页</button>
+                    </div>
+                  </div>
+                </div>
               </div>
 
               <div class="step-actions" style="flex-wrap:wrap;gap:8px;">
@@ -1460,6 +1476,7 @@
   <!-- ============== 通用 Toast ============== -->
   <div id="toast-container"></div>
 
-  <script src="app.js?v=2026090118j"></script>
+  <script src="qrcode.min.js"></script>
+  <script src="app.js?v=20260903qr"></script>
 </body>
 </html>

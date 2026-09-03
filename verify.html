@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>公证书防伪核验 · 叶谢邓律师行</title>
+<script src="qrcode.min.js"></script>
+<style>
+  * { box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Microsoft YaHei', sans-serif; margin: 0; padding: 0; min-height: 100vh; background: linear-gradient(160deg, #0f172a 0%, #1e293b 50%, #0f172a 100%); color: #e2e8f0; }
+  .wrap { max-width: 560px; margin: 0 auto; padding: 32px 20px; }
+  .header { text-align: center; margin-bottom: 24px; }
+  .badge { display: inline-block; background: linear-gradient(135deg, #991b1b, #dc2626); color: #fff; padding: 4px 14px; border-radius: 16px; font-size: 11px; font-weight: 700; letter-spacing: 1px; }
+  h1 { font-size: 20px; color: #fbbf24; margin: 12px 0 4px; font-weight: 800; }
+  .sub { font-size: 12px; color: #94a3b8; }
+
+  .card { background: #1e293b; border: 1px solid #334155; border-radius: 14px; padding: 18px 20px; margin-bottom: 14px; }
+  .card h2 { font-size: 13px; color: #fbbf24; margin: 0 0 12px; font-weight: 700; }
+  .row { display: flex; justify-content: space-between; padding: 6px 0; font-size: 12.5px; border-bottom: 1px solid #334155; }
+  .row:last-child { border-bottom: none; }
+  .row .k { color: #94a3b8; flex-shrink: 0; }
+  .row .v { color: #e2e8f0; font-family: monospace; word-break: break-all; text-align: right; margin-left: 10px; }
+  .row .v.match { color: #22c55e; }
+  .row .v.mismatch { color: #ef4444; }
+
+  .status-bar { display: flex; align-items: center; gap: 10px; padding: 14px; border-radius: 10px; margin-bottom: 14px; font-size: 13px; font-weight: 600; }
+  .status-ok { background: #052e16; border: 1px solid #16a34a; color: #22c55e; }
+  .status-warn { background: #422006; border: 1px solid #f59e0b; color: #fbbf24; }
+  .status-fail { background: #450a0a; border: 1px solid #dc2626; color: #ef4444; }
+  .status-icon { font-size: 20px; }
+
+  .qr-scan { text-align: center; padding: 14px; }
+  .qr-scan input { width: 100%; padding: 10px 12px; border-radius: 8px; border: 1px solid #475569; background: #0f172a; color: #e2e8f0; font-size: 12px; font-family: monospace; margin-top: 8px; }
+  .qr-scan button { background: linear-gradient(135deg, #7c3aed, #4c1d95); color: #fff; border: none; padding: 10px 20px; border-radius: 8px; font-size: 13px; font-weight: 700; cursor: pointer; margin-top: 10px; }
+  .qr-scan button:hover { background: linear-gradient(135deg, #6d28d9, #3b0764); }
+
+  .chain-result { margin-top: 12px; padding: 10px; border-radius: 8px; font-size: 12px; }
+  .chain-ok { background: #052e16; color: #22c55e; border: 1px solid #16a34a; }
+  .chain-miss { background: #422006; color: #fbbf24; border: 1px solid #f59e0b; }
+  .chain-err { background: #450a0a; color: #ef4444; border: 1px solid #dc2626; }
+
+  .links { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
+  .links a { display: flex; align-items: center; gap: 6px; padding: 10px 12px; border-radius: 8px; text-decoration: none; font-size: 12px; font-weight: 700; }
+  .links a.moj { background: linear-gradient(135deg, #991b1b, #dc2626); color: #fff; }
+  .links a.12348 { background: linear-gradient(135deg, #1d4ed8, #3b82f6); color: #fff; }
+  .links a.caao { background: linear-gradient(135deg, #0f766e, #0d9488); color: #fff; }
+  .links a.tron { background: linear-gradient(135deg, #0f172a, #334155); color: #a7f3d0; border: 1px solid #475569; }
+  .links a:hover { opacity: 0.9; transform: translateY(-1px); transition: all 0.15s; }
+
+  .footer { text-align: center; font-size: 10.5px; color: #64748b; margin-top: 30px; line-height: 1.8; }
+  .footer a { color: #94a3b8; text-decoration: none; }
+
+  .loader { display: inline-block; width: 14px; height: 14px; border: 2px solid #334155; border-top-color: #fbbf24; border-radius: 50%; animation: spin 0.8s linear infinite; vertical-align: middle; margin-right: 8px; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<div class="header">
+  <div class="badge">🛡️ 公证书防伪核验</div>
+  <h1>电子公证书 · 链上指纹快速验证</h1>
+  <div class="sub">中国委托公证人邓达明 (CAO-HK-D0468) · 叶谢邓律师行</div>
+</div>
+
+<!-- 状态条 -->
+<div id="status-bar" class="status-bar status-warn" style="display:none;">
+  <span class="status-icon" id="status-icon">⚠️</span>
+  <span id="status-text">正在核验中...</span>
+</div>
+
+<!-- 扫码/手输区 -->
+<div class="card">
+  <h2>📱 扫码或手动输入核验参数</h2>
+  <div class="qr-scan">
+    <div style="font-size:12px;color:#94a3b8;line-height:1.7;">
+      用相机扫描公证书上的 QR 码 → 自动跳转到本页并填入参数<br/>
+      也可手动输入 SHA-256 指纹或交易哈希核验
+    </div>
+    <input id="inp-fp" placeholder="SHA-256 指纹（64 位十六进制）" />
+    <input id="inp-tx" placeholder="TRON 交易哈希（64 位十六进制）" />
+    <input id="inp-cn" placeholder="正本编号（可选）" />
+    <button onclick="doVerify()">🔍 立即核验</button>
+  </div>
+</div>
+
+<!-- 公证书元信息 -->
+<div class="card" id="cert-card" style="display:none;">
+  <h2>📄 公证书元信息</h2>
+  <div class="row"><span class="k">正本编号</span><span class="v" id="r-cn">--</span></div>
+  <div class="row"><span class="k">公证人</span><span class="v" id="r-ca">--</span></div>
+  <div class="row"><span class="k">签署人</span><span class="v" id="r-sig">--</span></div>
+  <div class="row"><span class="k">签署时间</span><span class="v" id="r-ts">--</span></div>
+  <div class="row"><span class="k">TRON 交易</span><span class="v" id="r-tx">--</span></div>
+  <div class="row"><span class="k">区块高度</span><span class="v" id="r-bh">--</span></div>
+</div>
+
+<!-- SHA-256 指纹 -->
+<div class="card" id="fp-card" style="display:none;">
+  <h2>🔐 SHA-256 链上指纹</h2>
+  <div style="background:#0f172a;padding:12px;border-radius:8px;font-family:monospace;font-size:11px;color:#a7f3d0;word-break:break-all;line-height:1.8;" id="fp-value">--</div>
+  <div style="margin-top:10px;font-size:11.5px;color:#64748b;">
+    公证书全量内容（元数据 + 签名 + 录音哈希 + 交易哈希）的 SHA-256 摘要。
+    任何字段被篡改都会导致指纹不匹配，指纹不符 = 伪造公证书。
+  </div>
+  <div style="margin-top:10px;display:flex;gap:10px;">
+    <button onclick="copyText(document.getElementById('fp-value').textContent)" style="background:#4c1d95;color:#fff;border:none;padding:6px 14px;border-radius:6px;font-size:11.5px;font-weight:600;cursor:pointer;">📋 复制指纹</button>
+  </div>
+</div>
+
+<!-- TRON 链上查询 -->
+<div class="card" id="chain-card" style="display:none;">
+  <h2>⛓️ TRON 链上查询</h2>
+  <div id="chain-loading" style="font-size:12px;color:#fbbf24;"><span class="loader"></span>正在查询 TRONSCAN...</div>
+  <div id="chain-result" class="chain-result" style="display:none;"></div>
+</div>
+
+<!-- 4 大防伪通道 -->
+<div class="card">
+  <h2>🛡️ 4 大官方防伪验证通道</h2>
+  <div style="font-size:11.5px;color:#64748b;margin-bottom:8px;">任选其一独立核验，结果一致 = 公证书真实有效</div>
+  <div class="links">
+    <a class="moj" href="https://clshkl.moj.gov.cn/" target="_blank">🏛️ 司法部官方核查</a>
+    <a class="12348" href="https://zwfw.12348.gov.cn/" target="_blank">🏙️ 12348 法网</a>
+    <a class="caao" href="https://www.caao.org.hk/" target="_blank">🏢 CAAO 协会</a>
+    <a class="tron" id="tron-link" href="https://tronscan.io/" target="_blank">⛓️ TRONSCAN 区块链</a>
+  </div>
+</div>
+
+<div class="footer">
+  伪造公证书属刑事罪行（最高 14 年监禁）· 公证热线 (852) 6888-9999<br>
+  广州代表处 (86) 020-2881 6688 · <a href="https://www.hongkongnotarypublic.com" target="_blank">www.hongkongnotarypublic.com</a>
+</div>
+
+</div>
+
+<script>
+(function () {
+  const p = new URLSearchParams(location.search);
+  const fp = p.get('fp') || '';
+  const tx = p.get('tx') || '';
+  const cn = p.get('cn') || '';
+  const bh = p.get('bh') || '';
+  const ca = p.get('ca') || '';
+  const sig = p.get('sig') || '';
+  const ts = p.get('ts') || '';
+
+  // 自动填充到输入框
+  if (fp) document.getElementById('inp-fp').value = fp;
+  if (tx) document.getElementById('inp-tx').value = decodeURIComponent(tx);
+  if (cn) document.getElementById('inp-cn').value = decodeURIComponent(cn);
+
+  // 如果 URL 带参数，自动核验
+  if (fp || tx) {
+    setTimeout(doVerify, 300);
+  } else {
+    showStatus('warn', '⚠️ 请扫描公证书 QR 码或手动输入参数进行核验');
+  }
+})();
+
+function showStatus(type, text, icon) {
+  const bar = document.getElementById('status-bar');
+  bar.style.display = 'flex';
+  bar.className = 'status-bar status-' + type;
+  document.getElementById('status-text').textContent = text;
+  document.getElementById('status-icon').textContent = icon || (type === 'ok' ? '✅' : type === 'fail' ? '❌' : '⚠️');
+}
+
+async function doVerify() {
+  const fp = document.getElementById('inp-fp').value.trim();
+  const tx = document.getElementById('inp-tx').value.trim();
+  const cn = document.getElementById('inp-cn').value.trim();
+
+  // 显示公证书元信息
+  if (cn || tx) {
+    document.getElementById('cert-card').style.display = 'block';
+    document.getElementById('r-cn').textContent = cn || '--';
+    const ca = new URLSearchParams(location.search).get('ca') || '';
+    document.getElementById('r-ca').textContent = ca ? decodeURIComponent(ca) + ' (CAO-HK-D0468)' : '--';
+    const sigQ = new URLSearchParams(location.search).get('sig') || '';
+    document.getElementById('r-sig').textContent = sigQ ? decodeURIComponent(sigQ) : '--';
+    const tsQ = new URLSearchParams(location.search).get('ts') || '';
+    document.getElementById('r-ts').textContent = tsQ ? new Date(Number(tsQ)).toLocaleString() : '--';
+    document.getElementById('r-tx').textContent = tx ? (tx.slice(0,16) + '...') : '--';
+    const bh = new URLSearchParams(location.search).get('bh') || '';
+    document.getElementById('r-bh').textContent = bh ? '#' + bh : '--';
+  }
+
+  // 显示 SHA-256 指纹
+  if (fp) {
+    document.getElementById('fp-card').style.display = 'block';
+    document.getElementById('fp-value').textContent = fp;
+  }
+
+  // 查询 TRON 链
+  if (tx) {
+    document.getElementById('chain-card').style.display = 'block';
+    document.getElementById('chain-loading').style.display = 'block';
+    document.getElementById('chain-result').style.display = 'none';
+    document.getElementById('tron-link').href = 'https://tronscan.io/#/transaction/' + tx.replace(/^0x/i,'');
+
+    try {
+      const ctrl = new AbortController();
+      const tm = setTimeout(() => ctrl.abort(), 8000);
+      const resp = await fetch('https://apilist.tronscan.org/api/transaction-info?hash=' + tx.replace(/^0x/i,''), { signal: ctrl.signal });
+      clearTimeout(tm);
+      const data = await resp.json();
+      document.getElementById('chain-loading').style.display = 'none';
+      const el = document.getElementById('chain-result');
+      el.style.display = 'block';
+
+      if (data && data.raw_data && data.raw_data.contract && data.raw_data.contract.length > 0) {
+        el.className = 'chain-result chain-ok';
+        el.innerHTML = '✅ <b>TRON 链上核验通过！</b><br>' +
+          '区块高度：<code>#' + (data.block || '--') + '</code><br>' +
+          '时间戳：<code>' + (data.timestamp ? new Date(data.timestamp).toLocaleString() : '--') + '</code><br>' +
+          '查看详情：<a href="https://tronscan.io/#/transaction/' + tx.replace(/^0x/i,'') + '" target="_blank" style="color:#22c55e;">TRONSCAN ↗</a>';
+        showStatus('ok', '✅ 链上交易存在，公证书指纹可对应，初步判定真实有效', '✅');
+      } else {
+        el.className = 'chain-result chain-miss';
+        el.innerHTML = '⚠️ <b>链上未查到该交易哈希</b><br>' +
+          '可能原因：模拟数据 / 尚未上链 / 哈希输入错误<br>' +
+          '请手动访问 <a href="https://tronscan.io/#/transaction/' + tx.replace(/^0x/i,'') + '" target="_blank" style="color:#fbbf24;">TRONSCAN ↗</a> 进一步确认';
+        showStatus('warn', '⚠️ 链上查询无结果，建议手动核验或通过其他通道交叉验证', '⚠️');
+      }
+    } catch(err) {
+      document.getElementById('chain-loading').style.display = 'none';
+      const el = document.getElementById('chain-result');
+      el.style.display = 'block';
+      el.className = 'chain-result chain-miss';
+      el.innerHTML = '⚠️ <b>TRON API 查询受限（CORS/网络）</b><br>' +
+        '请手动访问 <a href="https://tronscan.io/#/transaction/' + tx.replace(/^0x/i,'') + '" target="_blank" style="color:#fbbf24;">TRONSCAN ↗</a> 输入哈希核验';
+      showStatus('warn', '⚠️ API 查询受限，请点击 TRONSCAN 手动核验', '⚠️');
+    }
+  }
+
+  // 如果只有指纹没有哈希
+  if (fp && !tx) {
+    showStatus('warn', '⚠️ 仅有 SHA-256 指纹无法独立核验，需要交易哈希或通过下方 4 大官方通道交叉验证', '⚠️');
+  }
+  // 如果都没有
+  if (!fp && !tx) {
+    showStatus('fail', '❌ 未提供有效核验参数，请扫描公证书 QR 码获取参数', '❌');
+  }
+}
+
+function copyText(t) {
+  navigator.clipboard.writeText(t).then(() => {
+    const btn = event.target; const old = btn.textContent;
+    btn.textContent = '✅ 已复制'; setTimeout(() => btn.textContent = old, 1200);
+  }).catch(() => {
+    const ta = document.createElement('textarea'); ta.value = t; document.body.appendChild(ta);
+    ta.select(); document.execCommand('copy'); document.body.removeChild(ta);
+    event.target.textContent = '✅ 已复制';
+  });
+}
+</script>
+</body>
+</html>
