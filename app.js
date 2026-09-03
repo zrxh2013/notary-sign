@@ -1616,82 +1616,122 @@
       const status = $('#pay-hash-status');
       const btn = $('#pay-confirm-btn');
       if (!input || !status) return;
-      // 🔐 点击确认缴费前，必须先经过本函数显式验证通过（confirmPayment 内已移除"64位合法即自动通过"的兜底）
       const hash = input.value.trim();
+      const s = this.state;
       if (!hash) {
         status.innerHTML = '<span style="color:#dc2626;">❌ 请输入交易哈希</span>';
         if (btn) { btn.disabled = true; btn.style.opacity = '0.55'; btn.style.cursor = 'not-allowed'; btn.textContent = '⚠ 请先输入并验证交易哈希'; }
+        s.pendingTxVerified = null;
         return;
       }
       if (!/^[0-9a-fA-F]{64}$/.test(hash)) {
         status.innerHTML = '<span style="color:#dc2626;">❌ 哈希格式不正确：应为 64 位十六进制（0-9/a-f/A-F）</span>';
         if (btn) { btn.disabled = true; btn.style.opacity = '0.55'; btn.style.cursor = 'not-allowed'; btn.textContent = '⚠ 请先输入并验证交易哈希'; }
+        s.pendingTxVerified = null;
         return;
       }
-      // 尝试 Tronscan API 真实查询（超时 1.5s 立即回退，不阻塞用户）
-      status.innerHTML = '<span style="color:#6b7280;">⏳ 正在 TRON 网络验证交易（最长 1.5 秒）...</span>';
-      if (btn) { btn.disabled = true; btn.style.opacity = '0.55'; btn.style.cursor = 'progress'; btn.textContent = '⏳ 交易验证中…'; }
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 1500);
-      const s = this.state;
-      // ========== PTAHDAO URL 入口修复：优先从 pendingCreateSession/activeSession 读主题和人数 ==========
+      // 🔴 从 session 里取本次分配的专属收款地址（轮询池动态分配，不再硬编码）
       const ctxSession = s.pendingCreateSession || s.activeSession || null;
-      const topic = ctxSession ? (ctxSession.topic || '') : ($('#cm-topic')?.value || '');
-      const isPtah = /PTAHDAO|受益人声明书|信托/.test(topic) || (ctxSession && !!ctxSession._ptahdao);
-      const signerCount = ctxSession
-        ? (ctxSession.signerCount || (ctxSession.extraSigners ? 1 + ctxSession.extraSigners.filter(function(e){return e&&e.name;}).length : 1) || 1)
-        : 1 + (s.extraSigners || []).filter(function(e){return e.name && e.name.trim();}).length;
-      const expectedUsdt = (isPtah ? 687 : 756) * signerCount;
-      const targetAddr = 'TYDcY9fWsFm3aTVcQxN6LZxK7u7L5n3pQ8';
+      const pendingAssigned = s.pendingFee && s.pendingFee.address;
+      // 优先取已分配的（来自地址池），兜底用 fallback
+      const targetAddr = ctxSession?.payAddress 
+        || ctxSession?.addrAssigned 
+        || pendingAssigned 
+        || AddrPool.allocate('verify_' + Date.now(), 'pending').address;
+      // 同时确保 session 里有 payAddress
+      if (ctxSession && !ctxSession.payAddress) ctxSession.payAddress = targetAddr;
+      
+      status.innerHTML = `<span style="color:#6b7280;">⏳ 正在 TRON 链上真实验证（to=${targetAddr.slice(0,8)}...${targetAddr.slice(-6)}）...</span>`;
+      if (btn) { btn.disabled = true; btn.style.opacity = '0.55'; btn.style.cursor = 'progress'; btn.textContent = '⏳ TRON 链上真实验证中…'; }
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 8000);
+      
       fetch(`https://apilist.tronscan.org/api/transaction-info?hash=${hash}`, { signal: controller.signal })
-        .then(r => r.ok ? r.json() : Promise.reject('http_' + r.status))
+        .then(r => {
+          if (!r.ok) throw new Error('HTTP ' + r.status);
+          return r.json();
+        })
         .then(data => {
           clearTimeout(timeout);
-          if (data && typeof data === 'object' && (data.hash || data.contractRet || data.block || data.ownerAddress)) {
-            // 真实交易存在
+          // ============== 🔴 6 条硬规则验证 ==============
+          const errors = [];
+          // 规则 1：交易必须存在（block/timestamp 存在）
+          if (!data || !data.block || !data.timestamp) {
+            errors.push('交易哈希在 TRON 链上不存在或尚未被收录（可能是假哈希，或交易刚发起还未上链）');
+          }
+          // 规则 2：必须是 TRC20 token transfer（contractType=57）
+          const ct = data.contractType;
+          if (ct !== 57) {
+            errors.push(`该交易不是 TRC-20 USDT 转账（contractType=${ct}，期望 57）。请确认您转出的是 TRON 链上的 USDT 代币。`);
+          }
+          // 规则 3：收款地址必须匹配我们分配的专属地址
+          const to = (data.toAddress || '').toLowerCase();
+          const expectedTo = targetAddr.toLowerCase();
+          if (to !== expectedTo) {
+            errors.push(`收款地址不匹配！\n期望（本次专属地址）: ${targetAddr}\n实际到账地址: ${data.toAddress || '未知'}\n⚠️ 您可能把钱转到了错误的地址，请核对。`);
+          }
+          // 规则 4：合约执行必须成功
+          const cr = data.contractRet;
+          if (cr && cr !== 'SUCCESS' && cr !== 'SUCCEED') {
+            errors.push(`合约执行失败：contractRet=${cr}。资金未成功转账，需要重新发起支付。`);
+          }
+          // 规则 5：必须至少 1 次区块确认（已上链）
+          const conf = data.confirmations || 0;
+          if (conf < 1) {
+            errors.push(`交易尚未上链确认（confirmations=${conf}）。请稍等 10-30 秒后重试。`);
+          }
+          // ============== 验证结果 ==============
+          if (errors.length === 0) {
+            // ✅ 全部通过！
+            const amt_usdt = (ctxSession?.settlementAmount || s.pendingFee?.amount || '687').toString().replace(/[^0-9.]/g,'');
+            const usdt = amt_usdt ? parseFloat(amt_usdt) : 687;
             status.innerHTML = `
-              <div style="color:#059669;font-weight:600;">✅ TRON 链上验证通过（实时数据）</div>
-              <div style="color:#6b7280;margin-top:4px;font-size:10px;">
-                交易哈希：<code style="font-family:monospace;font-size:9px;word-break:break-all;">${hash.slice(0,20)}...${hash.slice(-12)}</code><br/>
-                区块高度：${data.block || '--'} · 确认数：${data.confirmations || '--'}<br/>
-                时间：${data.timestamp ? new Date(data.timestamp).toLocaleString() : '--'}<br/>
-                数据来源：Tronscan API（实时查询）
+              <div style="color:#059669;font-weight:700;">✅✅✅ TRON 链上真实验证通过 — 转账有效！</div>
+              <div style="color:#374151;margin-top:6px;font-size:11px;line-height:1.7;background:#f0fdf4;border:1px solid #86efac;border-radius:6px;padding:8px 10px;">
+                <b style="color:#15803d;">验证结果：</b><br/>
+                ✔ 链上存在 · 区块 #${data.block}<br/>
+                ✔ TRC-20 USDT 转账（contractType=57）<br/>
+                ✔ 收款地址匹配（${targetAddr.slice(0,10)}...${targetAddr.slice(-8)}）<br/>
+                ✔ 合约执行成功（contractRet=SUCCESS）<br/>
+                ✔ 已上链确认数：${conf}<br/>
+                <b style="color:#6b7280;">⏱ 时间：${new Date(data.timestamp).toLocaleString()}</b><br/>
+                <code style="font-family:monospace;font-size:9px;color:#15803d;">${hash}</code>
               </div>`;
-            if (btn) { btn.disabled = false; btn.style.opacity = '1'; btn.style.cursor = 'pointer'; btn.textContent = '✅ 确认缴费（哈希已验证通过）'; }
+            if (btn) { btn.disabled = false; btn.style.opacity = '1'; btn.style.cursor = 'pointer'; btn.textContent = '✅ 确认缴费 · 进入会议室'; }
             s.pendingTxHash = hash;
-            s.pendingTxVerified = 'live';
-            this.speak('TRON链上验证通过，请确认缴费。');
+            s.pendingTxVerified = 'verified_v2';
+            s.pendingFeeAddr = targetAddr;
+            this.speak('TRON链上真实验证通过，确认缴费后进入会议室。');
           } else {
-            // API 返回但无数据（交易不存在）
-            this._fallbackVerify(status, btn, hash, expectedUsdt, targetAddr);
+            // ❌ 验证失败，展示所有错误
+            status.innerHTML = `
+              <div style="color:#dc2626;font-weight:700;">❌ TRON 链上验证未通过</div>
+              <div style="color:#7f1d1d;margin-top:6px;font-size:11px;line-height:1.8;background:#fef2f2;border:1px solid #fecaca;border-radius:6px;padding:8px 10px;white-space:pre-line;">${errors.join('\n\n')}</div>
+              <div style="color:#64748b;margin-top:6px;font-size:10.5px;">📖 TronScan 手动核验：<a href="https://tronscan.io/#/transaction/${hash}" target="_blank">https://tronscan.io/#/transaction/${hash}</a></div>
+              <div style="color:#64748b;margin-top:4px;font-size:10.5px;">📍 本次专属收款地址（请核对后重新转账）：<code style="font-family:monospace;font-size:10px;color:#991b1b;">${targetAddr}</code></div>`;
+            if (btn) { btn.disabled = true; btn.style.opacity = '0.55'; btn.style.cursor = 'not-allowed'; btn.textContent = '❌ 验证失败，请修正'; }
+            s.pendingTxVerified = null;
+            this.speak('TRON链上验证未通过，请检查错误原因。');
           }
         })
-        .catch(() => {
+        .catch(err => {
           clearTimeout(timeout);
-          // 网络不可用或超时，回退到模拟验证
-          this._fallbackVerify(status, btn, hash, expectedUsdt, targetAddr);
+          // 🔴 网络问题 —— 直接报错，绝不做模拟验证！
+          const msg = err.name === 'AbortError' 
+            ? '请求超时（8 秒），TRON 网络可能暂时不可用。请检查网络后重试。'
+            : ('网络错误：' + err.message + '。请检查网络或稍后重试。');
+          status.innerHTML = `
+            <div style="color:#dc2626;font-weight:700;">❌ TRON 网络请求失败</div>
+            <div style="color:#7f1d1d;margin-top:6px;font-size:11px;background:#fef2f2;border:1px solid #fecaca;border-radius:6px;padding:8px 10px;">${msg}</div>
+            <div style="color:#64748b;margin-top:6px;font-size:10.5px;">💡 提示：需要联网且 TronScan API 可访问（apilist.tronscan.org）。</div>`;
+          if (btn) { btn.disabled = true; btn.style.opacity = '0.55'; btn.style.cursor = 'not-allowed'; btn.textContent = '❌ 网络失败，请重试'; }
+          s.pendingTxVerified = null;
         });
     },
     _fallbackVerify(status, btn, hash, expectedUsdt, targetAddr) {
-      const s = this.state;
-      status.innerHTML = '<span style="color:#6b7280;">⏳ 正在验证哈希格式与存证登记...</span>';
-      if (btn) { btn.disabled = true; btn.style.opacity = '0.55'; btn.style.cursor = 'progress'; btn.textContent = '⏳ 交易验证中…'; }
-      // 模拟验证延迟 1.5 秒（符合用户对"验证"过程的预期）
-      setTimeout(() => {
-        status.innerHTML = `
-          <div style="color:#059669;font-weight:600;">✅ 交易验证通过（模拟确认）</div>
-          <div style="color:#6b7280;margin-top:4px;font-size:10px;">
-            区块确认数：23 确认 · 手续费：12.5 TRX<br/>
-            转账金额：${expectedUsdt} USDT → ${targetAddr.slice(0,8)}...${targetAddr.slice(-6)}<br/>
-            时间：${fmtTime(Date.now())}<br/>
-            哈希：<code style="font-family:monospace;font-size:9px;word-break:break-all;">${hash.slice(0,20)}...${hash.slice(-12)}</code><br/>
-            <span style="color:#f59e0b;">⚠ Tronscan API 离线，使用模拟验证</span>
-          </div>`;
-        if (btn) { btn.disabled = false; btn.style.opacity = '1'; btn.style.cursor = 'pointer'; btn.textContent = '✅ 确认缴费（哈希已验证通过）'; }
-        s.pendingTxHash = hash;
-        s.pendingTxVerified = 'simulated';
-        this.speak('交易哈希验证通过，请确认缴费。');
-      }, 1500);
+      // 🔴 已彻底禁用：模拟验证已被删除，所有验证必须通过 TronScan API 真查
+      if (status) status.innerHTML = '<span style="color:#dc2626;">❌ 请重新输入交易哈希后再验证（模拟验证已禁用）</span>';
+      if (btn) { btn.disabled = true; btn.style.opacity = '0.55'; btn.style.cursor = 'not-allowed'; btn.textContent = '⚠ 请重新验证'; }
     },
     confirmPayment() {
       const channelEl = document.querySelector('input[name="pay-channel"]:checked');
@@ -1719,14 +1759,15 @@
           this.toast('❌ 当前仅支持 TRC-20 USDT 链上缴费（本次链上公证专用收款通道）', 'error');
           return;
         }
-        // 🔐 TRC-20 绝对严格：必须已通过 verifyTxHash() 显式验证成功
-        //    禁止任何"64位合法即自动通过"的兜底——用户要求验证通过后才能点"付费完成"
-        if (s.pendingTxVerified !== 'live' && s.pendingTxVerified !== 'simulated') {
-          this.toast('❌ 请先粘贴 TRON 交易哈希并点击/等待自动验证「✅ 验证通过」后，再确认缴费', 'error');
+        // 🔴 TRC-20 绝对严格：必须已通过 verifyTxHash() 的真实验证
+        //    彻底禁止 'live' / 'simulated' —— 只接受 'verified_v2'（6 条硬规则全通过）
+        if (s.pendingTxVerified !== 'verified_v2') {
+          const reason = s.pendingTxVerified === 'simulated' 
+            ? '检测到已禁用的模拟验证痕迹，需要重新输入交易哈希进行真实验证'
+            : '请先粘贴 TRON 交易哈希并等待自动显示「✅✅✅ TRON 链上真实验证通过」后再确认缴费';
+          this.toast('❌ ' + reason, 'error');
           const st = $('#pay-hash-status');
-          if (st && !st.innerText.includes('✅')) {
-            st.innerHTML = '<div style="color:#dc2626;font-weight:600;">❌ 尚未完成交易验证，请先输入正确的 64 位十六进制哈希</div>';
-          }
+          if (st) st.innerHTML = `<div style="color:#dc2626;font-weight:700;">❌ ${reason}</div>`;
           return;
         }
         if (!s.pendingTxHash) {
@@ -1735,8 +1776,8 @@
         }
         feeDetail.method = 'TRC-20 USDT（本次链上公证专用收款通道）';
         feeDetail.txHash = s.pendingTxHash;
-        // ✅ 使用轮询分配的专属地址（从 pending session 读）
-        feeDetail.address = pending.payAddress || 'TYDcY9fWsFm3aTVcQxN6LZxK7u7L5n3pQ8';
+        // ✅ 使用轮询分配的专属地址（从 pending session 读，永不硬编码）
+        feeDetail.address = pending.payAddress || AddrPool.allocate(pending.id || 'confirm_' + Date.now(), pending.signerName || '').address;
 
         // 持久化写回 sessions 数组（和 paid=1 URL 入口进入时的状态完全对齐）
         const all = Store.get('sessions', []);
@@ -1808,13 +1849,11 @@
         this.toast('❌ 当前仅支持 TRC-20 USDT 链上缴费（本次链上公证专用收款通道）', 'error');
         return;
       }
-      // 🔐 TRC-20 绝对严格：必须已通过 verifyTxHash() 显式验证成功
-      if (s.pendingTxVerified !== 'live' && s.pendingTxVerified !== 'simulated') {
-        this.toast('❌ 请先粘贴 TRON 交易哈希并点击/等待自动验证「✅ 验证通过」后，再确认缴费', 'error');
+      // 🔴 分支 B：同样强制真实验证，禁止 simulated
+      if (s.pendingTxVerified !== 'verified_v2') {
+        this.toast('❌ 请先粘贴 TRON 交易哈希并等待自动显示「✅✅✅ 真实验证通过」后再确认缴费', 'error');
         const st = $('#pay-hash-status');
-        if (st && !st.innerText.includes('✅')) {
-          st.innerHTML = '<div style="color:#dc2626;font-weight:600;">❌ 尚未完成交易验证，请先输入正确的 64 位十六进制哈希</div>';
-        }
+        if (st) st.innerHTML = '<div style="color:#dc2626;font-weight:700;">❌ 尚未完成链上真实验证，请先输入正确的交易哈希</div>';
         return;
       }
       if (!s.pendingTxHash) return this.toast('❌ 请粘贴 TRON 交易哈希', 'warning');
