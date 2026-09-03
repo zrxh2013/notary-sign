@@ -55,7 +55,7 @@
 <body>
 <div class="demo-header">
   <h1>外部APP嵌入示例</h1>
-  <span class="badge">SDK v1.3.0</span>
+  <span class="badge">SDK v1.4.0</span>
   <span class="tag tag-purple">含 PTAHDAO 外链入口</span>
 </div>
 
@@ -133,6 +133,15 @@
       <h3>③ 编程式声明入口 API（iframe + postMessage）</h3>
       <button class="btn btn-success" onclick="ptahdaoDeclareEntry()">⚡ NotaryAPI.declareEntry()</button>
       <div id="p-result" class="link-box" style="display:none;"></div>
+
+      <h3>④ 加密 postMessage 入口（推荐 APP 端使用）<span class="tag tag-purple" style="margin-left:6px;">AES-256-GCM</span></h3>
+      <div style="font-size:11px;color:#64748b;line-height:1.6;background:#fef3c7;padding:8px 10px;border-radius:6px;margin-bottom:8px;border:1px solid #fde68a;">
+        <b>安全机制：</b>持有人信息经 AES-256-GCM 加密后通过 postMessage 传输，避免 URL 明文暴露。<br>
+        <b>防篡改：</b>GCM tag 校验失败自动拒绝；<b>防重放：</b>payload 内置时间戳，10 分钟内有效。<br>
+        <b>origin 白名单：</b>接收端只接受 PTAHDAO APP 真实 origin 的请求。
+      </div>
+      <button class="btn btn-primary" onclick="ptahdaoDeclareEntrySecure()">🔐 declareEntrySecure (AES-GCM 加密)</button>
+      <div id="p-secure-result" class="link-box" style="display:none;"></div>
 
       <h3>参考格式</h3>
       <div style="font-size:11px;color:#64748b;line-height:1.6;background:#f8fafc;padding:8px;border-radius:6px;">
@@ -339,6 +348,45 @@
       pLogFn('declareEntry ←', { ok: true, sessionId: r.sessionId, caseNo: r.caseNo });
     } catch (e) { pLogFn('declareEntry error', e.message); }
   }
+
+  // ④ 加密 postMessage 入口（推荐 APP 端使用）
+  async function ptahdaoDeclareEntrySecure() {
+    const opts = ptahdaoReadOpts();
+    const entryOpts = {
+      trustAccount: opts.trustAccount,
+      settlementNo: opts.settlementNo,
+      settlementAmount: opts.settlementAmount,
+      holder: opts.holder,
+      signerName: opts.holder,         // 持有人姓名作为签署人
+      signerPhone: opts.phone,
+      signerIdcard: opts.idcard,
+      paid: opts.paid === '1',
+      txHash: opts.paid === '1' ? ('demo-ptahdao-sec-' + Date.now()) : '',
+    };
+    pLogFn('declareEntrySecure → (明文)', entryOpts);
+    try {
+      // 1. 用 SDK 加密 payload（AES-256-GCM）
+      const payload = await PtahDaoNotarySDK.encryptPayload(entryOpts);
+      pLogFn('payload encrypted', { iv: payload.iv.slice(0, 8) + '...', cipherLen: payload.cipher.length });
+
+      // 2. 通过 postMessage 调用 declareEntrySecure（接收端会解密）
+      const r = await pCallApi('declareEntrySecure', payload);
+      const el = document.getElementById('p-secure-result');
+      el.style.display = 'block';
+      el.textContent = JSON.stringify({
+        sessionId: r.sessionId, caseNo: r.caseNo, secure: !!r.secure,
+        entered: !!r.entered, paymentOpened: !!r.paymentOpened,
+        declareLink: r.declareLink,
+      }, null, 2);
+      pLogFn('declareEntrySecure ←', { ok: true, sessionId: r.sessionId, caseNo: r.caseNo, secure: r.secure });
+    } catch (e) {
+      pLogFn('declareEntrySecure error', e.message);
+      const el = document.getElementById('p-secure-result');
+      el.style.display = 'block';
+      el.textContent = '❌ ' + e.message;
+    }
+  }
 </script>
+<script src="ptahdao-embed-sdk.js"></script>
 </body>
 </html>

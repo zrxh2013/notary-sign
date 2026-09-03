@@ -4838,9 +4838,22 @@ ${bodyFragment}
     _initExternalAPI() {
       // 事件回调注册表
       this._sdkEventCallbacks = [];
+      // PTAHDAO APP 端 origin 白名单（postMessage 安全校验用；空数组=允许任意 origin 但仅限 type=notary-api）
+      // 上线时建议把 PTAHDAO APP WebView 的真实 origin 加入白名单（如 https://app.ptahdao.com）
+      this._PTAHDAO_ALLOWED_ORIGINS = [
+        'https://app.ptahdao.com',
+        'https://ptahdao.com',
+        // 开发/测试环境
+        'http://localhost:8000',
+        'http://127.0.0.1:8000',
+        'https://zrxh2013.github.io',
+      ];
+      // PTAHDAO APP 端共享密钥（AES-256-GCM）；生产环境必须改为 PTAHDAO 与本系统双方约定的真实密钥
+      // 32 字节密钥以 base64 字符串形式存储，下方 _decryptPayload 内会自动 importKey
+      this._PTAHDAO_SHARED_KEY_B64 = 'UGtBaERBT1NlY3JldEtleUZvclB0YWhEYW9PcGVuU2lnbg=='; // 'PtAhDAOsecretKeyForPtahDaoOpenSign' base64
       // window.NotaryAPI 同步 API
       window.NotaryAPI = {
-        version: '1.3.0',
+        version: '1.4.0',
         // 打开创建会议弹窗
         openCreate: () => this.guestCreateMeeting(),
         // 直接创建会议（编程式调用，返回 Promise）
@@ -4848,6 +4861,10 @@ ${bodyFragment}
         // [PTAHDAO] 信托声明入口：编程式进入，等价于访问 ?from=ptahdao&... 链接
         // opts: { trustAccount, settlementNo, settlementAmount, holder, signerName, signerPhone, signerIdcard, date, time, paid, txHash }
         declareEntry: (opts) => this._apiDeclareEntry(opts || {}),
+        // [PTAHDAO] 加密入口（推荐 APP 端使用）：接收 AES-GCM 加密 payload，解密后调用 declareEntry
+        // payload: { iv: base64(12字节), cipher: base64(密文+GCM tag 16字节) }
+        // 密钥由双方约定（_PTAHDAO_SHARED_KEY_B64），不随消息传输
+        declareEntrySecure: (payload) => this._apiDeclareEntrySecure(payload || {}),
         // [PTAHDAO] 生成供外部平台（PTAHDAO APP/H5）跳转的签约入口外链接
         buildPTAHDaoLink: (opts) => this._buildPTAHDaoDeclareLink(opts || {}),
         // 通过编号短链还原会议
@@ -4870,26 +4887,45 @@ ${bodyFragment}
         // 监听第三方平台 postMessage 请求
         _onMessage: (e) => {
           if (!e.data || e.data.type !== 'notary-api') return;
+          // ===== origin 白名单校验：只接受白名单 origin 的请求 =====
+          // 若白名单为空数组则降级为允许任意 origin（仅适用于开发期；生产环境必须配置白名单）
+          const allowed = this._PTAHDAO_ALLOWED_ORIGINS || [];
+          if (allowed.length > 0) {
+            let matched = false;
+            for (const o of allowed) {
+              // 子域匹配：origin 为 https://app.ptahdao.com 时，白名单 https://ptahdao.com 也算匹配父域
+              if (e.origin === o || e.origin.endsWith('.' + o.replace(/^https?:\/\//, ''))) { matched = true; break; }
+            }
+            if (!matched) {
+              console.warn('[NotaryAPI] 拒绝来自未授权 origin 的请求:', e.origin);
+              try {
+                e.source.postMessage({ type: 'notary-api-resp', id: e.data.id, error: 'origin not allowed: ' + e.origin }, e.origin);
+              } catch (_) { /* 跨域 source 不可达，忽略 */ }
+              return;
+            }
+          }
+          // 响应 targetOrigin 必须为请求方真实 origin（不能用 '*'）
+          const respOrigin = e.origin || '*';
           const { id, action, args } = e.data;
           if (!window.NotaryAPI[action]) {
-            e.source.postMessage({ type: 'notary-api-resp', id, error: 'unknown action: ' + action }, '*');
+            e.source.postMessage({ type: 'notary-api-resp', id, error: 'unknown action: ' + action }, respOrigin);
             return;
           }
           // onEvent / destroy 特殊处理（无返回值，不走 Promise 回复）
           if (action === 'onEvent') {
             const cb = (args && args[0]);
             if (typeof cb === 'function') this._sdkEventCallbacks.push(cb);
-            e.source.postMessage({ type: 'notary-api-resp', id, result: true }, '*');
+            e.source.postMessage({ type: 'notary-api-resp', id, result: true }, respOrigin);
             return;
           }
           Promise.resolve(window.NotaryAPI[action](...(args || [])))
-            .then(result => e.source.postMessage({ type: 'notary-api-resp', id, result }, '*'))
-            .catch(err => e.source.postMessage({ type: 'notary-api-resp', id, error: String(err) }, '*'));
+            .then(result => { try { e.source.postMessage({ type: 'notary-api-resp', id, result }, respOrigin); } catch (_) {} })
+            .catch(err => { try { e.source.postMessage({ type: 'notary-api-resp', id, error: String(err) }, respOrigin); } catch (_) {} });
         },
       };
       window.addEventListener('message', window.NotaryAPI._onMessage);
       // 通知父窗口 SDK 已就绪（嵌入到第三方平台时）
-      this._postToParent({ type: 'notary-ready', version: '1.2.0', url: location.href });
+      this._postToParent({ type: 'notary-ready', version: '1.4.0', url: location.href });
     },
     // 向父窗口 postMessage（仅当被嵌入到 iframe 时有意义）
     _postToParent(msg) {
@@ -5167,6 +5203,68 @@ ${bodyFragment}
           }
           this._emitSdkEvent('ptahdaoEntry', { opts, result: resp });
           resolve(resp);
+        } catch (e) { reject(e); }
+      });
+    },
+    // [PTAHDAO] 加密入口：接收 AES-256-GCM 加密 payload，解密后调用 _apiDeclareEntry
+    // payload: { iv: base64(12字节), cipher: base64(密文+GCM tag 16字节) }
+    // 返回 Promise（与 _apiDeclareEntry 一致）
+    _apiDeclareEntrySecure(payload) {
+      return new Promise(async (resolve, reject) => {
+        try {
+          if (!payload || !payload.iv || !payload.cipher) {
+            return reject(new Error('payload {iv, cipher} required'));
+          }
+          const plain = await this._decryptPayload(payload.iv, payload.cipher);
+          let opts;
+          try { opts = JSON.parse(plain); }
+          catch (_) { return reject(new Error('decrypted payload is not valid JSON')); }
+          if (!opts || typeof opts !== 'object') return reject(new Error('decrypted payload not object'));
+          // 防重放：可选 timestamp 校验（10 分钟内有效）
+          if (opts.ts) {
+            const age = Math.abs(Date.now() - Number(opts.ts));
+            if (age > 10 * 60 * 1000) return reject(new Error('payload expired (>10min)'));
+          }
+          // 调用明文版本，复用全部业务逻辑
+          const result = await this._apiDeclareEntry(opts);
+          resolve({ ...result, secure: true });
+        } catch (e) { reject(e); }
+      });
+    },
+    // AES-256-GCM 解密（Web Crypto API）
+    // ivB64: base64 编码的 12 字节 IV
+    // cipherB64: base64 编码的密文（末尾 16 字节为 GCM tag）
+    // 返回 Promise<string>（解密后的明文 JSON 字符串）
+    _decryptPayload(ivB64, cipherB64) {
+      return new Promise(async (resolve, reject) => {
+        try {
+          if (!window.crypto || !crypto.subtle) {
+            return reject(new Error('Web Crypto API not available'));
+          }
+          // 把 base64 字符串转为 Uint8Array
+          const b64ToU8 = (b64) => {
+            const bin = atob(b64);
+            const u8 = new Uint8Array(bin.length);
+            for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
+            return u8;
+          };
+          const iv = b64ToU8(ivB64);
+          const cipher = b64ToU8(cipherB64);
+          // 从共享密钥 base64 字符串 importKey（raw 32 字节 = AES-256）
+          const keyRaw = b64ToU8(this._PTAHDAO_SHARED_KEY_B64);
+          if (keyRaw.length !== 32) {
+            return reject(new Error('shared key must be 32 bytes (AES-256), got ' + keyRaw.length));
+          }
+          const cryptoKey = await crypto.subtle.importKey(
+            'raw', keyRaw, { name: 'AES-GCM' }, false, ['decrypt']
+          );
+          // AES-GCM decrypt：Web Crypto API 会自动校验 GCM tag，校验失败抛异常（防篡改）
+          const plainBuf = await crypto.subtle.decrypt(
+            { name: 'AES-GCM', iv: iv }, cryptoKey, cipher
+          );
+          // 解码为 UTF-8 字符串
+          const plain = new TextDecoder('utf-8').decode(plainBuf);
+          resolve(plain);
         } catch (e) { reject(e); }
       });
     },
