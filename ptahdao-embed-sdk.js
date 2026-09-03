@@ -28,7 +28,8 @@
   // ============== 配置 ==============
   const DEFAULT_NOTARY_URL = 'https://zrxh2013.github.io/notary-sign/';
   // 默认共享密钥（base64，32 字节）；生产环境必须替换为 PTAHDAO 与公证系统双方约定的真实密钥
-  const DEFAULT_SHARED_KEY_B64 = 'UGtBaERBT1NlY3JldEtleUZvclB0YWhEYW9PcGVuU2lnbg==';
+  // 当前密钥为强随机生成（32B），仅供开发/测试；上线前请与 PTAHDAO 方重新协商并替换
+  const DEFAULT_SHARED_KEY_B64 = 'HqDTT07JMilo7zkQ0SA2Xt8+B0ndEkma+JhHgtjMSXQ=';
 
   // ============== 工具函数 ==============
   // base64 字符串 → Uint8Array

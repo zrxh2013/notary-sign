@@ -4850,7 +4850,8 @@ ${bodyFragment}
       ];
       // PTAHDAO APP 端共享密钥（AES-256-GCM）；生产环境必须改为 PTAHDAO 与本系统双方约定的真实密钥
       // 32 字节密钥以 base64 字符串形式存储，下方 _decryptPayload 内会自动 importKey
-      this._PTAHDAO_SHARED_KEY_B64 = 'UGtBaERBT1NlY3JldEtleUZvclB0YWhEYW9PcGVuU2lnbg=='; // 'PtAhDAOsecretKeyForPtahDaoOpenSign' base64
+      // 当前密钥为强随机生成（32B），仅供开发/测试；上线前请与 PTAHDAO 方重新协商并替换
+      this._PTAHDAO_SHARED_KEY_B64 = 'HqDTT07JMilo7zkQ0SA2Xt8+B0ndEkma+JhHgtjMSXQ=';
       // window.NotaryAPI 同步 API
       window.NotaryAPI = {
         version: '1.4.0',
