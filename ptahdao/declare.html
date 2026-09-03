@@ -7,125 +7,670 @@
 <meta name="description" content="PTAHDAO 信托受益人声明书签署公证专属入口 · 中国委托公证人邓达明 · 叶谢邓律师行">
 <meta name="author" content="Yip Tse & Tang Solicitors & Notaries">
 <style>
-  * { box-sizing: border-box; }
-  body { font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Microsoft YaHei', sans-serif; margin: 0; padding: 0; min-height: 100vh; background: linear-gradient(160deg, #ede9fe 0%, #f0fdf4 100%); display: flex; align-items: center; justify-content: center; color: #1e293b; }
-  .wrap { max-width: 480px; width: 92%; background: #fff; border-radius: 20px; padding: 32px 24px; box-shadow: 0 20px 60px rgba(76, 29, 149, .15); border: 1px solid #ddd6fe; text-align: center; }
-  .logo { font-size: 11px; color: #64748b; letter-spacing: 3px; text-transform: uppercase; font-weight: 600; margin-bottom: 10px; }
-  .brand { font-size: 16px; font-weight: 800; color: #4c1d95; letter-spacing: 0.5px; }
-  .brand-en { font-size: 12px; color: #7c3aed; font-style: italic; margin-top: 2px; }
-  .divider { height: 2px; background: linear-gradient(90deg, transparent, #7c3aed, transparent); margin: 16px 0; border-radius: 2px; }
-  .ptahdao-badge { display: inline-flex; align-items: center; gap: 6px; background: linear-gradient(135deg, #7c3aed, #4c1d95); color: #fff; padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: 700; box-shadow: 0 4px 12px rgba(124, 58, 237, .3); }
-  .ptahdao-badge .logo-icon { font-size: 14px; }
-  h1 { font-size: 18px; color: #1e1b4b; margin: 16px 0 8px; font-weight: 800; letter-spacing: 0.3px; }
-  .subtitle { font-size: 13px; color: #475569; line-height: 1.7; }
-  .loading { margin-top: 28px; }
-  .spinner { width: 40px; height: 40px; border: 3px solid #e2e8f0; border-top-color: #7c3aed; border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto; }
+  /* ========== 基础 ========== */
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg-page: #f6f4ef;         /* 暖米白底，衬托深蓝/金色卡片 */
+    --ink:        #0f172a;      /* 主标题文字（最高对比） */
+    --body:       #334155;      /* 正文 */
+    --muted:      #94a3b8;      /* 弱化说明 */
+
+    /* 一级卡 — 深蓝 */
+    --navy-900:   #0f2744;
+    --navy-800:   #163456;
+    --navy-700:   #1e3a5f;
+    --navy-600:   #264b7a;
+    --navy-text:  #f8fafc;
+
+    /* 金色（点缀/编号/左边条） */
+    --gold-500:   #d4af37;
+    --gold-400:   #e5c54a;
+    --gold-300:   #f0d778;
+    --gold-200:   #f7e9a8;
+    --gold-100:   #fdf3c6;
+
+    /* 琥珀+橙（注意事项） */
+    --amber-100:  #fffbeb;
+    --amber-200:  #fef3c7;
+    --amber-300:  #fde68a;
+    --orange-500: #f59e0b;
+    --orange-600: #ea580c;
+    --orange-700: #c2410c;
+
+    /* 白卡 */
+    --white-card: #ffffff;
+    --line:       #e2e8f0;
+    --radius-lg:  18px;
+    --radius-md:  12px;
+    --radius-sm:  8px;
+  }
+
+  html, body {
+    font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Microsoft YaHei', 'SF Mono', Consolas, monospace;
+    background: var(--bg-page);
+    color: var(--body);
+    font-size: 14px;
+    line-height: 1.65;
+    -webkit-font-smoothing: antialiased;
+    padding: 0 0 48px;
+  }
+
+  /* ========== 顶部品牌条 ========== */
+  .brand-bar {
+    background: #fff;
+    border-bottom: 1px solid var(--line);
+    padding: 14px 20px;
+    text-align: center;
+  }
+  .brand-bar .logo { font-size: 11px; color: var(--muted); letter-spacing: 3px; text-transform: uppercase; font-weight: 600; }
+  .brand-bar .brand { font-size: 16px; font-weight: 800; color: #4c1d95; letter-spacing: 0.5px; }
+  .brand-bar .brand-en { font-size: 11.5px; color: #7c3aed; font-style: italic; margin-top: 1px; }
+
+  /* ========== 主容器 ========== */
+  .wrap {
+    max-width: 480px;
+    width: 92%;
+    margin: 24px auto 0;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+  }
+
+  /* ========== 一级卡 · 本次办理信息（深蓝 + 金色左边条） ========== */
+  .card-primary {
+    background: linear-gradient(135deg, var(--navy-900) 0%, var(--navy-700) 100%);
+    border-radius: var(--radius-lg);
+    padding: 20px 20px 18px 22px;
+    color: var(--navy-text);
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 14px 32px rgba(15, 39, 68, .28);
+  }
+  .card-primary::before {
+    /* 金色左边条 */
+    content: '';
+    position: absolute;
+    left: 0; top: 14px; bottom: 14px;
+    width: 4px;
+    background: linear-gradient(180deg, var(--gold-300) 0%, var(--gold-500) 50%, var(--gold-300) 100%);
+    border-radius: 0 4px 4px 0;
+    box-shadow: 0 0 8px rgba(212,175,55,.5);
+  }
+  .card-primary::after {
+    /* 右上角装饰光晕 */
+    content: '';
+    position: absolute;
+    right: -40px; top: -40px;
+    width: 140px; height: 140px;
+    background: radial-gradient(circle, rgba(212,175,55,.18) 0%, transparent 70%);
+    pointer-events: none;
+  }
+  .cp-badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: rgba(212,175,55,.18);
+    border: 1px solid rgba(212,175,55,.4);
+    color: var(--gold-300);
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    margin-bottom: 12px;
+  }
+  .cp-badge .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--gold-400); display: inline-block; box-shadow: 0 0 6px rgba(229,197,74,.8); }
+  .cp-label {
+    font-size: 11px;
+    color: rgba(248,250,252,.55);
+    letter-spacing: 1px;
+    margin-bottom: 3px;
+  }
+  .cp-order {
+    font-family: 'SF Mono', Consolas, 'Courier New', monospace;
+    font-size: 16px;
+    font-weight: 800;
+    letter-spacing: 0.5px;
+    color: var(--gold-300);
+    text-shadow: 0 0 14px rgba(229,197,74,.35);
+    word-break: break-all;
+    margin-bottom: 14px;
+  }
+  .cp-meta {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px 14px;
+    padding-top: 10px;
+    border-top: 1px solid rgba(212,175,55,.22);
+  }
+  .cp-meta .m { font-size: 11.5px; color: rgba(248,250,252,.5); line-height: 1.5; }
+  .cp-meta .m b { color: var(--navy-text); font-weight: 600; font-size: 12.5px; display: block; }
+  .cp-hash {
+    margin-top: 12px;
+    background: rgba(212,175,55,.08);
+    border: 1px solid rgba(212,175,55,.25);
+    border-radius: var(--radius-sm);
+    padding: 8px 12px;
+  }
+  .cp-hash-label {
+    font-size: 10.5px;
+    color: rgba(212,175,55,.7);
+    letter-spacing: 0.8px;
+    margin-bottom: 4px;
+    text-transform: uppercase;
+  }
+  .cp-hash-value {
+    font-family: 'SF Mono', Consolas, monospace;
+    font-size: 12px;
+    color: var(--gold-200);
+    word-break: break-all;
+    letter-spacing: 0.2px;
+  }
+  .cp-hash-value.masked { font-size: 13px; color: var(--gold-300); letter-spacing: 0.3px; }
+  .cp-status {
+    margin-top: 12px;
+    display: flex; align-items: center; gap: 6px;
+    font-size: 12px;
+    color: #86efac;
+  }
+  .cp-status.ok::before { content: '✓'; display: inline-flex; width: 18px; height: 18px; border-radius: 50%; background: rgba(34,197,94,.2); border: 1px solid rgba(34,197,94,.5); align-items: center; justify-content: center; font-size: 10px; color: #86efac; }
+  .cp-status.pending { color: var(--gold-300); }
+  .cp-status.pending::before { content: '◷'; display: inline-flex; width: 18px; height: 18px; border-radius: 50%; background: rgba(212,175,55,.2); border: 1px solid rgba(212,175,55,.5); align-items: center; justify-content: center; font-size: 10px; }
+
+  /* ========== 分区头（金色竖条 + 深蓝粗标题 + 角标） ========== */
+  .section-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 4px 2px 2px;
+  }
+  .section-head .bar {
+    width: 4px; height: 20px;
+    background: linear-gradient(180deg, var(--gold-500), var(--gold-300));
+    border-radius: 2px;
+    flex-shrink: 0;
+  }
+  .section-head .title {
+    font-size: 15px;
+    font-weight: 800;
+    color: var(--navy-900);
+    letter-spacing: 0.3px;
+  }
+  .section-head .badge {
+    margin-left: auto;
+    background: var(--amber-200);
+    color: var(--orange-700);
+    font-size: 11px;
+    font-weight: 700;
+    padding: 2px 9px;
+    border-radius: 999px;
+  }
+
+  /* ========== 二级卡 · 6步时间轴 ========== */
+  .timeline-card {
+    background: #fff;
+    border-radius: var(--radius-md);
+    padding: 16px 18px 8px;
+    box-shadow: 0 2px 10px rgba(15,23,42,.04);
+  }
+  .tl-step {
+    display: flex;
+    gap: 14px;
+    position: relative;
+    padding-bottom: 14px;
+  }
+  .tl-step:last-child { padding-bottom: 0; }
+  /* 连接线（除最后一步，用 ::after 伪元素） */
+  .tl-step:not(:last-child)::after {
+    content: '';
+    position: absolute;
+    left: 15px; top: 32px; bottom: -2px;
+    width: 2px;
+    background: linear-gradient(180deg, var(--gold-400) 0%, var(--gold-200) 50%, var(--gold-100) 100%);
+    border-radius: 2px;
+  }
+  .tl-num {
+    flex-shrink: 0;
+    width: 32px; height: 32px;
+    background: radial-gradient(circle at 30% 30%, var(--gold-400), var(--gold-500) 60%, var(--gold-500));
+    color: #fff;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 800; font-size: 14px;
+    box-shadow: 0 2px 8px rgba(212,175,55,.45), inset 0 -2px 4px rgba(0,0,0,.1);
+    position: relative;
+    z-index: 1;
+  }
+  .tl-num.auto::after {
+    content: '';
+    position: absolute;
+    bottom: -2px; right: -2px;
+    width: 12px; height: 12px;
+    border-radius: 50%;
+    background: #10b981;
+    border: 2px solid #fff;
+  }
+  .tl-body { flex: 1; padding-top: 3px; }
+  .tl-title {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--ink);
+    display: flex; align-items: center; gap: 6px;
+  }
+  .tl-icon { font-size: 14px; }
+  .tl-meta {
+    margin-top: 3px;
+    font-size: 12px;
+    color: var(--muted);
+    display: flex; gap: 8px; flex-wrap: wrap;
+  }
+  .tl-meta .tag {
+    font-size: 11px; padding: 1px 8px; border-radius: 999px;
+  }
+  .tl-meta .tag.auto { background: #dcfce7; color: #166534; }
+  .tl-meta .tag.user  { background: #ffedd5; color: #c2410c; }
+  .tl-meta .tag.ai    { background: #e0e7ff; color: #3730a3; }
+
+  /* ========== 三级卡 · 注意事项（琥珀 + 橙） ========== */
+  .card-warn {
+    background: linear-gradient(135deg, var(--amber-100) 0%, var(--amber-200) 100%);
+    border: 1px solid var(--orange-500);
+    border-radius: var(--radius-md);
+    padding: 14px 16px;
+    position: relative;
+  }
+  .card-warn::before {
+    content: '⚠';
+    position: absolute;
+    left: -10px; top: -10px;
+    width: 28px; height: 28px;
+    background: var(--orange-600);
+    color: #fff;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; font-weight: 700;
+    box-shadow: 0 2px 8px rgba(234,88,12,.4);
+  }
+  .warn-title {
+    font-size: 13.5px;
+    font-weight: 800;
+    color: var(--orange-700);
+    margin-bottom: 8px;
+    padding-left: 14px;
+  }
+  .warn-list {
+    list-style: none;
+    padding-left: 14px;
+    font-size: 12.5px;
+    color: #7c2d12;
+  }
+  .warn-list li {
+    position: relative;
+    padding-left: 14px;
+    margin-bottom: 5px;
+    line-height: 1.6;
+  }
+  .warn-list li::before {
+    content: '';
+    position: absolute;
+    left: 0; top: 8px;
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--orange-500);
+  }
+
+  /* ========== 联系卡（圆形图标底 + 两级文本） ========== */
+  .contact-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+  .contact-item {
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-md);
+    padding: 12px 14px;
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    transition: transform .2s ease, box-shadow .2s ease;
+  }
+  .contact-item:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(15,23,42,.08); }
+  .ci-icon {
+    width: 36px; height: 36px; flex-shrink: 0;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px;
+  }
+  .ci-icon.phone  { background: #dbeafe; }
+  .ci-icon.hot    { background: #fee2e2; }
+  .ci-icon.web    { background: #ede9fe; }
+  .ci-icon.verify { background: #dcfce7; }
+  .ci-title {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--ink);
+    margin-bottom: 2px;
+  }
+  .ci-sub {
+    font-size: 11px;
+    color: var(--muted);
+    line-height: 1.45;
+  }
+  .ci-sub b { color: var(--body); font-weight: 600; }
+  .ci-sub a { color: #2563eb; text-decoration: none; }
+  .ci-sub a:hover { text-decoration: underline; }
+
+  /* ========== CTA 主按钮 ========== */
+  .cta-wrap { padding-top: 4px; }
+  .cta-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    width: 100%;
+    padding: 16px 20px;
+    background: linear-gradient(135deg, #4c1d95 0%, #7c3aed 50%, #d4af37 100%);
+    color: #fff;
+    border: none;
+    border-radius: var(--radius-md);
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    cursor: pointer;
+    box-shadow: 0 6px 20px rgba(76,29,149,.35), 0 2px 6px rgba(212,175,55,.25);
+    transition: transform .15s ease, box-shadow .15s ease;
+    text-align: center;
+  }
+  .cta-btn:hover  { transform: translateY(-1px); box-shadow: 0 10px 28px rgba(76,29,149,.42); }
+  .cta-btn:active { transform: translateY(0); }
+  .cta-btn .timer {
+    font-family: 'SF Mono', Consolas, monospace;
+    font-size: 13px;
+    background: rgba(255,255,255,.2);
+    padding: 2px 8px;
+    border-radius: 6px;
+  }
+  .cta-hint {
+    text-align: center;
+    font-size: 11.5px;
+    color: var(--muted);
+    margin-top: 10px;
+  }
+
+  /* ========== 加载/错误态 ========== */
+  .loading { margin-top: 24px; text-align: center; }
+  .spinner { width: 36px; height: 36px; border: 3px solid #e2e8f0; border-top-color: var(--navy-700); border-radius: 50%; animation: spin .8s linear infinite; margin: 0 auto; }
   @keyframes spin { to { transform: rotate(360deg); } }
-  .loading-text { font-size: 12px; color: #64748b; margin-top: 12px; }
-  .case-card { margin-top: 20px; background: linear-gradient(135deg, #fef3c7, #fef9c3); border: 1px solid #fde68a; border-radius: 10px; padding: 12px 16px; font-size: 12.5px; color: #92400e; text-align: left; line-height: 1.8; display: none; }
-  .case-card .label { color: #a16207; font-weight: 600; }
-  .case-card code { background: #fff; padding: 1px 6px; border-radius: 4px; font-family: 'SF Mono', Consolas, monospace; font-size: 11.5px; color: #78350f; }
-  .footer { margin-top: 28px; padding-top: 16px; border-top: 1px solid #f1f5f9; font-size: 11px; color: #94a3b8; line-height: 1.8; }
+  .loading-text { font-size: 12px; color: var(--muted); margin-top: 10px; }
+  .error-box {
+    margin-top: 12px;
+    background: #fee2e2; border: 1px solid #fecaca;
+    border-radius: var(--radius-md);
+    padding: 14px 16px;
+    font-size: 12.5px; color: #991b1b; text-align: left;
+  }
+
+  /* ========== 底部 ========== */
+  .footer {
+    margin-top: 32px;
+    padding-top: 18px;
+    border-top: 1px solid var(--line);
+    text-align: center;
+    font-size: 11.5px;
+    color: var(--muted);
+    line-height: 1.8;
+  }
   .footer a { color: #7c3aed; text-decoration: none; }
   .footer a:hover { text-decoration: underline; }
-  .hotline { background: #fef2f2; color: #991b1b; padding: 4px 10px; border-radius: 6px; font-weight: 600; display: inline-block; margin-top: 4px; font-size: 11.5px; }
-  .redirect-btn { display: none; margin-top: 16px; background: linear-gradient(135deg, #7c3aed, #4c1d95); color: #fff; border: none; padding: 12px 24px; border-radius: 10px; font-size: 14px; font-weight: 700; cursor: pointer; box-shadow: 0 6px 18px rgba(124, 58, 237, .4); }
-  .redirect-btn:hover { background: linear-gradient(135deg, #6d28d9, #3b0764); }
-  .error-box { display: none; margin-top: 20px; background: #fee2e2; border: 1px solid #fecaca; border-radius: 10px; padding: 14px; font-size: 12.5px; color: #991b1b; text-align: left; }
+  .footer .hotline {
+    background: #fef2f2; color: #991b1b;
+    padding: 3px 10px; border-radius: 6px;
+    font-weight: 600; display: inline-block; margin: 6px 0; font-size: 11.5px;
+  }
+  .anti-forgery {
+    margin-top: 6px; font-size: 11px; color: var(--muted);
+  }
+  .anti-forgery a { color: #4c1d95; font-weight: 600; }
+
+  /* ========== 空态 ========== */
+  .placeholder { font-size: 12px; color: var(--muted); font-style: italic; }
 </style>
 </head>
 <body>
 
-<div class="wrap">
+<!-- 顶部品牌条 -->
+<div class="brand-bar">
   <div class="logo">YIP · TSE · TANG</div>
   <div class="brand">叶谢邓律师行</div>
   <div class="brand-en">Yip, Tse &amp; Tang Solicitors &amp; Notaries</div>
+</div>
 
-  <div class="divider"></div>
+<div class="wrap" id="wrap">
 
-  <div class="ptahdao-badge">
-    <span class="logo-icon">🔗</span> PTAHDAO 信托专属入口
+  <!-- ========== 一级卡：本次办理信息 ========== -->
+  <div class="card-primary" id="primary-card">
+    <div class="cp-badge"><span class="dot"></span> PTAHDAO 信托专属通道</div>
+    <div class="cp-label">本次申请单号 / ORDER NO.</div>
+    <div class="cp-order" id="cp-order">—</div>
+    <div class="cp-meta">
+      <div class="m"><b id="cp-trust">—</b><span>信托账户</span></div>
+      <div class="m"><b id="cp-settle">—</b><span>结算编号</span></div>
+      <div class="m"><b id="cp-amount">—</b><span>结算资产</span></div>
+      <div class="m"><b id="cp-holder">—</b><span>持有人</span></div>
+    </div>
+    <div class="cp-hash">
+      <div class="cp-hash-label">TRON 链上哈希 / SETTLEMENT HASH</div>
+      <div class="cp-hash-value masked" id="cp-hash">—</div>
+    </div>
+    <div class="cp-status ok" id="cp-status">✅ 已完成链上验证，直接进入签署房间</div>
   </div>
 
-  <h1>PTAHDAO 信托受益人声明书签署公证</h1>
-  <p class="subtitle">中国委托公证人 · 邓达明 (CAO-HK-D0468)<br>本次办理全程预计 3-5 分钟，请保持网络畅通</p>
-
-  <div id="case-card" class="case-card"></div>
-
-  <div class="loading" id="loading">
-    <div class="spinner"></div>
-    <div class="loading-text">正在为您进入公证签署系统...</div>
+  <!-- ========== 分区头：办理流程 ========== -->
+  <div class="section-head">
+    <div class="bar"></div>
+    <div class="title">办理流程</div>
+    <div class="badge">共 6 步</div>
   </div>
 
-  <button class="redirect-btn" id="redirect-btn" onclick="doRedirect()">点击进入签署系统</button>
+  <!-- ========== 二级卡：6 步时间轴 ========== -->
+  <div class="timeline-card" id="timeline">
+    <div class="tl-step">
+      <div class="tl-num auto">1</div>
+      <div class="tl-body">
+        <div class="tl-title"><span class="tl-icon">🔗</span> PTAHDAO APP 进入专属通道</div>
+        <div class="tl-meta"><span class="tag auto">自动跳转</span><span>预填信托信息</span></div>
+      </div>
+    </div>
+    <div class="tl-step">
+      <div class="tl-num auto">2</div>
+      <div class="tl-body">
+        <div class="tl-title"><span class="tl-icon">🎬</span> 进入签署房间 + 欢迎播报</div>
+        <div class="tl-meta"><span class="tag ai">AI 公证员</span><span>自动启动</span></div>
+      </div>
+    </div>
+    <div class="tl-step">
+      <div class="tl-num auto">3</div>
+      <div class="tl-body">
+        <div class="tl-title"><span class="tl-icon">🪪</span> 身份证核验 + 人脸活体比对</div>
+        <div class="tl-meta"><span class="tag ai">AI 自动扫描</span><span>约 26s</span></div>
+      </div>
+    </div>
+    <div class="tl-step">
+      <div class="tl-num auto">4</div>
+      <div class="tl-body">
+        <div class="tl-title"><span class="tl-icon">📖</span> 法律告知 + 受益人声明书核查</div>
+        <div class="tl-meta"><span class="tag ai">AI 自动勾选</span><span>约 26s</span></div>
+      </div>
+    </div>
+    <div class="tl-step">
+      <div class="tl-num">5</div>
+      <div class="tl-body">
+        <div class="tl-title"><span class="tl-icon">🎙️</span> 口读承诺录音 + 手写签名</div>
+        <div class="tl-meta"><span class="tag user">用户操作</span><span>约 70-105s</span></div>
+      </div>
+    </div>
+    <div class="tl-step">
+      <div class="tl-num auto">6</div>
+      <div class="tl-body">
+        <div class="tl-title"><span class="tl-icon">⛓️</span> 链上存证 + 公证书生成</div>
+        <div class="tl-meta"><span class="tag auto">自动完成</span><span>约 20s</span></div>
+      </div>
+    </div>
+  </div>
 
-  <div id="error-box" class="error-box"></div>
+  <!-- ========== 三级卡：注意事项 ========== -->
+  <div class="card-warn">
+    <div class="warn-title">⚠ 进入前请确认</div>
+    <ul class="warn-list">
+      <li>全程使用视频摄像头 + 麦克风，请在光线充足、安静的环境下进行</li>
+      <li>口读承诺时请按视频引导一字一句清晰读出，系统会录音并上链存证</li>
+      <li>手写签名需本人亲自在手写板上操作，不可代签或预签</li>
+      <li>签名完成后公证书将实时上传司法部 + TRON 链，不可撤销</li>
+      <li>总时长约 <b>3-5 分钟</b>，请提前进入房间，中途不要退出</li>
+    </ul>
+  </div>
 
+  <!-- ========== 分区头：联系方式 ========== -->
+  <div class="section-head">
+    <div class="bar"></div>
+    <div class="title">联系方式</div>
+  </div>
+
+  <!-- ========== 联系卡 ========== -->
+  <div class="contact-grid">
+    <div class="contact-item">
+      <div class="ci-icon hot">📞</div>
+      <div>
+        <div class="ci-title">公证热线</div>
+        <div class="ci-sub"><b>(852) 6888-9999</b><br>叶谢邓律师行直查</div>
+      </div>
+    </div>
+    <div class="contact-item">
+      <div class="ci-icon phone">📱</div>
+      <div>
+        <div class="ci-title">广州代表处</div>
+        <div class="ci-sub"><b>(86) 020-2881 6688</b><br>内地业务对接</div>
+      </div>
+    </div>
+    <div class="contact-item">
+      <div class="ci-icon web">🌐</div>
+      <div>
+        <div class="ci-title">官方网站</div>
+        <div class="ci-sub"><a href="https://www.hongkongnotarypublic.com" target="_blank">hongkongnotarypublic.com</a></div>
+      </div>
+    </div>
+    <div class="contact-item">
+      <div class="ci-icon verify">🛡️</div>
+      <div>
+        <div class="ci-title">防伪核验</div>
+        <div class="ci-sub"><a href="https://clshkl.moj.gov.cn" target="_blank">司法部</a> · <a href="https://tronscan.io" target="_blank">TRONSCAN</a></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== 主 CTA ========== -->
+  <div class="cta-wrap">
+    <button class="cta-btn" id="cta-btn" onclick="doRedirect()">
+      立即签署受益人声明书
+      <span class="timer" id="countdown">5s</span>
+    </button>
+    <div class="cta-hint">如未自动跳转，请点击上方按钮进入签署房间</div>
+  </div>
+
+  <!-- 错误态 -->
+  <div id="error-box" class="error-box" style="display:none;"></div>
+
+  <!-- 底部版权 -->
   <div class="footer">
     香港旺角弥敦道 738-740 号荣华大楼 2 楼全层<br>
     <span class="hotline">☎ 公证热线 (852) 6888-9999</span><br>
-    广州代表处 (86) 020-2881 6688 · <a href="https://www.hongkongnotarypublic.com" target="_blank">www.hongkongnotarypublic.com</a><br>
-    电子公证书防伪通道：<a href="https://clshkl.moj.gov.cn" target="_blank">司法部</a> · <a href="https://zwfw.12348.gov.cn" target="_blank">12348 法网</a> · <a href="https://www.caao.org.hk" target="_blank">CAAO 协会</a> · <a href="https://tronscan.io" target="_blank">TRONSCAN</a>
+    中国委托公证人 · 邓达明 CAO-HK-D0468 · 叶谢邓律师行<br>
+    <div class="anti-forgery">
+      电子公证书防伪通道：
+      <a href="https://clshkl.moj.gov.cn" target="_blank">司法部</a> ·
+      <a href="https://zwfw.12348.gov.cn" target="_blank">12348 法网</a> ·
+      <a href="https://www.caao.org.hk" target="_blank">CAAO 协会</a> ·
+      <a href="https://tronscan.io" target="_blank">TRONSCAN</a> ·
+      <a href="https://etherscan.io" target="_blank">Etherscan</a>
+    </div>
   </div>
+
 </div>
 
 <script>
 (function () {
   const params = new URLSearchParams(location.search);
-  const from = params.get('from') || (location.pathname.indexOf('/ptahdao/') >= 0 ? 'ptahdao' : '');
-  const ta = params.get('ta') || params.get('trustAccount') || '';
-  const sn = params.get('sn') || params.get('settlementNo') || '';
-  const sa = params.get('sa') || params.get('settlementAmount') || '';
-  const holder = params.get('holder') || '';
-  const phone = params.get('phone') || '';
-  const idcard = params.get('idcard') || '';
-  const paid = params.get('paid') || '';
-  const tx = params.get('tx') || params.get('txHash') || '';
+  const from    = params.get('from') || (location.pathname.indexOf('/ptahdao/') >= 0 ? 'ptahdao' : '');
+  const ta      = params.get('ta') || params.get('trustAccount') || '';
+  const sn      = params.get('sn') || params.get('settlementNo') || '';
+  const sa      = params.get('sa') || params.get('settlementAmount') || '';
+  const holder  = params.get('holder') || '';
+  const phone   = params.get('phone') || '';
+  const idcard  = params.get('idcard') || '';
+  const paid    = params.get('paid') || '';
+  const tx      = params.get('tx') || params.get('txHash') || '';
+  const orderNo = params.get('orderNo') || params.get('caseNo') ||
+                  ('PT' + new Date().getFullYear() + String(Math.floor(Math.random() * 900000) + 100000));
 
-  // 如果 URL 已经有 from=ptahdao 或 路径在 /ptahdao/ 下，确保 from 参数存在
-  if (!from && location.pathname.indexOf('/ptahdao/') >= 0) {
-    params.set('from', 'ptahdao');
-  }
+  // 确保 from 参数存在
+  if (!from && location.pathname.indexOf('/ptahdao/') >= 0) params.set('from', 'ptahdao');
 
-  // 构造跳转 URL（保留所有参数）
-  const mainIndex = location.pathname.indexOf('/ptahdao/') >= 0
-    ? '../index.html'
-    : 'index.html';
+  // 构造跳转 URL
+  const mainIndex = location.pathname.indexOf('/ptahdao/') >= 0 ? '../index.html' : 'index.html';
   const redirectUrl = mainIndex + '?' + params.toString();
 
-  // 显示案件信息摘要
-  const hasPta = ta || sn || holder;
-  if (hasPta) {
-    const card = document.getElementById('case-card');
-    let html = '';
-    if (ta) html += `<div><span class="label">信托账户：</span><code>${ta}</code></div>`;
-    if (sn) html += `<div><span class="label">结算编号：</span><code>${sn}</code></div>`;
-    if (sa) html += `<div><span class="label">结算资产：</span><code>${sa} USDT</code></div>`;
-    if (holder) html += `<div><span class="label">持有人：</span><code>${holder}</code></div>`;
-    if (paid === '1') html += `<div style="margin-top:6px;color:#166534;font-weight:600;">✅ 已完成缴费，直接进入签署房间</div>`;
-    card.innerHTML = html;
-    card.style.display = 'block';
+  // ========== 填充一级卡数据 ==========
+  document.getElementById('cp-order').textContent = orderNo;
+  document.getElementById('cp-trust').textContent  = ta     || '—';
+  document.getElementById('cp-settle').textContent  = sn     || '—';
+  document.getElementById('cp-amount').textContent  = sa     ? (sa + ' USDT') : '—';
+  document.getElementById('cp-holder').textContent  = holder || '—';
+
+  // 哈希展示（长地址中段省略）
+  const hashEl = document.getElementById('cp-hash');
+  if (tx && tx.length > 20) {
+    hashEl.classList.remove('masked');
+    hashEl.textContent = tx.slice(0, 14) + '…' + tx.slice(-16);
+    hashEl.title = tx; // hover 看完整
+  } else if (tx) {
+    hashEl.classList.remove('masked');
+    hashEl.textContent = tx;
+  } else {
+    hashEl.textContent = '(本结算将自动上传 TRON 链)';
   }
 
-  // 检查必要参数
+  // 状态指示
+  const statusEl = document.getElementById('cp-status');
+  if (paid === '1' || tx) {
+    statusEl.className = 'cp-status ok';
+    statusEl.textContent = '✅ 已完成链上验证，直接进入签署房间';
+  } else {
+    statusEl.className = 'cp-status pending';
+    statusEl.textContent = '◷ 正在等待链上结算确认...';
+  }
+
+  // ========== 错误态（缺少必要参数） ==========
+  const hasPta = ta || sn || holder;
   if (!hasPta && location.pathname.indexOf('/ptahdao/') >= 0) {
-    // 没有参数，显示错误
-    const loading = document.getElementById('loading');
-    const errorBox = document.getElementById('error-box');
-    loading.style.display = 'none';
-    errorBox.style.display = 'block';
-    errorBox.innerHTML = '<b>⚠ 缺少必要参数</b><br>PTAHDAO 专属入口需要携带信托账户、结算编号、持有人等信息。<br><br>请通过 PTAHDAO APP 正确跳转，或返回首页重新申请。';
-    const btn = document.getElementById('redirect-btn');
-    btn.style.display = 'inline-block';
-    btn.textContent = '返回首页';
-    btn.onclick = function () { location.href = (location.pathname.indexOf('/ptahdao/') >= 0 ? '../index.html' : 'index.html'); };
+    const err = document.getElementById('error-box');
+    err.style.display = 'block';
+    err.innerHTML = '<b>⚠ 缺少必要参数</b><br>PTAHDAO 专属入口需要携带信托账户、结算编号、持有人等信息。<br><br>请通过 PTAHDAO APP 正确跳转，或返回首页重新申请。';
+    document.getElementById('timeline').style.display = 'none';
+    document.querySelector('.card-warn').style.display = 'none';
+    document.getElementById('primary-card').style.borderLeft = '';
     return;
   }
 
-  // 自动跳转（1.2 秒后）
-  setTimeout(function () {
-    location.href = redirectUrl;
-  }, 1200);
+  // ========== 5s 自动跳转 + 倒计时 ==========
+  let sec = 5;
+  const cd = document.getElementById('countdown');
+  const timer = setInterval(function () {
+    sec--;
+    cd.textContent = sec + 's';
+    if (sec <= 0) {
+      clearInterval(timer);
+      location.href = redirectUrl;
+    }
+  }, 1000);
 })();
 
 function doRedirect() {
