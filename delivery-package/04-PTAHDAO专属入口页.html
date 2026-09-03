@@ -433,9 +433,99 @@
 
   /* ========== 空态 ========== */
   .placeholder { font-size: 12px; color: var(--muted); font-style: italic; }
+
+  /* ========== 时间闸门 ========== */
+  .normal-content { display: block; }
+  .rest-view { display: none; min-height: 100vh; background: linear-gradient(160deg, #0f2744 0%, #1e3a5f 100%); color: #f8fafc; padding: 32px 20px; box-sizing: border-box; }
+  .rest-card { max-width: 420px; margin: 0 auto; text-align: center; padding-top: 60px; }
+  .rest-icon { font-size: 58px; margin-bottom: 12px; }
+  .rest-title { font-size: 20px; font-weight: 800; letter-spacing: 0.5px; color: #f0d778; text-shadow: 0 0 20px rgba(229,197,74,.4); }
+  .rest-sub { margin-top: 10px; font-size: 13.5px; color: rgba(248,250,252,.72); line-height: 1.7; }
+  .rest-hours { margin-top: 18px; display: inline-block; background: rgba(212,175,55,.14); border: 1px solid rgba(212,175,55,.35); border-radius: 10px; padding: 10px 18px; }
+  .rest-hours b { font-family: 'SF Mono', Consolas, monospace; font-size: 15px; color: #f0d778; letter-spacing: 0.5px; }
+  .rest-now { margin-top: 16px; font-size: 12px; color: rgba(248,250,252,.5); font-family: 'SF Mono', Consolas, monospace; }
+  .rest-countdown { margin-top: 14px; font-family: 'SF Mono', Consolas, monospace; font-size: 22px; font-weight: 800; color: #e5c54a; letter-spacing: 2px; text-shadow: 0 0 16px rgba(229,197,74,.45); }
+  .rest-tip { margin-top: 20px; font-size: 12px; color: rgba(248,250,252,.55); line-height: 1.7; }
+  .rest-tip a { color: #f0d778; text-decoration: none; }
+  .rest-force { display:none; margin-top: 16px; }
+  .closed .normal-content { display: none !important; }
+  .closed .rest-view { display: block !important; }
 </style>
+<script>
+/** 时间闸门：北京时间 09:00-21:00 开放，其余时间显示休息页 + 实时倒计时 */
+(function(){
+  var now = new Date();
+  var bjMs = now.getTime() + 8*3600*1000;
+  var bj = new Date(bjMs);
+  var h = bj.getUTCHours(), m = bj.getUTCMinutes();
+  var open = h >= 9 && h < 21;
+  var force = /[?&](force|debug)=1/.test(location.search);
+  if (!open && !force) {
+    document.body.classList.add('closed');
+    // 启动实时倒计时
+    (function startCountdown(){
+      function pad(n){ return n<10 ? '0'+n : ''+n; }
+      function tick(){
+        var d = new Date();
+        var dMs = d.getTime() + 8*3600*1000;
+        var cur = new Date(dMs);
+        // 计算目标开放时间（今日 09:00 或 明日 09:00）
+        var target;
+        var curMin = cur.getUTCHours()*60 + cur.getUTCMinutes();
+        if (curMin < 9*60) {
+          // 早上 09:00 前 → 目标今日 09:00
+          target = new Date(Date.UTC(cur.getUTCFullYear(), cur.getUTCMonth(), cur.getUTCDate(), 9, 0, 0));
+        } else {
+          // 21:00 后 → 目标明日 09:00
+          var tomorrow = new Date(Date.UTC(cur.getUTCFullYear(), cur.getUTCMonth(), cur.getUTCDate()+1, 9, 0, 0));
+          target = tomorrow;
+        }
+        var diffMs = target.getTime() - cur.getTime();
+        var diffSec = Math.floor(diffMs / 1000);
+        var days = Math.floor(diffSec / 86400);
+        var hh = Math.floor((diffSec % 86400) / 3600);
+        var mm = Math.floor((diffSec % 3600) / 60);
+        var ss = diffSec % 60;
+        // 更新"当前北京时间"
+        var nowEl = document.getElementById('rest-now');
+        if (nowEl) {
+          var curStr = cur.getUTCFullYear()+'-'+pad(cur.getUTCMonth()+1)+'-'+pad(cur.getUTCDate())+' '+pad(cur.getUTCHours())+':'+pad(cur.getUTCMinutes())+':'+pad(cur.getUTCSeconds());
+          nowEl.textContent = '🕑 当前北京时间：' + curStr;
+        }
+        // 更新倒计时
+        var cdEl = document.getElementById('rest-countdown');
+        if (cdEl) {
+          var label = days > 0 ? '天' : (cur.getUTCHours() < 9 ? '距离今日开放' : '距离明日开放');
+          cdEl.textContent = label + '　' + (days>0?days+'天 ':'') + pad(hh)+':'+pad(mm)+':'+pad(ss);
+        }
+      }
+      tick(); setInterval(tick, 1000);
+    })();
+  }
+})();
+</script>
 </head>
 <body>
+
+<!-- ===== 时间闸门：休息视图（默认隐藏，body.closed 时显示） ===== -->
+<div class="rest-view" id="rest-view">
+  <div class="rest-card">
+    <div class="rest-icon">🌙</div>
+    <div class="rest-title">当前不在服务时间</div>
+    <div class="rest-sub">我们正在为您整理公证流程与链上存证环境<br/>请在开放时间内再来办理</div>
+    <div class="rest-hours">🕐 <b>每日 09:00 — 21:00</b>（北京时间）</div>
+    <div class="rest-now" id="rest-now">当前北京时间 —</div>
+    <div class="rest-countdown" id="rest-countdown">— 离开放 —</div>
+    <div class="rest-tip">
+      叶谢邓律师行 · 中国委托公证人 · 邓达明 CAO-HK-D0468<br/>
+      咨询热线 <b style="color:#f0d778;">(852) 6888-9999</b> · 广州代表处 (86) 020-2881 6688<br/>
+      <a href="https://www.hongkongnotarypublic.com" target="_blank">www.hongkongnotarypublic.com</a>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 正常内容 ===== -->
+<div class="normal-content">
 
 <!-- 顶部品牌条 -->
 <div class="brand-bar">
@@ -594,7 +684,8 @@
     </div>
   </div>
 
-</div>
+</div><!-- /.wrap -->
+</div><!-- /.normal-content -->
 
 <script>
 (function () {
