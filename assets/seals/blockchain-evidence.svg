@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- 链上存证专用标识 · PTAHDAO 专属 · TRON 区块链 -->
+<svg xmlns="http://www.w3.org/2000/svg" width="200" height="80" viewBox="0 0 200 80">
+  <defs>
+    <linearGradient id="chainGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#7c3aed"/>
+      <stop offset="50%" stop-color="#4c1d95"/>
+      <stop offset="100%" stop-color="#1e1b4b"/>
+    </linearGradient>
+    <linearGradient id="tronGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#ff0613"/>
+      <stop offset="100%" stop-color="#cc000f"/>
+    </linearGradient>
+  </defs>
+  <!-- 背景圆角矩形 -->
+  <rect x="2" y="2" width="196" height="76" rx="8" fill="url(#chainGrad)" stroke="#7c3aed" stroke-width="1.5"/>
+  <!-- TRON 图标（简化版） -->
+  <g transform="translate(18 40)">
+    <circle r="18" fill="#fff" opacity="0.15"/>
+    <polygon points="0,-12 10,-4 6,-4 6,12 -6,12 -6,-4 -10,-4" fill="url(#tronGrad)" transform="rotate(-18)"/>
+  </g>
+  <!-- 主文字 -->
+  <text x="60" y="32" fill="#fff" font-size="12" font-weight="800" font-family="-apple-system,sans-serif" letter-spacing="0.5">⛓ 链上存证</text>
+  <text x="60" y="50" fill="#a78bfa" font-size="9" font-family="monospace">TRONSCAN · 不可篡改</text>
+  <!-- PTAHDAO 标记 -->
+  <rect x="130" y="18" width="66" height="20" rx="4" fill="#fff" opacity="0.15"/>
+  <text x="163" y="32" text-anchor="middle" fill="#c4b5fd" font-size="9" font-weight="700" font-family="monospace">PTAHDAO</text>
+  <!-- 底部条 -->
+  <line x1="130" y1="55" x2="190" y2="55" stroke="#7c3aed" stroke-width="1"/>
+  <text x="160" y="68" text-anchor="middle" fill="#a78bfa" font-size="8" font-family="monospace">公证数据上链封存</text>
+</svg>
