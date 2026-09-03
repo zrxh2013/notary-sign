@@ -3868,38 +3868,43 @@
         rawTxHash = s.txHash.replace(/^0x/i,'');
       }
       // 2) 如果拿到了真实 txHash，查询 TronScan API 获取真实区块高度和时间戳
+      //    支持 3 次重试（TronScan 对刚发起的交易可能有 10-30 秒收录延迟）
       let tronBlock = null; // { block, timestamp, ownerAddress, toAddress, amount, contractRet }
       if (rawTxHash) {
         this.addSystemMsg('【系统】正在向 TRON 区块链查询交易上链确认...');
-        try {
-          const ctrl = new AbortController();
-          const tm = setTimeout(() => ctrl.abort(), 10000);
-          const resp = await fetch('https://apilist.tronscan.org/api/transaction-info?hash=' + rawTxHash, { signal: ctrl.signal });
-          clearTimeout(tm);
-          if (resp.ok) {
-            const data = await resp.json();
-            if (data && (data.block || data.timestamp)) {
-              // TronScan API 顶层直接有 block/timestamp/toAddress/contractRet，
-              // raw_data.contract 可能是空数组，所以从顶层字段取值
-              const topContract = (data.contractRet && data.contractRet !== 'SUCCESS' && data.contractRet !== 'SUCCEED') ? data.contractRet : 'SUCCESS';
-              tronBlock = {
-                block: data.block || null,
-                timestamp: data.timestamp || null,
-                ownerAddress: data.ownerAddress || '',
-                toAddress: data.toAddress || '',
-                amount: 0,
-                contractRet: data.contractRet || topContract,
-                confirmed: !!data.confirmed,
-                confirmations: data.confirmations || 0,
-                onChain: true,
-              };
-              this.addSystemMsg(`【系统】✅ TRON 链上确认成功 · 区块 #${tronBlock.block} · ${tronBlock.timestamp ? new Date(tronBlock.timestamp).toLocaleString() : '--'}`);
-            } else {
-              this.addSystemMsg('【系统】⚠ TronScan 返回空数据，交易可能尚未上链（60 秒后可再次查询确认）');
-            }
+        for (let attempt = 0; attempt < 3 && !tronBlock; attempt++) {
+          if (attempt > 0) {
+            this.addSystemMsg(`【系统】⏳ TronScan 尚未收录，${attempt * 3} 秒后第 ${attempt+1} 次重试...`);
+            await new Promise(r => setTimeout(r, attempt * 3000));
           }
-        } catch(err) {
-          this.addSystemMsg('【系统】⚠ TronScan API 临时不可用（CORS/网络），交易已提交但暂无法自动获取区块确认号');
+          try {
+            const ctrl = new AbortController();
+            const tm = setTimeout(() => ctrl.abort(), 10000);
+            const resp = await fetch('https://apilist.tronscan.org/api/transaction-info?hash=' + rawTxHash, { signal: ctrl.signal });
+            clearTimeout(tm);
+            if (resp.ok) {
+              const data = await resp.json();
+              if (data && (data.block || data.timestamp)) {
+                const topContract = (data.contractRet && data.contractRet !== 'SUCCESS' && data.contractRet !== 'SUCCEED') ? data.contractRet : 'SUCCESS';
+                tronBlock = {
+                  block: data.block || null,
+                  timestamp: data.timestamp || null,
+                  ownerAddress: data.ownerAddress || '',
+                  toAddress: data.toAddress || '',
+                  amount: 0,
+                  contractRet: data.contractRet || topContract,
+                  confirmed: !!data.confirmed,
+                  confirmations: data.confirmations || 0,
+                  onChain: true,
+                };
+                this.addSystemMsg(`【系统】✅ TRON 链上确认成功（第 ${attempt+1} 次查询）· 区块 #${tronBlock.block} · ${tronBlock.timestamp ? new Date(tronBlock.timestamp).toLocaleString() : '--'}${tronBlock.confirmations?' · 确认数 '+tronBlock.confirmations:''}`);
+                break;
+              }
+            }
+          } catch(err) { /* 忽略单次错误，继续重试 */ }
+        }
+        if (!tronBlock) {
+          this.addSystemMsg('【系统】⚠ TronScan 3 次均未收录该交易（可能交易刚发起还未确认），公证书已保存，稍后可在完成页点击"区块链核验"按钮再次查询');
         }
       }
 
