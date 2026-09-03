@@ -5,6 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>公证书防伪核验 · 叶谢邓律师行</title>
 <script src="qrcode.min.js"></script>
+<script src="tronweb.js"></script>
+<script src="chain-config.js"></script>
+<script src="notary-chain.js"></script>
 <style>
   * { box-sizing: border-box; }
   body { font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Microsoft YaHei', sans-serif; margin: 0; padding: 0; min-height: 100vh; background: linear-gradient(160deg, #0f172a 0%, #1e293b 50%, #0f172a 100%); color: #e2e8f0; }
@@ -113,6 +116,15 @@
   <h2>⛓️ TRON 链上查询</h2>
   <div id="chain-loading" style="font-size:12px;color:#fbbf24;"><span class="loader"></span>正在查询 TRONSCAN...</div>
   <div id="chain-result" class="chain-result" style="display:none;"></div>
+</div>
+
+<!-- ⛓️ 链上存证仓库合约核验 -->
+<div class="card" id="evidence-card" style="display:none;">
+  <h2>⛓️ 链上存证仓库核验</h2>
+  <div style="font-size:11.5px;color:#64748b;margin-bottom:8px;">NotaryEvidenceRegistry 智能合约 — 验证公证书 SHA-256 指纹是否已写入链上存证仓库</div>
+  <div id="evidence-loading" style="font-size:12px;color:#fbbf24;"><span class="loader"></span>正在查询存证合约...</div>
+  <div id="evidence-result" style="display:none;margin-top:10px;padding:12px;border-radius:8px;font-size:12.5px;line-height:1.8;"></div>
+  <div id="evidence-contract-info" style="margin-top:8px;font-size:10.5px;color:#475569;display:none;"></div>
 </div>
 
 <!-- 4 大防伪通道 -->
@@ -235,6 +247,47 @@ async function doVerify() {
       el.innerHTML = '⚠️ <b>TRON API 查询受限（CORS/网络）</b><br>' +
         '请手动访问 <a href="https://tronscan.io/#/transaction/' + tx.replace(/^0x/i,'') + '" target="_blank" style="color:#fbbf24;">TRONSCAN ↗</a> 输入哈希核验';
       showStatus('warn', '⚠️ API 查询受限，请点击 TRONSCAN 手动核验', '⚠️');
+    }
+  }
+
+  // ⛓️ 链上存证仓库合约核验
+  if (fp && window.NotaryChain && window.CHAIN_CONFIG && CHAIN_CONFIG.isConfigured && CHAIN_CONFIG.isConfigured()) {
+    const evCard = document.getElementById('evidence-card');
+    const evLoading = document.getElementById('evidence-loading');
+    const evResult = document.getElementById('evidence-result');
+    const evInfo = document.getElementById('evidence-contract-info');
+    evCard.style.display = 'block';
+    evLoading.style.display = 'block';
+    evResult.style.display = 'none';
+    evInfo.style.display = 'block';
+    evInfo.innerHTML = '合约地址：<code style="color:#fbbf24;">' + CHAIN_CONFIG.CONTRACT_ADDRESS + '</code><br>网络：<code>' + CHAIN_CONFIG.NETWORK + '</code> · 浏览器：<a href="' + CHAIN_CONFIG.EXPLORER + '/#/contract/' + CHAIN_CONFIG.CONTRACT_ADDRESS + '" target="_blank" style="color:#fbbf24;">查看合约 ↗</a>';
+
+    try {
+      const chainVerify = await NotaryChain.verifyEvidenceOnChain(fp);
+      evLoading.style.display = 'none';
+      evResult.style.display = 'block';
+
+      if (chainVerify.verified) {
+        evResult.className = 'chain-result chain-ok';
+        evResult.innerHTML = '✅ <b>链上存证仓库核验通过！</b><br>' +
+          '该公证书 SHA-256 指纹已写入 NotaryEvidenceRegistry 合约<br>' +
+          '匹配证书号：<code style="color:#a7f3d0;">' + (chainVerify.certNo || '—') + '</code><br>' +
+          '存证状态：<b style="color:#22c55e;">有效</b>';
+      } else if (chainVerify.error === 'CONTRACT_NOT_CONFIGURED') {
+        evResult.className = 'chain-result chain-miss';
+        evResult.innerHTML = '⚠️ <b>存证合约未配置</b><br>请先部署 NotaryEvidenceRegistry 合约并更新 chain-config.js';
+      } else {
+        evResult.className = 'chain-result chain-miss';
+        evResult.innerHTML = '❌ <b>链上存证仓库未找到该指纹</b><br>' +
+          '该公证书可能尚未上链存证，或指纹不匹配<br>' +
+          (chainVerify.message ? '原因：<code>' + chainVerify.message + '</code><br>' : '') +
+          '请通过下方 4 大官方通道交叉验证';
+      }
+    } catch (e) {
+      evLoading.style.display = 'none';
+      evResult.style.display = 'block';
+      evResult.className = 'chain-result chain-miss';
+      evResult.innerHTML = '⚠️ <b>合约查询异常</b><br>' + e.message + '<br>请稍后重试或通过其他通道核验';
     }
   }
 

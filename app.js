@@ -385,7 +385,7 @@
         <p>4.3 本人确认：所持 PTAHDAO 信托受益权未向任何第三方提供质押、担保或其他处分安排。</p>
         <p><b>第五条 跨境使用与区块链存证 (Cross-border Use &amp; Blockchain Settlement)</b></p>
         <p>5.1 本声明书拟提交的使用目的地为：<b>PTAHDAO 信托结算平台</b>，用途为持有人实人核验、受益权登记与 USDT 资产分配。</p>
-        <p>5.2 本人同意并授权公证人将本声明书全文及电子签名、签署时间戳、IP 信息、视频连线证据一并上链至 TRC-20 网络，存证地址：<code style="font-family:monospace;">TYDcY9fWsFm3aTVcQxN6LZxK7u7L5n3pQ8</code>。</p>`,
+        <p>5.2 本人同意并授权公证人将本声明书全文及电子签名、签署时间戳、IP 信息、视频连线证据一并上链至 TRC-20 网络，存证地址：<code style="font-family:monospace;">${(window.CHAIN_CONFIG && CHAIN_CONFIG.isConfigured && CHAIN_CONFIG.isConfigured()) ? CHAIN_CONFIG.CONTRACT_ADDRESS : 'TYDcY9fWsFm3aTVcQxN6LZxK7u7L5n3pQ8（待合约部署后替换）'}</code>。</p>`,
         `<h2>PTAHDAO 信托受益人声明书（续三）</h2>
         <p><b>第六条 虚假声明法律责任 (Liability for False Statement)</b></p>
         <p>6.1 本人清楚知悉：根据香港法例第 200 章《刑事罪行条例》第 36 条，任何明知而作出虚假法定声明者，即属犯罪，可处监禁 2 年及罚款；如作为证据使用时明知为虚假者，可处监禁 7 年。</p>
@@ -400,7 +400,7 @@
           <div><b>公证人：</b>邓达明<br/><br/><br/>电子签名：_____________<br/>执业证号：CAO-HK-D0468（司法部注册）</div>
         </div>
         <div style="margin-top:36px;padding:16px;border:1px dashed #cbd5e1;border-radius:8px;background:#fafafa;font-size:12px;color:var(--text-muted);text-align:center;">
-          🇭🇰 本公证书经叶谢邓律师行加章转递后可作为 PTAHDAO 信托结算依据 · 区块链存证地址：TYDcY9fWsFm3aTVcQxN6LZxK7u7L5n3pQ8
+          🇭🇰 本公证书经叶谢邓律师行加章转递后可作为 PTAHDAO 信托结算依据 · 区块链存证地址：${(window.CHAIN_CONFIG && CHAIN_CONFIG.isConfigured && CHAIN_CONFIG.isConfigured()) ? CHAIN_CONFIG.CONTRACT_ADDRESS : 'TYDcY9fWsFm3aTVcQxN6LZxK7u7L5n3pQ8（待部署）'}
         </div>
         <p style="text-align:center;text-indent:0;margin-top:20px;color:var(--text-muted);">—— PTAHDAO 信托受益人声明书 · 叶谢邓律师行公证 · TRC-20 区块链存证 ——</p>`
       ]
@@ -4302,6 +4302,48 @@
         const _ss = Store.get('sessions', []);
         const _i = _ss.findIndex(x => x.id === s.id);
         if (_i >= 0) { _ss[_i] = s; Store.set('sessions', _ss); }
+
+        // 2.5) ⛓️ 链上存证仓库：将 SHA-256 指纹写入 NotaryEvidenceRegistry 合约
+        if (window.NotaryChain && window.CHAIN_CONFIG && CHAIN_CONFIG.isConfigured && CHAIN_CONFIG.isConfigured()) {
+          try {
+            const chainResult = await NotaryChain.storeEvidenceOnChain(
+              sha256hex,
+              s.certNo || ('GZ-GONGZHENG-' + new Date().getFullYear() + '-' + s.id),
+              s.notaryCertNo || s.notaryId || 'CAO-HK-D0468',
+              (s.settlement ? s.settlement.txHash : s.txHash) || ''
+            );
+            if (chainResult.success) {
+              s.evidenceTxHash = chainResult.txHash;
+              s.evidenceOnChain = true;
+              s.evidenceVia = chainResult.via;
+              console.log('[链上存证] ✅ 指纹已写入合约，txHash:', chainResult.txHash);
+              // 更新完成页展示
+              const evEl = $('#done-evidence-tx'); if (evEl) { evEl.textContent = chainResult.txHash.slice(0,20) + '...'; evEl.style.color = '#059669'; }
+              const evStatus = $('#done-evidence-status'); if (evStatus) { evStatus.textContent = '✅ 已上链存证'; evStatus.style.color = '#059669'; }
+            } else if (chainResult.pending) {
+              s.evidenceOnChain = false;
+              s.evidencePending = true;
+              console.log('[链上存证] ⏳ 待上链（无钱包），稍后补传');
+              const evStatus = $('#done-evidence-status'); if (evStatus) { evStatus.textContent = '⏳ 待上链（稍后补传）'; evStatus.style.color = '#f59e0b'; }
+            } else {
+              s.evidenceOnChain = false;
+              console.warn('[链上存证] ❌ 写入失败:', chainResult.error, chainResult.message);
+              const evStatus = $('#done-evidence-status'); if (evStatus) { evStatus.textContent = '⚠ 上链失败（' + chainResult.error + '）'; evStatus.style.color = '#dc2626'; }
+            }
+            // 持久化
+            const _ss2 = Store.get('sessions', []);
+            const _i2 = _ss2.findIndex(x => x.id === s.id);
+            if (_i2 >= 0) { _ss2[_i2] = s; Store.set('sessions', _ss2); }
+          } catch (e) {
+            console.warn('[链上存证] 异常:', e.message);
+            s.evidenceOnChain = false;
+          }
+        } else {
+          // 合约未配置 → 标记为待部署
+          s.evidenceOnChain = false;
+          s.evidenceContractPending = true;
+          console.log('[链上存证] 合约未配置，跳过上链。请部署合约并更新 chain-config.js');
+        }
 
         // 3) 填充元信息到 DOM
         const shaEl = $('#done-sha256'); if (shaEl) shaEl.textContent = sha256hex;
