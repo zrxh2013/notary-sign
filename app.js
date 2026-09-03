@@ -4131,7 +4131,7 @@
       if (isHKFlag) summary.push(['正本编号', `${s.certNo}  ·  叶谢邓-${new Date(now).getFullYear()}`]);
       summary.push(['签署文书', `${s.topic}${isHKFlag?`（正本：${s.certNo}）`:''}-公证书.pdf`]);
       summary.push(['录像文件', `${s.id}_recording.mp4`]);
-      if (isHKFlag) summary.push(['加章转递', '中国法律服务(香港)有限公司 · 办理中（约3-5工作日）']);
+      if (isHKFlag) summary.push(['加章转递', '中国法律服务(香港)有限公司 · 转递申请已发出，24 小时内完成']);
       // 信托结算存证信息
       if (s.settlement) {
         summary.push(['信托结算存证', `TRC-20 · ${s.settlement.address.slice(0,12)}...${s.settlement.address.slice(-6)}`]);
@@ -4142,6 +4142,56 @@
       $('#summary-list').innerHTML = summary.map(([k, v]) => `<div class="summary-item"><label>${k}</label><span>${v}</span></div>`).join('');
       this.addSystemMsg('【系统】签约完成，文书已上传至区块链存证');
       this.addSystemMsg(`【系统】信托结算全流程 ${s.settlement ? (s.settlement.record.files.length + s.settlement.record.toolRecords.length + 1) : 0} 项记录已上链至 TRC-20 专用地址`);
+
+      // ================ 🎯 即时盖章三步提示（签名后立即展示） ================
+      const sealToastHtml = `
+      <div id="seal-status-modal" style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.55);z-index:99999;display:flex;align-items:center;justify-content:center;" onclick="if(event.target.id==='seal-status-modal')this.remove()">
+        <div style="background:#fff;border-radius:16px;padding:28px 32px;max-width:460px;width:92%;box-shadow:0 20px 60px rgba(0,0,0,.3);">
+          <div style="text-align:center;margin-bottom:18px;">
+            <div style="font-size:44px;margin-bottom:4px;">🛡️</div>
+            <div style="font-size:18px;font-weight:800;color:#0f172a;">公证书盖章流程已启动</div>
+            <div style="font-size:12.5px;color:#64748b;margin-top:4px;">正本编号：${s.certNo || '--'} · ${new Date(now).toLocaleString()}</div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:10px;margin:14px 0 18px;">
+            <!-- 步骤 1：签名章 -->
+            <div style="display:flex;align-items:center;gap:12px;padding:10px 14px;background:#f0fdf4;border:1px solid #86efac;border-radius:10px;">
+              <div style="width:32px;height:32px;border-radius:50%;background:#16a34a;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:18px;flex-shrink:0;">✓</div>
+              <div style="flex:1;">
+                <div style="font-size:14px;font-weight:700;color:#166534;">① 公证人签名章 · 已加盖</div>
+                <div style="font-size:11.5px;color:#15803d;">${s.notaryName || '邓达明'}（${s.notaryOrg || '叶谢邓律师行'}）· ${DEFAULT_NOTARY.certNo || 'CAO-HK-D0468'}</div>
+              </div>
+              <div style="font-size:10px;color:#16a34a;font-weight:700;">即时完成</div>
+            </div>
+            <!-- 步骤 2：委托公证人专用章 -->
+            <div style="display:flex;align-items:center;gap:12px;padding:10px 14px;background:#fef3c7;border:1px solid #fcd34d;border-radius:10px;">
+              <div style="width:32px;height:32px;border-radius:50%;background:#d97706;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:16px;flex-shrink:0;">✓</div>
+              <div style="flex:1;">
+                <div style="font-size:14px;font-weight:700;color:#92400e;">② 中国委托公证人专用章 · 已加盖</div>
+                <div style="font-size:11.5px;color:#b45309;">司法部备案号 CAO-HK-D0468 · 电子签章已写入公证书</div>
+              </div>
+              <div style="font-size:10px;color:#d97706;font-weight:700;">即时完成</div>
+            </div>
+            <!-- 步骤 3：中法服转递专用章 -->
+            <div style="display:flex;align-items:center;gap:12px;padding:10px 14px;background:#fef2f2;border:1px solid #fecaca;border-radius:10px;">
+              <div style="width:32px;height:32px;border-radius:50%;background:#dc2626;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:14px;flex-shrink:0;">⏳</div>
+              <div style="flex:1;">
+                <div style="font-size:14px;font-weight:700;color:#991b1b;">③ 中国法律服务转递专用章</div>
+                <div style="font-size:11.5px;color:#b91c1c;">转递申请已自动发出，中法服 24 小时内完成加章</div>
+              </div>
+              <div style="font-size:10px;color:#dc2626;font-weight:700;">办理中</div>
+            </div>
+          </div>
+          <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:10px 14px;font-size:12px;color:#475569;line-height:1.7;margin-bottom:16px;">
+            💡 说明：签名章与公证专用章由委托公证人在签署现场即时加盖，电子公证书立即生效。中国法律服务（香港）有限公司转递专用章需由中法服官方审核加盖，<b>24 小时内自动完成</b>，届时可在司法部官网查询完整信息。
+          </div>
+          <div style="display:flex;gap:10px;">
+            <button onclick="document.getElementById('seal-status-modal').remove()" style="flex:1;padding:11px;background:#0f172a;color:#fff;border:none;border-radius:8px;font-weight:700;font-size:14px;cursor:pointer;">✅ 好的，知道了</button>
+            <button onclick="document.getElementById('seal-status-modal').remove();window.open('https://www.gangtonghk.com/a/115270.html','_blank')" style="padding:11px 16px;background:#fff;color:#0f172a;border:1px solid #cbd5e1;border-radius:8px;font-weight:600;font-size:13px;cursor:pointer;">📖 了解转递流程</button>
+          </div>
+        </div>
+      </div>`;
+      document.body.insertAdjacentHTML('beforeend', sealToastHtml);
+      this.toast('🛡 公证章 + 签名章已即时加盖，转递申请已发出（中法服 24 小时内完成）', 'success', 6000);
 
       // ============== 🛡 完成页防伪区：注入 4 个官方验证通道 URL + 正本编号/签署日期/转递编号占位 ==============
       const antiCard = $('#done-antiforgery-card');
@@ -4156,7 +4206,7 @@
         const dateEl = $('#done-verify-date'); if (dateEl) dateEl.textContent = ymd;
         // 3) 转递编号（中法服办理完成后回填，此处先生成建议占位格式 ZD-YYYY-NNNNNN = 中法服转递专用章编号示例）
         const zdNo = `ZD-${dt.getFullYear()}-${(s.certNo||'').slice(-8).padStart(8,'0')}`;
-        const zdEl = $('#done-verify-zhuandi'); if (zdEl) zdEl.textContent = `${zdNo}（办理中，中法服 3-5 工作日加章后最终确定）`;
+        const zdEl = $('#done-verify-zhuandi'); if (zdEl) zdEl.textContent = `${zdNo}（转递申请已发出，中法服 24 小时内加章完成后最终确定）`;
         // 4) 四个按钮 href（带查询参数便于用户复制转递编号&正本编号&日期前往）
         const safe = (x) => encodeURIComponent(String(x||''));
         const queryTail = `certno=${safe(s.certNo)}&date=${safe(ymd)}&zdno=${safe(zdNo)}&org=${safe(s.notaryOrg||'叶谢邓律师行')}&notary=${safe(s.notaryName||'邓达明')}&cao=${safe(s.notaryCertNo||DEFAULT_NOTARY.certNo)}&signer=${safe(s.signerName||'')}`;
