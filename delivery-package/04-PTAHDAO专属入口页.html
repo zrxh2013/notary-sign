@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>受益人声明书签署公证 · PTAHDAO 专属入口 | 叶谢邓律师行</title>
+<meta name="description" content="PTAHDAO 信托受益人声明书签署公证专属入口 · 中国委托公证人邓达明 · 叶谢邓律师行">
+<meta name="author" content="Yip Tse & Tang Solicitors & Notaries">
+<style>
+  * { box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Microsoft YaHei', sans-serif; margin: 0; padding: 0; min-height: 100vh; background: linear-gradient(160deg, #ede9fe 0%, #f0fdf4 100%); display: flex; align-items: center; justify-content: center; color: #1e293b; }
+  .wrap { max-width: 480px; width: 92%; background: #fff; border-radius: 20px; padding: 32px 24px; box-shadow: 0 20px 60px rgba(76, 29, 149, .15); border: 1px solid #ddd6fe; text-align: center; }
+  .logo { font-size: 11px; color: #64748b; letter-spacing: 3px; text-transform: uppercase; font-weight: 600; margin-bottom: 10px; }
+  .brand { font-size: 16px; font-weight: 800; color: #4c1d95; letter-spacing: 0.5px; }
+  .brand-en { font-size: 12px; color: #7c3aed; font-style: italic; margin-top: 2px; }
+  .divider { height: 2px; background: linear-gradient(90deg, transparent, #7c3aed, transparent); margin: 16px 0; border-radius: 2px; }
+  .ptahdao-badge { display: inline-flex; align-items: center; gap: 6px; background: linear-gradient(135deg, #7c3aed, #4c1d95); color: #fff; padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: 700; box-shadow: 0 4px 12px rgba(124, 58, 237, .3); }
+  .ptahdao-badge .logo-icon { font-size: 14px; }
+  h1 { font-size: 18px; color: #1e1b4b; margin: 16px 0 8px; font-weight: 800; letter-spacing: 0.3px; }
+  .subtitle { font-size: 13px; color: #475569; line-height: 1.7; }
+  .loading { margin-top: 28px; }
+  .spinner { width: 40px; height: 40px; border: 3px solid #e2e8f0; border-top-color: #7c3aed; border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .loading-text { font-size: 12px; color: #64748b; margin-top: 12px; }
+  .case-card { margin-top: 20px; background: linear-gradient(135deg, #fef3c7, #fef9c3); border: 1px solid #fde68a; border-radius: 10px; padding: 12px 16px; font-size: 12.5px; color: #92400e; text-align: left; line-height: 1.8; display: none; }
+  .case-card .label { color: #a16207; font-weight: 600; }
+  .case-card code { background: #fff; padding: 1px 6px; border-radius: 4px; font-family: 'SF Mono', Consolas, monospace; font-size: 11.5px; color: #78350f; }
+  .footer { margin-top: 28px; padding-top: 16px; border-top: 1px solid #f1f5f9; font-size: 11px; color: #94a3b8; line-height: 1.8; }
+  .footer a { color: #7c3aed; text-decoration: none; }
+  .footer a:hover { text-decoration: underline; }
+  .hotline { background: #fef2f2; color: #991b1b; padding: 4px 10px; border-radius: 6px; font-weight: 600; display: inline-block; margin-top: 4px; font-size: 11.5px; }
+  .redirect-btn { display: none; margin-top: 16px; background: linear-gradient(135deg, #7c3aed, #4c1d95); color: #fff; border: none; padding: 12px 24px; border-radius: 10px; font-size: 14px; font-weight: 700; cursor: pointer; box-shadow: 0 6px 18px rgba(124, 58, 237, .4); }
+  .redirect-btn:hover { background: linear-gradient(135deg, #6d28d9, #3b0764); }
+  .error-box { display: none; margin-top: 20px; background: #fee2e2; border: 1px solid #fecaca; border-radius: 10px; padding: 14px; font-size: 12.5px; color: #991b1b; text-align: left; }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <div class="logo">YIP · TSE · TANG</div>
+  <div class="brand">叶谢邓律师行</div>
+  <div class="brand-en">Yip, Tse &amp; Tang Solicitors &amp; Notaries</div>
+
+  <div class="divider"></div>
+
+  <div class="ptahdao-badge">
+    <span class="logo-icon">🔗</span> PTAHDAO 信托专属入口
+  </div>
+
+  <h1>PTAHDAO 信托受益人声明书签署公证</h1>
+  <p class="subtitle">中国委托公证人 · 邓达明 (CAO-HK-D0468)<br>本次办理全程预计 3-5 分钟，请保持网络畅通</p>
+
+  <div id="case-card" class="case-card"></div>
+
+  <div class="loading" id="loading">
+    <div class="spinner"></div>
+    <div class="loading-text">正在为您进入公证签署系统...</div>
+  </div>
+
+  <button class="redirect-btn" id="redirect-btn" onclick="doRedirect()">点击进入签署系统</button>
+
+  <div id="error-box" class="error-box"></div>
+
+  <div class="footer">
+    香港旺角弥敦道 738-740 号荣华大楼 2 楼全层<br>
+    <span class="hotline">☎ 公证热线 (852) 6888-9999</span><br>
+    广州代表处 (86) 020-2881 6688 · <a href="https://www.hongkongnotarypublic.com" target="_blank">www.hongkongnotarypublic.com</a><br>
+    电子公证书防伪通道：<a href="https://clshkl.moj.gov.cn" target="_blank">司法部</a> · <a href="https://zwfw.12348.gov.cn" target="_blank">12348 法网</a> · <a href="https://www.caao.org.hk" target="_blank">CAAO 协会</a> · <a href="https://tronscan.io" target="_blank">TRONSCAN</a>
+  </div>
+</div>
+
+<script>
+(function () {
+  const params = new URLSearchParams(location.search);
+  const from = params.get('from') || (location.pathname.indexOf('/ptahdao/') >= 0 ? 'ptahdao' : '');
+  const ta = params.get('ta') || params.get('trustAccount') || '';
+  const sn = params.get('sn') || params.get('settlementNo') || '';
+  const sa = params.get('sa') || params.get('settlementAmount') || '';
+  const holder = params.get('holder') || '';
+  const phone = params.get('phone') || '';
+  const idcard = params.get('idcard') || '';
+  const paid = params.get('paid') || '';
+  const tx = params.get('tx') || params.get('txHash') || '';
+
+  // 如果 URL 已经有 from=ptahdao 或 路径在 /ptahdao/ 下，确保 from 参数存在
+  if (!from && location.pathname.indexOf('/ptahdao/') >= 0) {
+    params.set('from', 'ptahdao');
+  }
+
+  // 构造跳转 URL（保留所有参数）
+  const mainIndex = location.pathname.indexOf('/ptahdao/') >= 0
+    ? '../index.html'
+    : 'index.html';
+  const redirectUrl = mainIndex + '?' + params.toString();
+
+  // 显示案件信息摘要
+  const hasPta = ta || sn || holder;
+  if (hasPta) {
+    const card = document.getElementById('case-card');
+    let html = '';
+    if (ta) html += `<div><span class="label">信托账户：</span><code>${ta}</code></div>`;
+    if (sn) html += `<div><span class="label">结算编号：</span><code>${sn}</code></div>`;
+    if (sa) html += `<div><span class="label">结算资产：</span><code>${sa} USDT</code></div>`;
+    if (holder) html += `<div><span class="label">持有人：</span><code>${holder}</code></div>`;
+    if (paid === '1') html += `<div style="margin-top:6px;color:#166534;font-weight:600;">✅ 已完成缴费，直接进入签署房间</div>`;
+    card.innerHTML = html;
+    card.style.display = 'block';
+  }
+
+  // 检查必要参数
+  if (!hasPta && location.pathname.indexOf('/ptahdao/') >= 0) {
+    // 没有参数，显示错误
+    const loading = document.getElementById('loading');
+    const errorBox = document.getElementById('error-box');
+    loading.style.display = 'none';
+    errorBox.style.display = 'block';
+    errorBox.innerHTML = '<b>⚠ 缺少必要参数</b><br>PTAHDAO 专属入口需要携带信托账户、结算编号、持有人等信息。<br><br>请通过 PTAHDAO APP 正确跳转，或返回首页重新申请。';
+    const btn = document.getElementById('redirect-btn');
+    btn.style.display = 'inline-block';
+    btn.textContent = '返回首页';
+    btn.onclick = function () { location.href = (location.pathname.indexOf('/ptahdao/') >= 0 ? '../index.html' : 'index.html'); };
+    return;
+  }
+
+  // 自动跳转（1.2 秒后）
+  setTimeout(function () {
+    location.href = redirectUrl;
+  }, 1200);
+})();
+
+function doRedirect() {
+  const params = new URLSearchParams(location.search);
+  const mainIndex = location.pathname.indexOf('/ptahdao/') >= 0 ? '../index.html' : 'index.html';
+  location.href = mainIndex + '?' + params.toString();
+}
+</script>
+</body>
+</html>

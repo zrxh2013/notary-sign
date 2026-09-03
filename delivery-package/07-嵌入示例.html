@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>外部APP嵌入示例 · 信签云 SDK Demo</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f1f5f9; color: #1e293b; padding: 16px; }
+  .demo-header { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+  .demo-header h1 { font-size: 20px; }
+  .demo-header .badge { background: #3b82f6; color: #fff; font-size: 11px; padding: 2px 8px; border-radius: 10px; }
+  .tabs { display: flex; gap: 8px; margin-bottom: 16px; }
+  .tab-btn { padding: 8px 14px; border: 1px solid #cbd5e1; background: #fff; border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 600; color: #475569; }
+  .tab-btn.active { background: #4f46e5; color: #fff; border-color: #4f46e5; }
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+  .demo-layout { display: grid; grid-template-columns: 1fr 340px; gap: 16px; max-width: 1200px; margin: 0 auto; }
+  .iframe-wrap { background: #fff; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,.08); overflow: hidden; }
+  .iframe-wrap iframe { width: 100%; height: 640px; border: 0; display: block; }
+  .iframe-wrap.mobile iframe { max-width: 430px; margin: 0 auto; display: block; border-left: 1px solid #e2e8f0; border-right: 1px solid #e2e8f0; box-shadow: 0 0 20px rgba(0,0,0,.12); }
+  .side-panel { background: #fff; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,.08); padding: 20px; }
+  .side-panel h2 { font-size: 16px; margin-bottom: 12px; }
+  .side-panel h3 { font-size: 13px; margin: 14px 0 8px; color: #475569; border-bottom: 1px dashed #e2e8f0; padding-bottom: 4px; }
+  .form-field { margin-bottom: 8px; }
+  .form-field label { display: block; font-size: 11px; color: #64748b; margin-bottom: 3px; }
+  .form-field input, .form-field select { width: 100%; padding: 6px 8px; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 12px; outline: none; }
+  .btn { display: block; width: 100%; padding: 9px 14px; margin-bottom: 6px; border: none; border-radius: 8px; font-size: 13px; cursor: pointer; transition: .15s; }
+  .btn-primary { background: #3b82f6; color: #fff; }
+  .btn-primary:hover { background: #2563eb; }
+  .btn-secondary { background: #f1f5f9; color: #1e293b; }
+  .btn-secondary:hover { background: #e2e8f0; }
+  .btn-success { background: #22c55e; color: #fff; }
+  .btn-success:hover { background: #16a34a; }
+  .btn-warning { background: #f59e0b; color: #fff; }
+  .btn-warning:hover { background: #d97706; }
+  .log-box { background: #0f172a; color: #94a3b8; font-size: 11px; font-family: 'SF Mono', Monaco, monospace; border-radius: 8px; padding: 10px; height: 180px; overflow-y: auto; margin-top: 10px; }
+  .log-box .entry { margin-bottom: 3px; }
+  .log-box .entry .ts { color: #64748b; }
+  .log-box .entry .event { color: #60a5fa; font-weight: 600; }
+  .log-box .entry .payload { color: #4ade80; word-break: break-all; }
+  .notary-info { background: #f8fafc; border-radius: 8px; padding: 10px; margin-bottom: 10px; font-size: 12px; line-height: 1.7; }
+  .notary-info .label { color: #64748b; }
+  .fee-table { width: 100%; font-size: 11px; border-collapse: collapse; margin-top: 6px; }
+  .fee-table th, .fee-table td { padding: 3px 6px; text-align: left; border-bottom: 1px solid #e2e8f0; }
+  .fee-table .total td { font-weight: 700; color: #3b82f6; }
+  .link-box { background: #0f172a; color: #a5f3fc; padding: 8px; border-radius: 6px; font-size: 11px; word-break: break-all; font-family: 'SF Mono', Monaco, monospace; margin: 6px 0; max-height: 120px; overflow-y: auto; }
+  .tag { display: inline-block; padding: 2px 6px; border-radius: 10px; font-size: 10px; font-weight: 600; }
+  .tag-blue { background: #dbeafe; color: #1e40af; }
+  .tag-purple { background: #ede9fe; color: #5b21b6; }
+  .tag-green { background: #dcfce7; color: #166534; }
+  @media (max-width: 768px) { .demo-layout { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<div class="demo-header">
+  <h1>外部APP嵌入示例</h1>
+  <span class="badge">SDK v1.4.0</span>
+  <span class="tag tag-purple">含 PTAHDAO 外链入口</span>
+  <a href="ptahdao-integration.html" target="_blank" rel="noopener" style="margin-left:auto;background:#7c3aed;color:#fff;text-decoration:none;padding:8px 16px;border-radius:8px;font-size:13px;font-weight:600;">📄 导出对接规范（可打印 PDF）</a>
+</div>
+
+<div class="tabs">
+  <button class="tab-btn active" onclick="switchTab('sdk')">通用 SDK 模式</button>
+  <button class="tab-btn" onclick="switchTab('ptahdao')">🟪 PTAHDAO 信托声明入口</button>
+</div>
+
+<div id="tab-sdk" class="tab-panel active">
+  <div class="demo-layout">
+    <div class="iframe-wrap">
+      <iframe id="notary-iframe" src="https://zrxh2013.github.io/notary-sign/?embed=1" allow="camera; microphone; fullscreen"></iframe>
+    </div>
+    <div class="side-panel">
+      <h2>SDK 控制面板</h2>
+      <div id="notary-info" class="notary-info" style="display:none;"></div>
+      <button class="btn btn-secondary" onclick="demoGetNotaryInfo()">获取公证人信息</button>
+      <button class="btn btn-primary" onclick="demoCreateMeeting()">编程式创建会议</button>
+      <button class="btn btn-secondary" onclick="demoOpenCreate()">打开创建弹窗</button>
+      <button class="btn btn-success" onclick="demoOpenJoin()">通过链接进入签约</button>
+      <hr style="margin:12px 0;border:none;border-top:1px solid #e2e8f0;">
+      <h2 style="font-size:13px;">事件日志</h2>
+      <div id="log-box" class="log-box">
+        <div class="entry"><span class="ts">--:--:--</span> 等待 SDK 就绪...</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="tab-ptahdao" class="tab-panel">
+  <div class="demo-layout">
+    <div class="iframe-wrap mobile">
+      <iframe id="ptahdao-iframe" src="https://zrxh2013.github.io/notary-sign/" allow="camera; microphone; fullscreen"></iframe>
+    </div>
+    <div class="side-panel">
+      <h2><span class="tag tag-purple">PTAHDAO</span> 信托声明签署入口配置</h2>
+      <div style="font-size:12px;color:#64748b;margin-bottom:10px;">
+        模拟从 PTAHDAO 信托管理平台（路径 <code style="background:#f1f5f9;padding:1px 4px;border-radius:4px;">/declarations</code>）
+        跳转到本系统的「受益人声明书签署公证」，有两种集成方式：
+        <span class="tag tag-blue" style="margin:2px 2px 0;">URL 跳转</span>
+        <span class="tag tag-green" style="margin:2px 2px 0;">iframe + API</span>
+      </div>
+
+      <h3>① 信托持有人信息</h3>
+      <div class="form-field"><label>信托账户 (trustAccount / ta)</label>
+        <input id="p-ta" placeholder="如：PT-2026-008251" value="PT-2026-008251" /></div>
+      <div class="form-field"><label>结算编号 (settlementNo / sn)</label>
+        <input id="p-sn" placeholder="如：SET-20260902-007" value="SET-20260902-007" /></div>
+      <div class="form-field"><label>账户结算资产 USDT (sa)</label>
+        <input id="p-sa" placeholder="如：125000" value="125000" /></div>
+      <div style="display:flex;gap:6px;">
+        <div class="form-field" style="flex:1;"><label>持有人姓名</label>
+          <input id="p-holder" placeholder="姓名" value="李振华" /></div>
+        <div class="form-field" style="flex:1;"><label>手机</label>
+          <input id="p-phone" placeholder="手机号" value="13922887766" /></div>
+      </div>
+      <div class="form-field"><label>证件号 (idcard)</label>
+        <input id="p-idcard" placeholder="身份证/护照" value="440101199208154321" /></div>
+      <div class="form-field">
+        <label>缴费状态 &nbsp;
+          <span style="font-size:11px;color:#94a3b8;">paid=1 表示 PTAHDAO 端已完成代扣，直接进房间</span>
+        </label>
+        <select id="p-paid">
+          <option value="">未缴费（进入本系统支付页）</option>
+          <option value="1">已缴费（直接进入视频房间）</option>
+        </select>
+      </div>
+
+      <h3>② 生成 PTAHDAO 跳转外链（URL GET）</h3>
+      <button class="btn btn-primary" onclick="ptahdaoBuildLink()">🔗 生成外链 URL</button>
+      <div id="p-link" class="link-box" style="display:none;">生成后显示…</div>
+      <button class="btn btn-secondary" onclick="ptahdaoOpenLink()" style="margin-top:6px;">📱 在上方手机模拟器中打开</button>
+      <button class="btn btn-warning" onclick="ptahdaoNewTab()" style="margin-top:4px;">🆕 新标签页打开（真实手机效果）</button>
+
+      <h3>③ 编程式声明入口 API（iframe + postMessage）</h3>
+      <button class="btn btn-success" onclick="ptahdaoDeclareEntry()">⚡ NotaryAPI.declareEntry()</button>
+      <div id="p-result" class="link-box" style="display:none;"></div>
+
+      <h3>④ 加密 postMessage 入口（推荐 APP 端使用）<span class="tag tag-purple" style="margin-left:6px;">AES-256-GCM</span></h3>
+      <div style="font-size:11px;color:#64748b;line-height:1.6;background:#fef3c7;padding:8px 10px;border-radius:6px;margin-bottom:8px;border:1px solid #fde68a;">
+        <b>安全机制：</b>持有人信息经 AES-256-GCM 加密后通过 postMessage 传输，避免 URL 明文暴露。<br>
+        <b>防篡改：</b>GCM tag 校验失败自动拒绝；<b>防重放：</b>payload 内置时间戳，10 分钟内有效。<br>
+        <b>origin 白名单：</b>接收端只接受 PTAHDAO APP 真实 origin 的请求。
+      </div>
+      <button class="btn btn-primary" onclick="ptahdaoDeclareEntrySecure()">🔐 declareEntrySecure (AES-GCM 加密)</button>
+      <div id="p-secure-result" class="link-box" style="display:none;"></div>
+
+      <h3>参考格式</h3>
+      <div style="font-size:11px;color:#64748b;line-height:1.6;background:#f8fafc;padding:8px;border-radius:6px;">
+        <b>URL 外链：</b><br>
+        <code style="font-size:10px;">https://zrxh2013.github.io/notary-sign/index.html?from=ptahdao&ta=PT001&sn=SET007&sa=125000&holder=李振华&phone=139...&idcard=...&paid=1</code>
+        <br><br>
+        <b>iframe API：</b><br>
+        <code style="font-size:10px;">NotaryAPI.declareEntry({ trustAccount:'PT001', settlementNo:'SET007', settlementAmount:'125000', holder:'李振华', phone:'...', paid:true })</code>
+      </div>
+
+      <hr style="margin:12px 0;border:none;border-top:1px solid #e2e8f0;">
+      <h2 style="font-size:13px;">事件日志</h2>
+      <div id="p-log" class="log-box">
+        <div class="entry"><span class="ts">--:--:--</span> PTAHDAO Demo 就绪，等待操作...</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // ===== Tab 切换 =====
+  function switchTab(name) {
+    document.querySelectorAll('.tab-btn').forEach((b,i) => b.classList.toggle('active', ['sdk','ptahdao'][i]===name));
+    document.getElementById('tab-sdk').classList.toggle('active', name==='sdk');
+    document.getElementById('tab-ptahdao').classList.toggle('active', name==='ptahdao');
+  }
+
+  // ===== 通用 SDK 通信层 =====
+  const iframe = document.getElementById('notary-iframe');
+  const logBox = document.getElementById('log-box');
+  let msgId = 0;
+  const pendingPromises = {};
+  function log(event, payload) {
+    const now = new Date();
+    const ts = String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0') + ':' + String(now.getSeconds()).padStart(2,'0');
+    const entry = document.createElement('div');
+    entry.className = 'entry';
+    entry.innerHTML = `<span class="ts">${ts}</span> <span class="event">[${event}]</span> <span class="payload">${payload ? JSON.stringify(payload).slice(0, 220) : ''}</span>`;
+    logBox.appendChild(entry);
+    logBox.scrollTop = logBox.scrollHeight;
+  }
+  window.addEventListener('message', (e) => {
+    const data = e.data;
+    if (!data) return;
+    if (data.type === 'notary-ready') { log('notary-ready', { version: data.version }); return; }
+    if (data.type === 'notary-event') { log('event:' + data.event, data.payload); return; }
+    if (data.type === 'notary-api-resp' && pendingPromises[data.id]) {
+      const { resolve, reject } = pendingPromises[data.id];
+      delete pendingPromises[data.id];
+      if (data.error) reject(new Error(data.error));
+      else resolve(data.result);
+    }
+  });
+  function callApi(action, ...args) {
+    return new Promise((resolve, reject) => {
+      const id = 'msg_' + (++msgId);
+      pendingPromises[id] = { resolve, reject };
+      iframe.contentWindow.postMessage({ type: 'notary-api', id, action, args }, '*');
+      setTimeout(() => { if (pendingPromises[id]) { delete pendingPromises[id]; reject(new Error('timeout')); } }, 15000);
+    });
+  }
+  function demoGetNotaryInfo() {
+    callApi('getNotaryInfo').then(info => {
+      const el = document.getElementById('notary-info');
+      el.style.display = 'block';
+      let feeRows = info.feeStandard.items.map(i =>
+        `<tr><td>${i.name}</td><td>${i.hkd}</td><td>${i.usdt} USDT</td></tr>`
+      ).join('');
+      el.innerHTML = `
+        <div><span class="label">公证人：</span>${info.name}（${info.org}）</div>
+        <div><span class="label">资格：</span>${info.legalBasis}</div>
+        <div><span class="label">电话：</span>${info.phone} · 热线 ${info.hotline}</div>
+        <div><span class="label">地址：</span>${info.address}</div>
+        <div><span class="label">官网：</span><a href="${info.website}" target="_blank">${info.website}</a></div>
+        <table class="fee-table"><thead><tr><th>收费项目</th><th>港元</th><th>USDT</th></tr></thead><tbody>${feeRows}<tr class="total"><td>合计</td><td>${info.feeStandard.total.hkd}</td><td>${info.feeStandard.total.usdt} USDT</td></tr></tbody></table>
+      `;
+      log('getNotaryInfo', { name: info.name });
+    }).catch(err => log('error', { error: err.message }));
+  }
+  function demoCreateMeeting() {
+    const opts = {
+      signerName: '张三', signerPhone: '13800138000', signerIdcard: '440101199001011234',
+      date: new Date().toISOString().slice(0, 10), time: '14:00',
+      topic: 'PTAHDAO信托受益人声明书签署公证',
+      paid: true, txHash: '0x' + Math.random().toString(16).slice(2).repeat(4).slice(0, 64),
+    };
+    log('create →', opts);
+    callApi('create', opts).then(result => {
+      log('create ←', result);
+      alert('会议创建成功！\n编号：' + result.caseNo + '\n签约链接：' + result.signerLink);
+    }).catch(err => log('create error', { error: err.message }));
+  }
+  function demoOpenCreate() {
+    callApi('openCreate').then(() => log('openCreate', { ok: true }));
+  }
+  function demoOpenJoin() {
+    const url = prompt('请输入签约人链接（如 #Pt028&d=... 或 ?join=...&sid=...&d=...）');
+    if (!url) return;
+    log('openJoin →', { url });
+    callApi('openJoin', url).then(result => { log('openJoin ←', result); })
+      .catch(err => log('openJoin error', { error: err.message }));
+  }
+
+  // ===== PTAHDAO 外链入口通信层 =====
+  const pIframe = document.getElementById('ptahdao-iframe');
+  const pLog = document.getElementById('p-log');
+  let pMsgId = 0;
+  const pPending = {};
+  function pLogFn(event, payload) {
+    const now = new Date();
+    const ts = String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0') + ':' + String(now.getSeconds()).padStart(2,'0');
+    const entry = document.createElement('div');
+    entry.className = 'entry';
+    entry.innerHTML = `<span class="ts">${ts}</span> <span class="event">[${event}]</span> <span class="payload">${payload ? JSON.stringify(payload).slice(0, 260) : ''}</span>`;
+    pLog.appendChild(entry);
+    pLog.scrollTop = pLog.scrollHeight;
+  }
+  window.addEventListener('message', (e) => {
+    const data = e.data;
+    if (!data) return;
+    if (e.source === pIframe.contentWindow) {
+      if (data.type === 'notary-ready') { pLogFn('ptahdao-notary-ready', { version: data.version }); return; }
+      if (data.type === 'notary-event') { pLogFn('event:' + data.event, data.payload); return; }
+      if (data.type === 'notary-api-resp' && pPending[data.id]) {
+        const { resolve, reject } = pPending[data.id];
+        delete pPending[data.id];
+        if (data.error) reject(new Error(data.error));
+        else resolve(data.result);
+      }
+    }
+  });
+  function pCallApi(action, ...args) {
+    return new Promise((resolve, reject) => {
+      const id = 'pmsg_' + (++pMsgId);
+      pPending[id] = { resolve, reject };
+      pIframe.contentWindow.postMessage({ type: 'notary-api', id, action, args }, '*');
+      setTimeout(() => { if (pPending[id]) { delete pPending[id]; reject(new Error('timeout')); } }, 15000);
+    });
+  }
+  function ptahdaoReadOpts() {
+    return {
+      trustAccount: document.getElementById('p-ta').value.trim(),
+      settlementNo: document.getElementById('p-sn').value.trim(),
+      settlementAmount: document.getElementById('p-sa').value.trim(),
+      holder: document.getElementById('p-holder').value.trim(),
+      phone: document.getElementById('p-phone').value.trim(),
+      idcard: document.getElementById('p-idcard').value.trim(),
+      paid: document.getElementById('p-paid').value,
+    };
+  }
+  // 通过 buildPTAHDaoLink API 生成外链
+  async function ptahdaoBuildLink() {
+    const opts = ptahdaoReadOpts();
+    pLogFn('buildPTAHDaoLink →', opts);
+    try {
+      const link = await pCallApi('buildPTAHDaoLink', opts);
+      const el = document.getElementById('p-link');
+      el.style.display = 'block';
+      el.textContent = link;
+      pLogFn('buildPTAHDaoLink ←', link);
+      return link;
+    } catch (e) { pLogFn('error', e.message); }
+  }
+  function ptahdaoOpenLink() {
+    const linkEl = document.getElementById('p-link');
+    if (!linkEl.textContent || linkEl.textContent.startsWith('生成后')) {
+      ptahdaoBuildLink().then(link => { if (link) { pIframe.src = link; pLogFn('open-in-simulator', link); } });
+    } else {
+      pIframe.src = linkEl.textContent;
+      pLogFn('open-in-simulator', linkEl.textContent);
+    }
+  }
+  function ptahdaoNewTab() {
+    const linkEl = document.getElementById('p-link');
+    const url = (linkEl.textContent && !linkEl.textContent.startsWith('生成后'))
+      ? linkEl.textContent
+      : 'https://zrxh2013.github.io/notary-sign/index.html?' + new URLSearchParams({ from: 'ptahdao', ...ptahdaoReadOpts() }).toString();
+    window.open(url, '_blank');
+    pLogFn('open-new-tab', url);
+  }
+  // 调用 declareEntry() 编程式进入
+  async function ptahdaoDeclareEntry() {
+    const opts = ptahdaoReadOpts();
+    const entryOpts = {
+      trustAccount: opts.trustAccount,
+      settlementNo: opts.settlementNo,
+      settlementAmount: opts.settlementAmount,
+      holder: opts.holder,
+      signerPhone: opts.phone,
+      signerIdcard: opts.idcard,
+      paid: opts.paid === '1',
+      txHash: opts.paid === '1' ? ('demo-ptahdao-' + Date.now()) : '',
+    };
+    pLogFn('declareEntry →', entryOpts);
+    try {
+      const r = await pCallApi('declareEntry', entryOpts);
+      const el = document.getElementById('p-result');
+      el.style.display = 'block';
+      el.textContent = JSON.stringify({
+        sessionId: r.sessionId, caseNo: r.caseNo, fee: '687 USDT',
+        entered: !!r.entered, paymentOpened: !!r.paymentOpened,
+        signerLink: r.signerLink, declareLink: r.declareLink,
+      }, null, 2);
+      pLogFn('declareEntry ←', { ok: true, sessionId: r.sessionId, caseNo: r.caseNo });
+    } catch (e) { pLogFn('declareEntry error', e.message); }
+  }
+
+  // ④ 加密 postMessage 入口（推荐 APP 端使用）
+  async function ptahdaoDeclareEntrySecure() {
+    const opts = ptahdaoReadOpts();
+    const entryOpts = {
+      trustAccount: opts.trustAccount,
+      settlementNo: opts.settlementNo,
+      settlementAmount: opts.settlementAmount,
+      holder: opts.holder,
+      signerName: opts.holder,         // 持有人姓名作为签署人
+      signerPhone: opts.phone,
+      signerIdcard: opts.idcard,
+      paid: opts.paid === '1',
+      txHash: opts.paid === '1' ? ('demo-ptahdao-sec-' + Date.now()) : '',
+    };
+    pLogFn('declareEntrySecure → (明文)', entryOpts);
+    try {
+      // 1. 用 SDK 加密 payload（AES-256-GCM）
+      const payload = await PtahDaoNotarySDK.encryptPayload(entryOpts);
+      pLogFn('payload encrypted', { iv: payload.iv.slice(0, 8) + '...', cipherLen: payload.cipher.length });
+
+      // 2. 通过 postMessage 调用 declareEntrySecure（接收端会解密）
+      const r = await pCallApi('declareEntrySecure', payload);
+      const el = document.getElementById('p-secure-result');
+      el.style.display = 'block';
+      el.textContent = JSON.stringify({
+        sessionId: r.sessionId, caseNo: r.caseNo, secure: !!r.secure,
+        entered: !!r.entered, paymentOpened: !!r.paymentOpened,
+        declareLink: r.declareLink,
+      }, null, 2);
+      pLogFn('declareEntrySecure ←', { ok: true, sessionId: r.sessionId, caseNo: r.caseNo, secure: r.secure });
+    } catch (e) {
+      pLogFn('declareEntrySecure error', e.message);
+      const el = document.getElementById('p-secure-result');
+      el.style.display = 'block';
+      el.textContent = '❌ ' + e.message;
+    }
+  }
+</script>
+<script src="ptahdao-embed-sdk.js"></script>
+</body>
+</html>

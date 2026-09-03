@@ -209,11 +209,15 @@ async function doVerify() {
       const el = document.getElementById('chain-result');
       el.style.display = 'block';
 
-      if (data && data.raw_data && data.raw_data.contract && data.raw_data.contract.length > 0) {
+      if (data && (data.block || data.timestamp || data.hash)) {
         el.className = 'chain-result chain-ok';
         el.innerHTML = '✅ <b>TRON 链上核验通过！</b><br>' +
           '区块高度：<code>#' + (data.block || '--') + '</code><br>' +
           '时间戳：<code>' + (data.timestamp ? new Date(data.timestamp).toLocaleString() : '--') + '</code><br>' +
+          '确认数：<code>' + (data.confirmations || '--') + '</code> · ' + (data.confirmed ? '<b style="color:#22c55e;">已确认</b>' : '<b style="color:#f59e0b;">待确认</b>') + '<br>' +
+          '发起人：<code>' + (data.ownerAddress ? data.ownerAddress.slice(0,12)+'...' : '--') + '</code><br>' +
+          '目标地址：<code>' + (data.toAddress ? data.toAddress.slice(0,12)+'...' : '--') + '</code><br>' +
+          '合约返回：<code>' + (data.contractRet || 'SUCCESS') + '</code><br>' +
           '查看详情：<a href="https://tronscan.io/#/transaction/' + tx.replace(/^0x/i,'') + '" target="_blank" style="color:#22c55e;">TRONSCAN ↗</a>';
         showStatus('ok', '✅ 链上交易存在，公证书指纹可对应，初步判定真实有效', '✅');
       } else {

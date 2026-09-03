@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- PTAHDAO 信托受益人声明书 · 公证存证标记 · 可嵌入 APP 列表/详情页 -->
+<svg xmlns="http://www.w3.org/2000/svg" width="160" height="160" viewBox="0 0 160 160">
+  <defs>
+    <linearGradient id="badgeBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fef3c7"/>
+      <stop offset="100%" stop-color="#fde68a"/>
+    </linearGradient>
+  </defs>
+  <!-- 外框 -->
+  <rect x="4" y="4" width="152" height="152" rx="12" fill="url(#badgeBg)" stroke="#d97706" stroke-width="2"/>
+  <!-- 顶部徽章 -->
+  <polygon points="80,8 88,26 108,26 92,38 98,58 80,46 62,58 68,38 52,26 72,26" fill="#dc2626" stroke="#991b1b" stroke-width="1"/>
+  <!-- 文档图标 -->
+  <g transform="translate(48 52)">
+    <rect x="0" y="0" width="64" height="72" rx="4" fill="#fff" stroke="#b45309" stroke-width="2"/>
+    <line x1="10" y1="16" x2="54" y2="16" stroke="#d97706" stroke-width="1.5"/>
+    <line x1="10" y1="26" x2="54" y2="26" stroke="#d97706" stroke-width="1.5"/>
+    <line x1="10" y1="36" x2="46" y2="36" stroke="#d97706" stroke-width="1.5"/>
+    <line x1="10" y1="46" x2="54" y2="46" stroke="#d97706" stroke-width="1.5"/>
+    <line x1="10" y1="56" x2="38" y2="56" stroke="#d97706" stroke-width="1.5"/>
+    <!-- 签名 -->
+    <path d="M 18 62 Q 28 55 38 62 T 58 60" stroke="#dc2626" stroke-width="2" fill="none" font-family="serif"/>
+  </g>
+  <!-- 底部文字 -->
+  <text x="80" y="140" text-anchor="middle" fill="#92400e" font-size="10" font-weight="800" font-family="-apple-system,sans-serif">已公证 · 链上存证</text>
+  <text x="80" y="152" text-anchor="middle" fill="#b45309" font-size="7" font-family="monospace">PTAHDAO · Notary Sign</text>
+</svg>
