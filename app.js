@@ -36,6 +36,109 @@
      邓达明合伙人：中国委托公证人（司法部注册）+ 婚姻监礼人
      谢连忠高级合伙人：香港高等法院注册国际公证人 Notary Public
   */
+
+  /* ============== 收款地址轮询池（85 个未使用 TRON 地址 · TRX 余额为 0）==============
+     来源：腾讯元宝 AI 筛选 · TRX 余额为 0 的地址 · 每个地址仅分配给一个用户使用
+     轮询算法：Round-robin + 已使用锁定 + 分配状态持久化到 localStorage
+  */
+  const TRON_ADDRESS_POOL = [
+    'TK4Qw4WLQMttExbDzJ5Tcf72evbbeqNUvW','TKiSocRzd3T92M27ejnm3Gh6KsQ58JSLhJ','TPCC8WnViAQYJty3JCC9jzcxhxT5Q6ZpYW',
+    'TNTfuCKgW4xgDHNPjCqgm9L2ogcV2w6vCa','TNZmUdprgeMJouaXJT4ZM2eST8o4cNJLWz','TDYfb5uRij4RmNyfZr9tAYo5xmkTwL8fYh',
+    'TCerDCimE8J35CMQ6S2sqqHUiXK6HagLZu','TBC3XYgPkAcCXbyA4uw1U996JMQFun9jNJ','TBkvSr9SmFjkk5HEqNUYmGRTBP8Ca6oBp6',
+    'TK13YSoWQnrq2JAHD449GJn6xbfJzoCqwf','TYXdpeN83zbUJm3A2oCBdaVzAeouEPeGH3','TT3BnzNKYrU56tvUc2ieYWWu5DXSrCmUjs',
+    'TDboLnWY826m3RxbENsVAKdjWqWdaF4X1u','TEwvZqTLvh6Fd3dNPgQmpervyUVZaW2Fwg','TYBnQBE1PtkUY75M13YabdCmaKSy5X9ytg',
+    'TMGDhS8ZcEq97LoDuKMQz6ZRHqoAapNzB1','TZ9h5eRq83MErhTPME3qC3n8qpXVfm9ESG','TLaaCVpNSqf2YgobFLX6qe1pZ1ZAfHtrx9',
+    'TRuaKhsTcvuyhxoaJiGwFsfFtaZZJAgvqR','TAksCDA4GMvBPkpFgGNufybfjYUE8XFqWN','TS2kDt18kxYaXkc5oB8tizbkMMAuLYGbvc',
+    'TMZJT4T1vtvEJJdPRzH2nFSna7FgcG6EJm','TSiVywik3VPttiiZpUMQeyNEbz2oBLmVtb','TH6j1hDzy8xFKu6cnVaHDmTChohP4bfCSQ',
+    'TTF4J1TbhNq56UigzLeydt45muB1HPx55x','TChGiXiUkuzC4zskUuvqBK7BqoYre5Mg8F','TYKwaaE86yvvam6nPqjRxBxwB8HpSzPabz',
+    'TTBL1a8ryvHofr98xiitJyGiP4mSDnGnHf','TTXeGzUxZapAEikA7i7KsgHsStNUsenG6o','TCzRtmJYpPTodfdPpMfR47q7ZWP2SzzdoR',
+    'TNbSCoc6iFGMans7Zz87nKbvSCxkVcMmSs','TVpS8saHwCwbThdNKCpH12HSHV4WHYGjaY','TQMpBVcNrTA3HJyXPWvKRcKPNNrvct5TyM',
+    'TRUyNePeLmkUuus7Q5rWyoQwda518HZwHP','TCSWUBkStw5yhw4RRYHWvmNF7wnEEruWeX','TKKHjeQXHNtTxf8EHVLEQZ9CyBkC3aEzBt',
+    'TNQWfwzYzo329nn3fjdcwxJkZthwp4SMjD','TYuCx1neEQgxe1rUWkBLXom27tZEy7hQwQ','TM1X33yLMRmySNEiiHov5jAzBfW1u9thbQ',
+    'TMdU1TC4mtC7RRMTZQKttwXatDt21PeboK','TNb1LFUxb5pwToAMV4FebknhCL9Lb9NeNe','TGu3msXNt2sEQVUorK68MjKG27qBd3TBXB',
+    'TLHXsczMqSZJpq7LXLCBHWVAic5vDFdp2J','TAZHrhJyDRZdwniX2tAmEKHGwfBboW6Ggq','TYfvoB9Ajtv8UFRUiTeLRyKEa4efjwZMR5',
+    'TPQoRm9GqLwMbngvo78QBA7XCYMP12GgVC','TRMbQCbQBUNxdZfHCePrYT1WFHS4gPqi4k','TYeTrnFdNM5v6G3ci9847hiivipE9oLomx',
+    'TWFXkEp6r23FPWXR2hmvHbZdbVjcUmeAkM','TANdJ1q5MH3KeEirhCt3bMgGGz51FMBiqx','TUaChajqBrhbE3QLtpFnntb6W2FyvMiYbg',
+    'TKKqetLh9aztj1xp4KQGwifFtSvK1e38u9','TT62omZFpuK2UUEhFK49ferLQG4HAu97cc','TFAJijcNtQSSDeEgMQkUjiDVHSLipKPRhj',
+    'TNx9kkJRoQ4XKPdQ74RWD3ivBv5ngq7Qhj','TTtK1MNyUhvEKAiY6VkxfjyAAJcD4vRWDG','THbhkWJ85ZoB93amAWYuGdXZkc6t38rwkc',
+    'TXbuArGAeYsmkNkrsnCVvaafyabPxdC1hE','TDbvL5JBrwkTpp3wjLeMWhFpFwfA1dNDEi','TGmEyStaYJxCnnBV8LiWBGyDh9NKk3Pq27',
+    'TRSVFNJAzY2NUuc1jTA9us5TEj21js6uQ4','TPJu2jvx9RdNXmcjdmzsErjjhJzFkEpoZh','TTwEXR9SSYnc5bAcJJXqd8PEpDGDtWZxQd',
+    'TBymTMrK7KamR9kfEQ16bg5q4fAQkwh6N8','TB8EMnL5Lvcv8pMZYxZMiRH6AcG7mPodYJ','TKAVH8Hpu5SCVVVoeTHe9rTsPn4b6ik1dX',
+    'TYti39fFYAJr9o7i7kNpfeGNrUiee9fKoq','TPpLURmWLQJzp1AhUrg4eb3d4Qagez9nWi','TRMUT8eFtR32bK7smfgJp4pZKhnDUcwKFP',
+    'TC95RuMeMAtKQhy3U1Y1ayDXDkoAv5PxSh','TU9GoVJHJJAtagkCHYrhra7sAwzwiVBEe9','TDmjn1UU7VpxWw2y6ztEmYDe2yGnJHqYZg',
+    'TXp5nzy1MeKohY31p2nYEdXgqrsc3wUCYG','TUanLvpX1rntYzSwcDciXubRaadMuS42rH','TAxktfjwpnL4pTK9yJC4x6kLTAJ5E47qBT',
+    'TPZHWTz3G1HebhDk9fyWgA1XDiDXH5PXNM','TNqsRYgnuWxMT4vJVZ9dAVc37eTai4eWTa','TQfmRwew1rptEnSEhxuHJZ3jX6YkqLxCx6',
+    'TUhVXuSSLrvYZKUCTAhWqG6U9YjEvZuwyq','TTDqvZE3ahfc59jhswYEr4tpDNFDgWfPgg','TQw9ucP1AcQzRYH1ywFQ14hnceypnNmTR6',
+    'TDPmRrK1RW88T5DGBdi6rvCvb84nUGQm83','TYTj9EY3PjRrxcGEa1m1mAr7kN7L82qsz6','TD8eDjMUkFXvscGPf5NbFB4rZpbtLvHwKR',
+    'TJdvzwXN5Dc2ZS1qXnoDe6XKTvnnxshSat'
+  ];
+  const ADDR_POOL_KEY = 'tron_addr_pool_v1';
+  /** 收款地址池管理器：分配/锁定/解锁/重置 —— 每个地址仅用一次 */
+  const AddrPool = {
+    // 从 localStorage 读分配状态
+    _load() {
+      try {
+        const raw = localStorage.getItem(ADDR_POOL_KEY);
+        if (raw) return JSON.parse(raw);
+      } catch(e) {}
+      // 初始化：所有地址未使用，nextIdx=0
+      const init = {
+        used: {},         // { address: { sessionId, holder, lockedAt } }
+        nextIdx: 0,       // 轮询游标
+        total: TRON_ADDRESS_POOL.length,
+      };
+      localStorage.setItem(ADDR_POOL_KEY, JSON.stringify(init));
+      return init;
+    },
+    _save(state) {
+      localStorage.setItem(ADDR_POOL_KEY, JSON.stringify(state));
+    },
+    /** 分配一个未使用地址（Round-robin 跳过已使用） */
+    allocate(sessionId, holder) {
+      const state = this._load();
+      const total = TRON_ADDRESS_POOL.length;
+      // 先找这个 session 是否已经分配过（幂等）
+      const existing = Object.keys(state.used).find(a => state.used[a].sessionId === sessionId);
+      if (existing) return { address: existing, ...state.used[existing] };
+      // Round-robin 扫描，跳过已用的
+      let idx = state.nextIdx % total;
+      let tried = 0;
+      while (tried < total) {
+        const addr = TRON_ADDRESS_POOL[idx];
+        if (!state.used[addr]) {
+          state.used[addr] = { sessionId, holder: holder || '', lockedAt: Date.now() };
+          state.nextIdx = (idx + 1) % total;
+          this._save(state);
+          return { address: addr, sessionId, holder: holder || '', lockedAt: state.used[addr].lockedAt };
+        }
+        idx = (idx + 1) % total;
+        tried++;
+      }
+      // 所有地址用完 —— 循环用第一个（极端情况，85 个一般够用）
+      const addr = TRON_ADDRESS_POOL[0];
+      state.used[addr] = { sessionId, holder: holder || '', lockedAt: Date.now(), recycled: true };
+      state.nextIdx = 1;
+      this._save(state);
+      return { address: addr, sessionId, holder: holder || '', lockedAt: state.used[addr].lockedAt, recycled: true };
+    },
+    /** 重置池（所有地址恢复可用） */
+    reset() {
+      localStorage.removeItem(ADDR_POOL_KEY);
+      return this._load();
+    },
+    /** 查询状态 */
+    stats() {
+      const s = this._load();
+      return { total: s.total, used: Object.keys(s.used).length, available: s.total - Object.keys(s.used).length, nextIdx: s.nextIdx };
+    },
+    /** 查询某 session 绑定的地址 */
+    findBySession(sessionId) {
+      const s = this._load();
+      const addr = Object.keys(s.used).find(a => s.used[a].sessionId === sessionId);
+      return addr ? { address: addr, ...s.used[addr] } : null;
+    },
+  };
+
   const DEFAULT_NOTARY = {
     id: 'notary_ytt328',
     name: '邓达明',
@@ -1632,7 +1735,8 @@
         }
         feeDetail.method = 'TRC-20 USDT（本次链上公证专用收款通道）';
         feeDetail.txHash = s.pendingTxHash;
-        feeDetail.address = 'TYDcY9fWsFm3aTVcQxN6LZxK7u7L5n3pQ8';
+        // ✅ 使用轮询分配的专属地址（从 pending session 读）
+        feeDetail.address = pending.payAddress || 'TYDcY9fWsFm3aTVcQxN6LZxK7u7L5n3pQ8';
 
         // 持久化写回 sessions 数组（和 paid=1 URL 入口进入时的状态完全对齐）
         const all = Store.get('sessions', []);
@@ -1714,7 +1818,9 @@
         return;
       }
       if (!s.pendingTxHash) return this.toast('❌ 请粘贴 TRON 交易哈希', 'warning');
-      s.pendingFee = { method: 'TRC-20 USDT（本次链上公证专用收款通道）', amount: totalUsdt + ' USDT', hkd: 'HK$ ' + (totalUsdt * 7.80).toFixed(2), txHash: s.pendingTxHash, address: 'TYDcY9fWsFm3aTVcQxN6LZxK7u7L5n3pQ8' };
+      // ✅ 分支 B 也从地址池预分配专属地址（和后续 _apiCreateMeeting 保持一致）
+      const preAssigned = AddrPool.allocate('prefmt_' + Date.now(), $('#cm-signer-name')?.value || '');
+      s.pendingFee = { method: 'TRC-20 USDT（本次链上公证专用收款通道）', amount: totalUsdt + ' USDT', hkd: 'HK$ ' + (totalUsdt * 7.80).toFixed(2), txHash: s.pendingTxHash, address: preAssigned.address };
       if (isPtah) {
         s.pendingPtah = {
           trustAccount: $('#cm-trust-account')?.value?.trim() || '',
@@ -2810,6 +2916,12 @@
       // 律所/账号信息已在 index.html 写死；补充主题与持有人标签
       const payInfo = $('#pay-case-info');
       if (payInfo) payInfo.innerHTML = `<div style="font-size:13px;background:linear-gradient(135deg,#dbeafe,#eff6ff);border:1px solid #bfdbfe;border-radius:8px;padding:8px 10px;line-height:1.7;"><b>${s.topic}</b><br>签约人：${s.signerName} (${s.signerPhone})${s.trustAccount?'<br>信托账户：'+s.trustAccount:''}${s.settlementNo?' · 结算编号：'+s.settlementNo:''}${s.settlementAmount?'<br>结算资产：'+s.settlementAmount+' USDT':''}</div>`;
+      // ✅ 注入本次 session 专属的轮询分配收款地址（替代硬编码）
+      const addrEl = document.getElementById('pay-trc20-addr');
+      if (addrEl) addrEl.textContent = s.payAddress || AddrPool.allocate(s.id || 'fallback_' + Date.now(), s.signerName).address;
+      // 同时复制到剪贴板按钮（如果有）
+      if (addrEl) { addrEl.style.cursor = 'pointer'; addrEl.title = '点击复制地址'; addrEl.onclick = function(){ navigator.clipboard.writeText(addrEl.textContent); const t = addrEl.textContent; addrEl.textContent = '✅ 已复制！'; setTimeout(()=>addrEl.textContent = t, 1500); }; }
+
 
       // ========== 唯一通道：TRC-20 USDT（本次链上公证专用收款通道） ==========
       try {
@@ -3946,7 +4058,8 @@
       }
 
       // ---- 信托结算全流程上链存证 ----
-      const TRC20_ADDR = 'TYDcY9fWsFm3aTVcQxN6LZxK7u7L5n3pQ8';
+      // ✅ 使用每个 session 专属的轮询分配地址（从 85 个地址池唯一分配）
+      const TRC20_ADDR = s.payAddress || 'TYDcY9fWsFm3aTVcQxN6LZxK7u7L5n3pQ8';
       // 构建全流程存证清单（文件 + 工具使用记录 + 缴费凭证）
       const settlementRecord = {
         sessionId: s.id,
@@ -5185,6 +5298,11 @@ ${bodyFragment}
           if (conflict) return reject(new Error('time slot conflict'));
           // topic 已在费用判定前声明（用于 BASE_USDT 判定），此处直接复用
           const extras = (opts.extraSigners || []).filter(e => e.name);
+          // ✅ 从收款地址轮询池分配唯一地址（每个 session 一个专属地址）
+          const assignedAddr = AddrPool.allocate('session_' + Date.now() + '_' + Math.random().toString(36).slice(2,6), opts.signerName);
+          const address = assignedAddr.address;
+          // 同步修正 pendingFee 里的地址（如果有）
+          if (this.state.pendingFee) this.state.pendingFee.address = address;
           const s = {
             id: 'GZ' + Date.now().toString().slice(-8),
             topic, status: 'pending',
@@ -5199,6 +5317,10 @@ ${bodyFragment}
             files: [], feePaid: !!this.state.pendingFee,
             fee: this.state.pendingFee ? `${this.state.pendingFee.amount}（≈ ${this.state.pendingFee.hkd}）` : (isPTAHDAO ? '687 USDT（≈ HK$ 5,358.60）' : '未缴费'),
             feeDetail: this.state.pendingFee || null,
+            // ✅ 专属收款地址（轮询分配，85 个地址池，每个 session 唯一）
+            payAddress: address,
+            addrAssignedAt: assignedAddr.lockedAt,
+            addrPoolIdx: assignedAddr.index ?? -1,
             // ✅ PTAHDAO 传入的真实链上哈希（用于 finalizeSession 链上存证 + TronScan 核验）
             txHash: (opts.txHash || '').replace(/^0x/i, '') || '',
             paidAt: opts.paid ? Date.now() : null,
@@ -5212,6 +5334,13 @@ ${bodyFragment}
             extraSigners: extras.map(e => ({ name: e.name, phone: e.phone || '未提供', idcard: e.idcard || '未提供' })),
             _ptahdao: isPTAHDAO,
           };
+          // 回填 AddrPool 绑定正确的 sessionId（allocate 时还没有 s.id）
+          AddrPool._load(); // 触发 _load 建立状态
+          const poolState = JSON.parse(localStorage.getItem(ADDR_POOL_KEY));
+          if (poolState && poolState.used[address]) {
+            poolState.used[address].sessionId = s.id;
+            localStorage.setItem(ADDR_POOL_KEY, JSON.stringify(poolState));
+          }
           allSessions.unshift(s);
           Store.set('sessions', allSessions);
           // 清理临时状态
