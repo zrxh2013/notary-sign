@@ -93,7 +93,7 @@
     _save(state) {
       localStorage.setItem(ADDR_POOL_KEY, JSON.stringify(state));
     },
-    /** 纯轮番分配：每次取 pool[nextIdx] 并前进，用完一轮自动从头开始，不锁定地址 */
+    /** 分配地址：取当前游标地址，不自动前进 —— 仅当该地址实际收到转账（markReceived）后才前进到下一个 */
     allocate(sessionId, holder) {
       const state = this._load();
       const total = TRON_ADDRESS_POOL.length;
@@ -101,13 +101,25 @@
       if (state.sessionMap[sessionId]) {
         return { address: state.sessionMap[sessionId], sessionId, holder: holder || '' };
       }
-      // 纯轮番：取当前游标地址，前进一位，不跳过、不锁定
+      // 取当前游标地址，不自动前进（等待 markReceived 触发才推进）
       const idx = state.nextIdx % total;
       const addr = TRON_ADDRESS_POOL[idx];
       state.sessionMap[sessionId] = addr;
-      state.nextIdx = (idx + 1) % total;  // 用完一轮自动回 0
+      // 不再 state.nextIdx = (idx + 1) % total —— 该地址未收到转账前继续复用
       this._save(state);
       return { address: addr, sessionId, holder: holder || '' };
+    },
+    /** 标记某地址已收到转账，游标前进到下一个地址（下次新 session 分配新地址） */
+    markReceived(address) {
+      const state = this._load();
+      const total = TRON_ADDRESS_POOL.length;
+      const currentAddr = TRON_ADDRESS_POOL[state.nextIdx % total];
+      // 只有当前游标指向的地址收到转账时才前进，避免重复推进
+      if (address && address === currentAddr) {
+        state.nextIdx = (state.nextIdx + 1) % total;
+        this._save(state);
+      }
+      return state.nextIdx;
     },
     /** 重置池 */
     reset() {
@@ -1724,6 +1736,10 @@
             s.pendingTxHash = hash;
             s.pendingTxVerified = 'verified_v2';
             s.pendingFeeAddr = targetAddr;
+            // ✅ 该地址已实际收到转账 → 游标前进到下一个地址（下次新 session 分配新地址）
+            if (typeof AddrPool !== 'undefined' && typeof AddrPool.markReceived === 'function') {
+              AddrPool.markReceived(targetAddr);
+            }
             this.speak('TRON链上真实验证通过，确认缴费后进入会议室。');
           } else {
             // ❌ 验证失败，展示所有错误
