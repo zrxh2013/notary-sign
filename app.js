@@ -2974,8 +2974,24 @@
       // 同步回填到 pendingCreateSession（保证 finalizeSession 读到一致地址）
       if (pendingSess && !pendingSess.payAddress) pendingSess.payAddress = displayAddr;
       if (addrEl) addrEl.textContent = displayAddr;
-      // 同时复制到剪贴板按钮（如果有）
-      if (addrEl) { addrEl.style.cursor = 'pointer'; addrEl.title = '点击复制地址'; addrEl.onclick = function(){ navigator.clipboard.writeText(addrEl.textContent); const t = addrEl.textContent; addrEl.textContent = '✅ 已复制！'; setTimeout(()=>addrEl.textContent = t, 1500); }; }
+      // 复制按钮 + 点击地址均可复制
+      const copyBtn = document.getElementById('pay-copy-addr-btn');
+      const doCopy = function() {
+        const text = addrEl ? addrEl.textContent.trim() : '';
+        if (!text) return;
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(text).then(onOk).catch(fallback);
+        } else { fallback(); }
+        function onOk() { if (copyBtn) { const old = copyBtn.textContent; copyBtn.textContent = '✅ 已复制！'; setTimeout(()=>{ if (copyBtn) copyBtn.textContent = old; }, 1500); } }
+        function fallback() {
+          const ta = document.createElement('textarea');
+          ta.value = text; document.body.appendChild(ta); ta.select();
+          try { document.execCommand('copy'); onOk(); } catch(e){}
+          document.body.removeChild(ta);
+        }
+      };
+      if (copyBtn) copyBtn.onclick = doCopy;
+      if (addrEl) { addrEl.style.cursor = 'pointer'; addrEl.title = '点击复制地址'; addrEl.onclick = doCopy; }
 
 
       // ========== 唯一通道：TRC-20 USDT（本次链上公证专用收款通道） ==========
