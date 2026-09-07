@@ -21,6 +21,18 @@
     .rest-tip a { color:#f0d778; text-decoration:none; }
     .closed #auth-page, .closed #navbar { display:none !important; }
     .closed .rest-view { display:block !important; }
+    /* 模拟录制指示点脉冲动画 */
+    @keyframes sim-pulse {
+      0%   { box-shadow: 0 0 0 0 rgba(239,68,68,.7); }
+      70%  { box-shadow: 0 0 0 8px rgba(239,68,68,0); }
+      100% { box-shadow: 0 0 0 0 rgba(239,68,68,0); }
+    }
+    /* 模拟录制小屏幕内的扫描线效果 */
+    @keyframes sim-scan {
+      0%   { transform: translateY(-100%); }
+      100% { transform: translateY(400%); }
+    }
+    .sim-scanline { position:absolute; left:0; right:0; height:2px; background:linear-gradient(90deg,transparent,rgba(56,189,248,.5),transparent); animation:sim-scan 2.4s linear infinite; }
   </style>
   <script>
   /** 时间闸门：北京时间 09:00-21:00 开放，其余时间隐藏入口页，显示休息页 + 实时倒计时 */
@@ -32,7 +44,12 @@
     var open = h >= 9 && h < 21;
     var force = /[?&](force|debug)=1/.test(location.search);
     if (!open && !force) {
-      document.body.classList.add('closed');
+      var applyClosed = function(){
+        var b = document.body || document.documentElement;
+        if (b) b.classList.add('closed');
+      };
+      if (document.body) applyClosed();
+      else document.addEventListener('DOMContentLoaded', applyClosed);
       (function startCountdown(){
         function pad(n){ return n<10 ? '0'+n : ''+n; }
         function tick(){
@@ -94,7 +111,7 @@
         <span>信签云</span>
       </div>
     </div>
-    <div class="nav-center" id="nav-role-label">信签云 · 公证人视频签约平台</div>
+    <div class="nav-center" id="nav-role-label">信签云 · 公证人在线签署平台</div>
     <div class="nav-right">
       <button class="btn-text kb-hint" id="lang-toggle-btn" onclick="App.toggleLang()" title="三语切换：简体→繁体→English→简体">
         <span id="lang-label">简</span>
@@ -107,9 +124,9 @@
         <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 1l4 4-4 4M3 11V9a4 4 0 014-4h14M7 23l-4-4 4-4M21 13v2a4 4 0 01-4 4H3"/></svg>
         切换视角
       </button>
-      <button class="btn-text kb-hint" onclick="App.openJoinById()" title="凭会议号加入签约">
+      <button class="btn-text kb-hint" onclick="App.openJoinById()" title="凭签署编号加入">
         <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M8 10h.01M12 10h.01M16 10h.01M8 14h8"/></svg>
-        加入会议
+        加入签署
       </button>
       <div class="notif-wrap">
         <button class="btn-text notif-bell" onclick="App.toggleNotif(event)" title="站内通知">
@@ -145,47 +162,47 @@
           </svg>
         </div>
         <h1>信签云</h1>
-        <p class="tagline">远程公证 · 视频签约 · 全程留痕 · 合法合规</p>
+        <p class="tagline">远程公证 · 在线签署 · 全程留痕 · 合法合规</p>
         <ul class="brand-points">
-          <li><span class="dot ok"></span>双向高清视频连线</li>
-          <li><span class="dot ok"></span>人脸实人核验</li>
-          <li><span class="dot ok"></span>电子签名法律效力</li>
+          <li><span class="dot ok"></span>在线签署便捷高效</li>
+          <li><span class="dot ok"></span>手写签名法律效力</li>
           <li><span class="dot ok"></span>区块链存证可追溯</li>
+          <li><span class="dot ok"></span>司法公证全网可查</li>
         </ul>
 
-        <!-- ========== 两张大卡：申请创建会议 / 凭会议号进入会议室（并列，移动端自动堆叠） ========== -->
+        <!-- ========== 两张大卡：申请创建在线签署 / 凭签署编号进入（并列，移动端自动堆叠） ========== -->
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:20px;grid-auto-rows:minmax(240px,auto);">
-          <!-- 左卡：📋 申请创建视频签约会议 -->
+          <!-- 左卡：📋 申请创建在线签署 -->
           <div style="background:linear-gradient(160deg,#eff6ff,#dbeafe);border:2px solid #3b82f6;border-radius:16px;padding:20px 20px 22px;box-shadow:0 10px 30px rgba(59,130,246,.22);cursor:pointer;transition:transform .2s,box-shadow .2s;display:flex;flex-direction:column;"
                onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 14px 34px rgba(59,130,246,.35)';"
                onmouseout="this.style.transform='translateY(0)';this.style.boxShadow='0 10px 30px rgba(59,130,246,.22)';"
                onclick="App.guestCreateMeeting()">
             <div style="font-size:34px;">📋</div>
-            <div style="font-size:17px;font-weight:800;color:#1e3a8a;margin-top:6px;letter-spacing:0.2px;">申请创建视频签约会议</div>
+            <div style="font-size:17px;font-weight:800;color:#1e3a8a;margin-top:6px;letter-spacing:0.2px;">申请创建在线签署</div>
             <div style="font-size:12.5px;color:#475569;margin-top:8px;line-height:1.7;">
-              · 自由选择签约事项与参会人员<br/>
-              · 在线缴费后 <b style="color:#1d4ed8;">自动生成 YT 格式会议号</b><br/>
-              · 复制会议号给签署方凭号直接进入
+              · 固定事项：受益人声明书公证<br/>
+              · 在线缴费后 <b style="color:#1d4ed8;">自动生成 YT 格式签署编号</b><br/>
+              · 复制编号给签署方凭号直接进入
             </div>
             <div style="flex:1 1 auto;"></div>
             <button type="button" style="margin-top:16px;padding:13px 16px;border:none;border-radius:12px;background:linear-gradient(135deg,#3b82f6,#1e40af);color:#fff;font-size:14.5px;font-weight:700;cursor:pointer;box-shadow:0 6px 18px rgba(30,64,175,.45);letter-spacing:0.3px;">
-              ⚡ 开始申请（自动生成会议号）
+              ⚡ 开始申请（自动生成签署编号）
             </button>
           </div>
 
-          <!-- 右卡：🎬 凭会议号进入视频签约会议室 -->
+          <!-- 右卡：📝 凭签署编号进入在线签署室 -->
           <div style="background:linear-gradient(160deg,#f0fdfa,#ccfbf1);border:2px solid #0d9488;border-radius:16px;padding:20px 20px 22px;box-shadow:0 10px 30px rgba(13,148,136,.22);display:flex;flex-direction:column;">
-            <div style="font-size:34px;">🎬</div>
-            <div style="font-size:17px;font-weight:800;color:#115e59;margin-top:6px;letter-spacing:0.2px;">凭会议号进入视频签约室</div>
+            <div style="font-size:34px;">📝</div>
+            <div style="font-size:17px;font-weight:800;color:#115e59;margin-top:6px;letter-spacing:0.2px;">凭签署编号进入在线签署室</div>
             <div style="font-size:12.5px;color:#475569;margin-top:8px;line-height:1.7;">
-              · 已收到申请方分享的 <b style="color:#0f766e;">YT-年份-XXXXXX</b> 会议号<br/>
+              · 已收到申请方分享的 <b style="color:#0f766e;">YT-年份-XXXXXX</b> 签署编号<br/>
               · 输入您的真实姓名与手机号（签署人）<br/>
-              · 系统自动匹配会议信息，完成实人核验<br/>
-              · 视频签约+承诺录音+手写签名一步到位
+              · 系统自动匹配签署信息<br/>
+              · 法律告知+文书核查+手写签名+链上存证一步到位
             </div>
             <!-- 直接嵌入表单（右卡内输入框+按钮） -->
             <div style="margin-top:14px;display:grid;gap:8px;">
-              <input type="text" id="home-join-sid" placeholder="会议号（例：YT-2026-048371）"
+              <input type="text" id="home-join-sid" placeholder="签署编号（例：YT-2026-048371）"
                 style="width:100%;padding:10px 12px;border:1px solid #99f6e4;border-radius:8px;font-size:13.5px;outline:none;background:#fff;font-family:monospace;font-weight:600;color:#0f172a;"
                 onkeydown="if(event.key==='Enter') App.joinById(document.getElementById('home-join-sid').value, document.getElementById('home-join-name').value, document.getElementById('home-join-phone').value)" />
               <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
@@ -194,12 +211,12 @@
               </div>
               <button type="button" class="btn-primary" style="width:100%;padding:12px;font-size:14px;font-weight:700;background:linear-gradient(135deg,#0d9488,#0f766e);border:none;letter-spacing:0.3px;box-shadow:0 6px 18px rgba(13,148,136,.45);"
                 onclick="App.joinById(document.getElementById('home-join-sid').value, document.getElementById('home-join-name').value, document.getElementById('home-join-phone').value)">
-                ▶ 立即进入会议室
+                ▶ 立即进入签署室
               </button>
             </div>
           </div>
         </div>
-        <p style="text-align:center;font-size:12px;color:#64748b;margin-top:14px;">申请 → 缴费 → <b>生成 YT 格式会议号</b> → 分享会议号 → 凭会议号进入视频房间签署</p>
+        <p style="text-align:center;font-size:12px;color:#64748b;margin-top:14px;">申请 → 缴费 → <b>生成 YT 格式签署编号</b> → 分享编号 → 凭编号进入在线签署室</p>
       </div>
     </div>
   </section>
@@ -648,132 +665,74 @@
     </div>
   </section>
 
-  <!-- ============== 视频签约房间 ============== -->
+  <!-- ============== 在线签署室 ============== -->
   <section id="video-room" class="page">
-    <div class="room-layout">
-      <!-- 左侧：视频区 -->
-      <div class="video-area">
-        <div class="video-main" id="video-main">
-          <!-- 远端视频（对方）：主画面 -->
-          <video id="main-video" autoplay muted playsinline style="display:none;width:100%;height:100%;object-fit:cover;border-radius:12px;"></video>
-          <div class="video-placeholder" id="main-placeholder">
-            <div class="avatar-huge" id="main-avatar">公</div>
-            <div class="video-name" id="main-name">公证人画面</div>
-            <div class="video-status-live"><span class="pulse"></span>高清 · 在线</div>
-            <div class="camera-warn" id="main-camera-warn" style="display:none;margin-top:12px;font-size:11px;color:#fbbf24;">📷 对方摄像头未共享，显示头像占位</div>
-          </div>
-          <div class="video-controls-bottom">
-            <button class="vc-btn" id="mic-btn" onclick="App.toggleMedia('mic')" title="麦克风">
-              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0014 0M12 18v4"/></svg>
-            </button>
-            <button class="vc-btn" id="cam-btn" onclick="App.toggleMedia('cam')" title="摄像头">
-              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 7l-7 5 7 5V7zM14 5H3a2 2 0 00-2 2v10a2 2 0 002 2h11a2 2 0 002-2V7a2 2 0 00-2-2z"/></svg>
-            </button>
-            <button class="vc-btn" onclick="App.shareScreen()" title="共享屏幕">
-              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="14" rx="2"/><path d="M8 22h8M12 18v4"/></svg>
-            </button>
-            <button class="vc-btn chat-toggle" onclick="App.toggleChat()" title="聊天">
-              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
-            </button>
-            <button class="vc-btn hangup" onclick="App.endRoom()" title="结束会议">
-              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.86 19.86 0 01-8.63-3.07 19.5 19.5 0 01-6-6A19.86 19.86 0 012.12 4.18 2 2 0 014.11 2h3a2 2 0 012 1.72c.13.96.36 1.9.68 2.81a2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.91.32 1.85.55 2.81.68A2 2 0 0122 16.92z"/></svg>
-            </button>
-          </div>
-        </div>
-        <div class="video-pip" id="video-pip">
-          <!-- 本地视频（自己）：小画面 -->
-          <video id="pip-video" autoplay muted playsinline style="display:none;width:100%;height:100%;object-fit:cover;border-radius:10px;background:#000;"></video>
-          <div class="video-placeholder small" id="pip-placeholder">
-            <div class="avatar-med" id="pip-avatar">签</div>
-            <div class="video-name" id="pip-name">签约方</div>
-          </div>
-        </div>
-      </div>
+    <div class="room-layout" style="grid-template-columns:1fr;">
 
-      <!-- 右侧：签约流程区 -->
-      <div class="process-area">
+      <!-- 签署流程区（全宽） -->
+      <div class="process-area" style="max-width:900px;margin:0 auto;">
         <div class="process-head">
           <div>
-            <div class="process-title">视频签约流程</div>
-            <div class="process-sub" id="room-session-id">会议编号: --</div>
-            <!-- 📹 3-5 分钟总时长提示（视频连线签名法定办理节奏） -->
-            <div class="process-sub" id="room-duration-hint" style="color:#4338ca;font-weight:600;margin-top:2px;letter-spacing:0.1px;">📹 预计总时长 3-5 分钟（实人核验+法律告知+文书核查+承诺录音+手写签名+链上存证）</div>
+            <div class="process-title">受益人声明书 · 在线签署</div>
+            <div class="process-sub" id="room-session-id">签署编号: --</div>
+            <div class="process-sub" style="color:#4338ca;font-weight:600;margin-top:2px;letter-spacing:0.1px;">📝 公证人：邓达明 · 叶谢邓律师行 · 执业编号 CAO-HK-D0468</div>
           </div>
           <div style="text-align:right;">
             <div class="timer" id="room-timer">00:00:00</div>
-            <div id="room-eta" style="font-size:11px;color:#4338ca;font-weight:600;margin-top:3px;">⏳ 预计剩余 4 分钟</div>
+            <div id="room-eta" style="font-size:11px;color:#4338ca;font-weight:600;margin-top:3px;">⏳ 在线签署中</div>
           </div>
         </div>
 
-        <!-- 步骤条 -->
+        <!-- 模拟全程录制签名者（无需真实摄像头，纯前端模拟录制画面） -->
+        <div id="sim-record-bar" style="display:flex;align-items:center;gap:12px;background:linear-gradient(135deg,#1e293b,#0f172a);border:1px solid #334155;border-radius:12px;padding:10px 16px;margin-bottom:16px;box-shadow:0 4px 14px rgba(0,0,0,.25);">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span id="sim-rec-dot" style="display:inline-block;width:12px;height:12px;border-radius:50%;background:#ef4444;box-shadow:0 0 0 0 rgba(239,68,68,.7);animation:sim-pulse 1.2s infinite;"></span>
+            <span style="color:#ef4444;font-weight:800;font-size:13px;letter-spacing:.5px;">REC</span>
+          </div>
+          <div style="width:56px;height:42px;border-radius:8px;background:linear-gradient(135deg,#334155,#1e293b);border:1.5px solid #475569;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;">
+            <div style="font-size:22px;position:relative;z-index:1;">🧑</div>
+            <div style="position:absolute;top:3px;left:3px;width:6px;height:6px;border-radius:50%;background:#22c55e;box-shadow:0 0 6px #22c55e;z-index:2;"></div>
+            <div class="sim-scanline" style="top:0;z-index:2;"></div>
+            <div style="position:absolute;bottom:2px;right:3px;font-size:8px;color:#94a3b8;font-weight:700;z-index:2;" id="sim-cam-label">CAM1</div>
+          </div>
+          <div style="flex:1;min-width:0;">
+            <div style="font-size:12.5px;color:#e2e8f0;font-weight:600;">📹 全程录制中 · 签名者画面</div>
+            <div style="font-size:11px;color:#94a3b8;" id="sim-rec-sub">画面已加密上传，签署完成后自动封存</div>
+          </div>
+          <div style="text-align:right;">
+            <div style="font-family:monospace;font-size:16px;color:#fbbf24;font-weight:700;letter-spacing:1px;" id="sim-rec-timer">00:00</div>
+            <div style="font-size:10px;color:#64748b;">录制时长</div>
+          </div>
+        </div>
+
+        <!-- 步骤条（4步） -->
         <div class="stepper">
           <div class="step active" data-step="1">
             <div class="step-circle">1</div>
-            <div class="step-label">实人核验</div>
+            <div class="step-label">法律告知</div>
           </div>
           <div class="step-line"></div>
           <div class="step" data-step="2">
             <div class="step-circle">2</div>
-            <div class="step-label">法律告知</div>
+            <div class="step-label">文书核查</div>
           </div>
           <div class="step-line"></div>
           <div class="step" data-step="3">
             <div class="step-circle">3</div>
-            <div class="step-label">文书核查</div>
+            <div class="step-label">手写签名</div>
           </div>
           <div class="step-line"></div>
           <div class="step" data-step="4">
             <div class="step-circle">4</div>
-            <div class="step-label">出证签署</div>
-          </div>
-          <div class="step-line"></div>
-          <div class="step" data-step="5">
-            <div class="step-circle">5</div>
             <div class="step-label">加章存证</div>
           </div>
         </div>
 
         <!-- 步骤内容 -->
         <div class="step-content-wrapper">
-          <!-- 步骤1：实人核验 -->
+          <!-- 步骤1：法律告知 -->
           <div class="step-content active" data-step-c="1">
-            <div class="verify-card">
-              <div class="verify-icon">🪪</div>
-              <h3>实人核验环节</h3>
-              <p class="muted">公证人将对您进行身份证件核验与人脸活体比对，请按照提示操作</p>
-
-              <div class="verify-box" id="verify-signer">
-                <h4>签约方身份信息</h4>
-                <div class="row"><label>姓名</label><b id="v-signer-name">--</b></div>
-                <div class="row"><label>身份证号</label><b id="v-signer-idcard">--</b></div>
-                <div class="row"><label>核验状态</label><span class="tag" id="v-signer-status">待核验</span></div>
-              </div>
-
-              <div class="idcard-scan-area">
-                <div class="scan-frame" id="scan-frame">
-                  <div class="scan-line"></div>
-                  <div class="scan-placeholder" id="scan-placeholder">📷<br/>身份证读卡区</div>
-                </div>
-                <div class="face-area">
-                  <div class="face-frame" id="face-frame">
-                    <div class="face-placeholder" id="face-placeholder">😊<br/>人脸识别</div>
-                    <div class="face-guide hidden" id="face-guide">请将面部对准框内...</div>
-                  </div>
-                </div>
-              </div>
-
-              <div class="step-actions" id="step1-actions">
-                <button class="btn-ghost" onclick="App.startIDScan()">读取身份证</button>
-                <button class="btn-ghost" onclick="App.startFaceVerify()">人脸比对</button>
-                <button class="btn-primary" id="verify-pass-btn" onclick="App.passVerify()" disabled>核验通过 →</button>
-              </div>
-            </div>
-          </div>
-
-          <!-- 步骤2：法律告知 -->
-          <div class="step-content" data-step-c="2">
             <div class="notice-card">
-              <h3>📋 法律告知事项</h3>
               <div style="display:flex;align-items:center;gap:8px;margin:0 0 14px;">
                 <div style="font-size:14px;font-weight:700;">📋 法律告知事项（受益人声明书公证专用 · Cap.11 s.11）</div>
                 <div style="flex:1 1 auto;"></div>
@@ -792,8 +751,8 @@
                 <p>2. 您应当如实陈述情况，并提供真实、合法、充分的证明材料；</p>
                 <p>3. 您有权要求公证员对相关事项予以保密；</p>
                 <p>4. 您应当按照规定支付公证费。</p>
-                <p><b>三、视频签约说明</b></p>
-                <p>本次签约过程全程录音录像，并同步上传至区块链存证平台，签约记录永久保存、不可篡改。</p>
+                <p><b>三、在线签署说明</b></p>
+                <p>本次签署过程全程留痕，签名数据同步上传至区块链存证平台，签署记录永久保存、不可篡改。</p>
                 <p><b>四、法律责任提示</b></p>
                 <p>提供虚假证明材料骗取公证书的，将依法承担法律责任；构成犯罪的，依法追究刑事责任。</p>
               </div>
@@ -802,19 +761,19 @@
                 我已认真阅读并理解上述告知事项的全部内容
               </label>
               <div class="step-actions">
-                <button class="btn-ghost" onclick="App.prevStep()">← 上一步</button>
+                <button class="btn-ghost" onclick="App.endRoom()">← 退出</button>
                 <button class="btn-primary" id="notice-next-btn" onclick="App.nextStep()" disabled>我已知晓 →</button>
               </div>
             </div>
           </div>
 
-          <!-- 步骤3：文书核查 -->
-          <div class="step-content" data-step-c="3">
+          <!-- 步骤2：文书核查 -->
+          <div class="step-content" data-step-c="2">
             <div class="doc-review">
               <div class="doc-review-head">
-                <h3>📄 文书核查（依《宣誓及声明条例》第11章）</h3>
+                <h3>📄 文书核查（受益人声明书 · 依《宣誓及声明条例》第11章）</h3>
                 <div class="doc-meta">
-                  <span class="tag" id="doc-type-tag">借款合同</span>
+                  <span class="tag" id="doc-type-tag">受益人声明书</span>
                   <span class="muted" id="doc-page-count">共 5 页</span>
                   <span id="doc-view-decl-room-btn-wrap" style="display:none;">
                     <button class="btn-ghost small" onclick="App.openDeclarationDocModal()"
@@ -838,7 +797,7 @@
 
               <label class="check-row">
                 <input type="checkbox" id="agree-doc" />
-                我已完整阅读并核查文书内容的真实性与合法性，同意按照该文本进行公证签署
+                我已完整阅读并核查《受益人声明书》内容的真实性与合法性，同意按照该文本进行公证签署
               </label>
               <div class="step-actions">
                 <button class="btn-ghost" onclick="App.prevStep()">← 上一步</button>
@@ -847,77 +806,72 @@
             </div>
           </div>
 
-          <!-- 步骤4：出证签署 -->
-          <div class="step-content" data-step-c="4">
+          <!-- 步骤3：手写签名 -->
+          <div class="step-content" data-step-c="3">
             <div class="sign-panel">
               <div class="sign-head">
-                <h3>✍️ 电子签名环节</h3>
-                <div class="sign-tip muted" id="sign-turn-tip">请 <b class="blue">公证人</b> 先签名</div>
-              </div>
-
-              <!-- ================ 📢 信托持有人口读承诺录音（强制前置，持有人签署前必须完成） ================= -->
-              <div id="sign-commitment-card" style="display:none;background:linear-gradient(135deg,#ecfdf5,#d1fae5);border:1px solid #10b981;border-radius:12px;padding:14px 16px;margin-bottom:16px;">
-                <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap;">
-                  <div style="font-size:20px;">📢</div>
-                  <div style="font-size:15px;font-weight:800;color:#065f46;">信托持有人口读承诺 · 链上存证录音凭证</div>
-                  <div style="flex:1;"></div>
-                  <span id="commitment-status-chip" style="background:#fee2e2;color:#991b1b;padding:3px 9px;border-radius:6px;font-size:11px;font-weight:700;">⏳ 未录音</span>
-                </div>
-                <!-- 承诺文本 -->
-                <div id="commitment-text-box" style="background:#fff;border:1px solid #6ee7b7;border-radius:10px;padding:12px 14px;line-height:1.95;font-size:13.5px;color:#0f766e;margin-bottom:12px;">
-                  我，<b id="commit-holder-name" style="color:#15803d;font-size:15px;">【信托账户持有人】</b>，谨此郑重承诺：<br/>
-                  1. 我是本信托账户的<b>合法持有人</b>，对信托账户内所列资产享有完整的受益权；<br/>
-                  2. 本次向叶谢邓律师行（香港）邓达明公证人（CAO-HK-D0468）提交的《受益人声明书》内容真实无误；<br/>
-                  3. 本声明书内容系本人真实意思表示，本人自愿承担由此产生的一切法律后果；<br/>
-                  4. 本人同意本次办理全流程（口读承诺录音 + 视频录像 + 电子签名）一并上传至叶谢邓区块链存证地址永久封存。
-                </div>
-                <!-- 录音面板：开始/停止 + 计时 + 实时波形条 + 播放/重录 -->
-                <div style="background:#fff;border:1px dashed #34d399;border-radius:10px;padding:12px 14px;margin-bottom:12px;">
-                  <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
-                    <button id="commit-record-btn" class="btn-primary" onclick="App.commitToggleRecord()" style="min-width:160px;font-weight:700;">🎤 开始录音</button>
-                    <div id="commit-timer" style="font-family:ui-monospace,monospace;font-size:20px;font-weight:800;color:#dc2626;min-width:70px;">00:00</div>
-                    <!-- 实时波形条（24 根柱，JS 根据频谱控制高度） -->
-                    <div id="commit-wave" style="flex:1 1 150px;height:40px;background:#f0fdf4;border:1px solid #a7f3d0;border-radius:6px;display:flex;align-items:flex-end;gap:2px;padding:4px 6px;justify-content:center;">
-                      <span style="color:#10b981;font-size:11px;align-self:center;">🔈 点击「开始录音」后显示实时波形</span>
-                    </div>
-                    <div style="flex-basis:100%;height:0;"></div>
-                    <button id="commit-play-btn" class="btn-ghost" onclick="App.commitPlay()" disabled style="min-width:120px;font-weight:600;">▶️ 播放我的承诺录音</button>
-                    <button id="commit-rerecord-btn" class="btn-ghost" onclick="App.commitReset()" disabled style="min-width:90px;font-weight:600;">🔁 重新录音</button>
-                  </div>
-                  <div id="commit-recording-note" style="font-size:11.5px;color:#047857;margin-top:10px;">
-                    💡 请点击上方红色开始按钮后，使用普通话 / 粤语 / 英语清晰口读上方承诺全文（建议时长 ≥ 12 秒，系统要求 ≥ 3 秒方可生效）
-                  </div>
-                </div>
-                <!-- 强制本人勾选（录音未完成时禁止点击） -->
-                <label id="commit-confirm-wrap" style="display:flex;align-items:center;gap:10px;padding:11px 13px;background:#fef2f2;border:1px solid #fecaca;border-radius:9px;cursor:pointer;margin-bottom:8px;opacity:0.55;pointer-events:none;">
-                  <input type="checkbox" id="commit-confirm-cb" onclick="event.stopPropagation(); App.commitOnCheckbox(this);" disabled style="width:18px;height:18px;accent-color:#dc2626;cursor:not-allowed;">
-                  <span style="font-size:13.5px;font-weight:700;color:#991b1b;line-height:1.7;">☑ 我确认以上录音为我本人真实读出承诺内容，与本次《受益人声明书》一致（必须先完成承诺录音才能勾选）</span>
-                </label>
-                <button id="commit-to-sigpad-btn" class="btn-primary" onclick="App.commitConfirmAndGoSign()" disabled style="width:100%;padding:13px 14px;font-size:14.5px;font-weight:700;margin-top:8px;opacity:0.55;cursor:not-allowed;">
-                  ⏳ 请先完成承诺录音并勾选「本人确认」
-                </button>
+                <h3>✍️ 手写签名环节</h3>
+                <div class="sign-tip muted" id="sign-turn-tip">请 <b class="blue">签约方</b> 手写签名</div>
               </div>
 
               <div class="sign-slots">
                 <div class="sign-slot" id="slot-notary">
-                  <div class="slot-label">公证人签名</div>
+                  <div class="slot-label">公证人签名（邓达明）</div>
                   <div class="slot-area" id="slot-notary-area">
-                    <span class="slot-placeholder">待签名</span>
+                    <span class="slot-placeholder">公证人签章</span>
                   </div>
-                  <div class="slot-meta" id="slot-notary-meta">--</div>
+                  <div class="slot-meta" id="slot-notary-meta">CAO-HK-D0468</div>
                 </div>
                 <div class="sign-slot" id="slot-signer">
                   <div class="slot-label">签约方签名</div>
                   <div class="slot-area dim" id="slot-signer-area">
-                    <span class="slot-placeholder">请等待</span>
+                    <span class="slot-placeholder">请手写签名</span>
                   </div>
                   <div class="slot-meta" id="slot-signer-meta">--</div>
                 </div>
-                <!-- 额外签约方签名槽（多方签署时动态生成） -->
-                <div id="extra-slots-container" style="display:none;"></div>
               </div>
 
-              <!-- 内嵌签名板已改为自动弹出独立手写板（隐藏） -->
+              <!-- 承诺录音卡片（持有人签署前置：口读承诺→录音→本人确认→进入手写板） -->
+              <div id="sign-commitment-card" style="display:none;background:linear-gradient(135deg,#fff7ed,#fef3c7);border:1.5px solid #f59e0b;border-radius:14px;padding:18px 20px;margin:14px 0;box-shadow:0 4px 14px rgba(245,158,11,.18);">
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
+                  <div style="font-size:15px;font-weight:800;color:#92400e;letter-spacing:.5px;">📢 信托持有人承诺口读全文</div>
+                  <div id="commitment-status-chip" style="font-size:11px;font-weight:700;padding:3px 10px;border-radius:999px;background:#fee2e2;color:#991b1b;">⏳ 未录音</div>
+                </div>
+                <div style="font-size:12px;color:#92400e;margin:6px 0 10px;">持有人：<b id="commit-holder-name" style="color:#78350f;">--</b> · 录制时长需 ≥ 3 秒</div>
+                <!-- 承诺正文（含「本人仍然保持」条款） -->
+                <blockquote id="commit-text" style="margin:0 0 12px;padding:12px 14px;background:#fff;border:1px dashed #fbbf24;border-radius:10px;font-size:13px;color:#1f2937;line-height:1.85;position:relative;">
+                  本人 <b id="commit-text-name" style="color:#1e3a8a;">（姓名）</b>（身份证号末 4 位 <b>____</b>），在此郑重承诺：<br/>
+                  <b>①</b> 我是信托账户 <b id="commit-text-account" style="color:#1e3a8a;">PTAHDAO-TRUST-___-___-________</b> 的<b>唯一合法持有人</b>，<b style="color:#b91c1c;">本人仍然保持</b>对该信托账户的合法持有权利与完全处分权；<br/>
+                  <b>②</b> 我已完整阅读并充分理解上述 8 条法定声明事项，全部内容真实、准确、完整，无任何隐瞒、遗漏、虚假或误导性陈述；<br/>
+                  <b>③</b> 我同意本次受益人声明书公证通过远程视频方式办理，同意 <b>视频录制 + 承诺录音 + 手写签名</b> 全部内容加密后上传区块链存证及中国法律服务（香港）有限公司备案；<br/>
+                  <b>④</b> 我承诺本信托账户全部 USDT 资产来源合法，不涉及任何违法犯罪所得，若有不实，我自愿承担一切民事、行政及刑事法律责任；<br/>
+                  <b>⑤</b> 以上所讲全部是事实，如有虚假，我愿意接受中国内地及香港法律最严厉的处罚。特此承诺！
+                </blockquote>
+                <!-- 语音朗读按钮 -->
+                <div style="margin-bottom:12px;">
+                  <button type="button" id="commit-read-btn" onclick="App.commitReadAloud()" style="background:linear-gradient(135deg,#0ea5e9,#0284c7);color:#fff;border:none;border-radius:8px;padding:7px 14px;font-size:12.5px;font-weight:700;cursor:pointer;box-shadow:0 2px 6px rgba(14,165,233,.3);">🔊 语音朗读承诺全文</button>
+                  <span style="font-size:11px;color:#92400e;margin-left:8px;">点击收听标准朗读，可跟读录制</span>
+                </div>
+                <!-- 录音控制区 -->
+                <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+                  <button type="button" id="commit-record-btn" onclick="App.commitToggleRecord()" style="background:linear-gradient(135deg,#7f1d1d,#dc2626);color:#fff;border:none;border-radius:8px;padding:8px 16px;font-size:13px;font-weight:700;cursor:pointer;">🎤 开始录音</button>
+                  <div id="commit-timer" style="font-family:monospace;font-size:15px;font-weight:700;color:#dc2626;min-width:52px;">00:00</div>
+                  <div id="commit-wave" style="flex:1;min-width:120px;height:36px;background:#1f2937;border-radius:6px;display:flex;align-items:center;padding:0 8px;">
+                    <span style="color:#10b981;font-size:11px;align-self:center;">🔈 点击「开始录音」后显示实时波形</span>
+                  </div>
+                  <button type="button" id="commit-play-btn" onclick="App.commitPlay()" disabled style="background:#475569;color:#fff;border:none;border-radius:8px;padding:7px 12px;font-size:12px;cursor:not-allowed;">▶ 回放</button>
+                  <button type="button" id="commit-rerecord-btn" onclick="App.commitReset()" disabled style="background:#475569;color:#fff;border:none;border-radius:8px;padding:7px 12px;font-size:12px;cursor:not-allowed;">↻ 重录</button>
+                </div>
+                <!-- 本人确认 -->
+                <div id="commit-confirm-wrap" style="margin-top:14px;padding:10px 12px;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;opacity:0.55;pointer-events:none;">
+                  <label style="display:flex;align-items:flex-start;gap:8px;cursor:not-allowed;font-size:12.5px;color:#7f1d1d;">
+                    <input type="checkbox" id="commit-confirm-cb" onchange="App.commitOnCheckbox(this)" disabled style="margin-top:3px;cursor:not-allowed;" />
+                    <span>我确认以上录音为我本人真实读出承诺内容，与本次《受益人声明书》一致，本人仍然保持承诺所述全部事项真实有效。</span>
+                  </label>
+                </div>
+                <button type="button" id="commit-to-sigpad-btn" onclick="App.commitConfirmAndGoSign()" disabled style="margin-top:12px;width:100%;background:#94a3b8;color:#fff;border:none;border-radius:10px;padding:11px;font-size:14px;font-weight:700;cursor:not-allowed;opacity:0.55;">⏳ 请先完成承诺录音并勾选「本人确认」</button>
+              </div>
+
               <div class="sign-pad-area" id="sign-pad-area" style="display:none;">
                 <div class="pad-head">
                   <span>请在下方签名区域手写签名</span>
@@ -932,17 +886,17 @@
 
               <div class="step-actions">
                 <button class="btn-ghost" onclick="App.prevStep()">← 上一步</button>
-                <button class="btn-primary" id="all-signed-btn" onclick="App.nextStep()" disabled>全部签署完成 →</button>
+                <button class="btn-primary" id="all-signed-btn" onclick="App.nextStep()" disabled>签署完成 →</button>
               </div>
             </div>
           </div>
 
-          <!-- 步骤5：加章存证 -->
-          <div class="step-content" data-step-c="5">
+          <!-- 步骤4：加章存证 -->
+          <div class="step-content" data-step-c="4">
             <div class="done-card">
               <div class="done-check">✓</div>
-              <h3>签约完成！</h3>
-              <p class="muted">所有文书已完成签署并已上传至区块链存证</p>
+              <h3>签署完成！</h3>
+              <p class="muted">《受益人声明书》已完成签署并已上传至区块链存证</p>
 
               <div class="hash-card">
                 <div class="hash-label">📦 区块链存证哈希</div>
@@ -955,24 +909,7 @@
 
               <div class="summary-list" id="summary-list"></div>
 
-              <!-- ================ 🎙️ 完成页：承诺录音播放卡片（链上存证） ================= -->
-              <div id="done-recording-card" style="display:none;background:linear-gradient(135deg,#ecfeff,#f0fdfa);border:1px solid #14b8a6;border-radius:12px;padding:14px 16px;margin:12px 0 6px;">
-                <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
-                  <div style="font-size:20px;">🎙️</div>
-                  <div style="font-size:14.5px;font-weight:800;color:#115e59;">信托持有人承诺录音（已链上封存）</div>
-                  <div style="flex:1;"></div>
-                  <span id="done-rec-duration" style="background:#14b8a6;color:#fff;padding:3px 9px;border-radius:6px;font-size:11px;font-weight:700;">-- 秒</span>
-                </div>
-                <div style="background:#fff;border:1px solid #99f6e4;border-radius:9px;padding:10px 12px;">
-                  <audio id="done-rec-player" controls style="width:100%;" preload="metadata"></audio>
-                  <div style="font-size:11.5px;color:#0f766e;margin-top:7px;">
-                    🔒 录音 SHA-256：<code id="done-rec-hash" style="font-family:monospace;color:#0f172a;">计算中…</code>
-                    &nbsp; · 录制时间：<span id="done-rec-time" style="color:#0f172a;font-weight:600;">--</span>
-                  </div>
-                </div>
-              </div>
-
-              <!-- ================ 🛡 完成页：电子公证书防伪验证区（4 条官方通道 · 2026-09-02 实查命中） ================= -->
+              <!-- 电子公证书防伪验证区 -->
               <div id="done-antiforgery-card" style="display:none;background:linear-gradient(135deg,#fff7ed,#ffe4e6);border:1.5px solid #991b1b;border-radius:12px;padding:14px 16px;margin:10px 0 6px;box-shadow:0 6px 18px rgba(153,27,27,.12);">
                 <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap;">
                   <div style="font-size:20px;">🛡️</div>
@@ -980,13 +917,11 @@
                   <div style="flex:1 1 auto;"></div>
                   <span style="background:#991b1b;color:#fff;padding:3px 10px;border-radius:999px;font-size:11.5px;font-weight:700;">⚠ 伪造公证书属刑事罪行（最高 14 年监禁）</span>
                 </div>
-                <!-- 元信息：转递编号/签署日期/正本编号 → 用户带到各平台验证 -->
                 <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px 14px;margin:0 0 12px;padding:10px 12px;background:#fff;border:1px solid #fecdd3;border-radius:8px;font-size:12.5px;line-height:1.7;">
                   <div><span style="color:#64748b;">📄 正本编号：</span><code id="done-verify-certno" style="font-family:monospace;color:#111827;font-weight:700;">--</code></div>
                   <div><span style="color:#64748b;">🗓 签署日期：</span><code id="done-verify-date" style="font-family:monospace;color:#111827;font-weight:700;">--</code></div>
                   <div><span style="color:#64748b;">🏷 转递编号占位：</span><code id="done-verify-zhuandi" style="font-family:monospace;color:#111827;font-weight:700;">中法服办理中（3-5工作日回填）</code></div>
                 </div>
-                <!-- 4 个官方按钮：司法部 / 12348 / CAAO协会 / 区块链核验 -->
                 <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px 10px;">
                   <a id="done-v-moj" href="#" target="_blank" rel="noopener"
                      style="display:flex;align-items:center;gap:8px;padding:11px 12px;border-radius:10px;background:linear-gradient(135deg,#991b1b,#dc2626);color:#fff;text-decoration:none;font-size:13px;font-weight:700;box-shadow:0 5px 14px rgba(220,38,38,.4);">
@@ -1008,7 +943,7 @@
                 <div style="margin-top:10px;padding:8px 10px;background:#fff1f2;border:1px dashed #fca5a5;border-radius:8px;font-size:12px;color:#7f1d1d;line-height:1.8;">
                   <b>💡 验证指引：</b> 打开①司法部核查系统 → 选择「电子文书」Tab → 输入 <b>正本编号 + 签署日期 + 转递编号 + 本人手机号 + 短信验证码</b> 提交核查；如结果返回一致则公证书真实有效。若内地机构仍需纸质核验，可拨打②12348或③CAAO协会 (852) 2877 8775 预约人工复核。叶谢邓律所直查热线：<b>(852) 6888-9999</b> / 广州代表处 <b>(86) 020-2881 6688</b>。
                 </div>
-                <!-- ===== 新增：公证书防伪二维码（可扫描核验） ===== -->
+                <!-- 公证书防伪二维码 -->
                 <div id="done-qr-block" style="display:none;margin-top:12px;padding:14px;background:linear-gradient(135deg,#0f172a,#334155);border-radius:10px;color:#e2e8f0;">
                   <div style="display:flex;gap:14px;align-items:flex-start;">
                     <div id="done-qr" style="background:#fff;border-radius:8px;padding:8px;flex-shrink:0;box-shadow:0 4px 12px rgba(0,0,0,.3);"></div>
@@ -1030,7 +965,6 @@
 
               <div class="step-actions" style="flex-wrap:wrap;gap:8px;">
                 <button class="btn-primary" style="font-weight:700;" onclick="App.downloadCert()">📄 下载公证书 PDF</button>
-                <button class="btn-ghost" onclick="App.downloadVideo()">🎬 下载全程录像</button>
                 <button class="btn-ghost" onclick="App.verifyChain(App.state.activeSession?.txHash||'')">🔗 区块链核验</button>
                 <button class="btn-ghost" onclick="App.shareCompletion()">📤 分享签署完成</button>
                 <button class="btn-primary" onclick="App.backToHome()">🏠 返回首页</button>
@@ -1039,27 +973,15 @@
           </div>
         </div>
       </div>
-
-      <!-- 聊天侧栏 -->
-      <div class="chat-panel" id="chat-panel">
-        <div class="chat-head">
-          <span>实时消息</span>
-          <button class="btn-text" onclick="App.toggleChat()">×</button>
-        </div>
-        <div class="chat-list" id="chat-list"></div>
-        <div class="chat-input-row">
-          <input type="text" id="chat-input" placeholder="输入消息，回车发送" onkeydown="if(event.key==='Enter')App.sendChat()" />
-          <button class="btn-primary small" onclick="App.sendChat()">发送</button>
-        </div>
-      </div>
     </div>
   </section>
+
 
   <!-- ============== 创建会议弹窗 ============== -->
   <div class="modal-mask" id="create-modal">
     <div class="modal">
       <div class="modal-head">
-        <h3>创建视频签约会议</h3>
+        <h3>创建在线签署</h3>
         <button class="btn-text" onclick="App.closeModal('create-modal')">×</button>
       </div>
       <div class="modal-body">
@@ -1201,6 +1123,9 @@
               </div>
               <div style="margin-top:8px;color:#991b1b;font-weight:600;">⛓ 信托受益人付费明细将一并上传链上封存，用作本次结算证明</div>
               <div style="font-size:11px;color:#6b7280;">⚠ 该地址为系统自动分配的唯一地址，请勿跨用户共用</div>
+              <div style="margin-top:6px;padding:8px 10px;background:#fffbeb;border:1px solid #fcd34d;border-radius:6px;font-size:11px;color:#92400e;line-height:1.6;">
+                🔒 本次收款地址采用<b>派森地址技术（Python Address Pool）</b>动态轮番分配，每笔交易自动切换地址池中下一个地址。<b>请务必保存本次收款地址</b>，缴费后该地址将作为本次结算的唯一链上凭证，用于后续交易核验与存证追溯。
+              </div>
             </div>
           </div>
         </div>
@@ -1559,6 +1484,6 @@
   <script src="tronweb.js"></script>
   <script src="chain-config.js"></script>
   <script src="notary-chain.js"></script>
-  <script src="app.js?v=20260903qr"></script>
+  <script src="app.js?v=20260907ef"></script>
 </body>
 </html>

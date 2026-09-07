@@ -3,7 +3,9 @@
     "@noble/curves": "^2.4.0",
     "@noble/hashes": "^2.4.0",
     "@noble/secp256k1": "^3.2.0",
+    "bip39": "^3.1.0",
+    "ethers": "^6.17.0",
     "solc": "^0.8.20",
-    "tronweb": "^6.0.0"
+    "tronweb": "^6.5.0"
   }
 }

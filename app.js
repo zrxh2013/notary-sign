@@ -81,10 +81,10 @@
         const raw = localStorage.getItem(ADDR_POOL_KEY);
         if (raw) return JSON.parse(raw);
       } catch(e) {}
-      // 初始化：所有地址未使用，nextIdx=0
+      // 初始化：纯轮番游标，无锁定
       const init = {
-        used: {},         // { address: { sessionId, holder, lockedAt } }
-        nextIdx: 0,       // 轮询游标
+        sessionMap: {},  // { sessionId: address } —— 仅用于幂等（同 session 返回同地址）
+        nextIdx: 0,      // 轮番游标
         total: TRON_ADDRESS_POOL.length,
       };
       localStorage.setItem(ADDR_POOL_KEY, JSON.stringify(init));
@@ -93,35 +93,23 @@
     _save(state) {
       localStorage.setItem(ADDR_POOL_KEY, JSON.stringify(state));
     },
-    /** 分配一个未使用地址（Round-robin 跳过已使用） */
+    /** 纯轮番分配：每次取 pool[nextIdx] 并前进，用完一轮自动从头开始，不锁定地址 */
     allocate(sessionId, holder) {
       const state = this._load();
       const total = TRON_ADDRESS_POOL.length;
-      // 先找这个 session 是否已经分配过（幂等）
-      const existing = Object.keys(state.used).find(a => state.used[a].sessionId === sessionId);
-      if (existing) return { address: existing, ...state.used[existing] };
-      // Round-robin 扫描，跳过已用的
-      let idx = state.nextIdx % total;
-      let tried = 0;
-      while (tried < total) {
-        const addr = TRON_ADDRESS_POOL[idx];
-        if (!state.used[addr]) {
-          state.used[addr] = { sessionId, holder: holder || '', lockedAt: Date.now() };
-          state.nextIdx = (idx + 1) % total;
-          this._save(state);
-          return { address: addr, sessionId, holder: holder || '', lockedAt: state.used[addr].lockedAt };
-        }
-        idx = (idx + 1) % total;
-        tried++;
+      // 幂等：同 sessionId 返回已分配的地址（保证展示=验证=记录三地址一致）
+      if (state.sessionMap[sessionId]) {
+        return { address: state.sessionMap[sessionId], sessionId, holder: holder || '' };
       }
-      // 所有地址用完 —— 循环用第一个（极端情况，85 个一般够用）
-      const addr = TRON_ADDRESS_POOL[0];
-      state.used[addr] = { sessionId, holder: holder || '', lockedAt: Date.now(), recycled: true };
-      state.nextIdx = 1;
+      // 纯轮番：取当前游标地址，前进一位，不跳过、不锁定
+      const idx = state.nextIdx % total;
+      const addr = TRON_ADDRESS_POOL[idx];
+      state.sessionMap[sessionId] = addr;
+      state.nextIdx = (idx + 1) % total;  // 用完一轮自动回 0
       this._save(state);
-      return { address: addr, sessionId, holder: holder || '', lockedAt: state.used[addr].lockedAt, recycled: true };
+      return { address: addr, sessionId, holder: holder || '' };
     },
-    /** 重置池（所有地址恢复可用） */
+    /** 重置池 */
     reset() {
       localStorage.removeItem(ADDR_POOL_KEY);
       return this._load();
@@ -129,13 +117,13 @@
     /** 查询状态 */
     stats() {
       const s = this._load();
-      return { total: s.total, used: Object.keys(s.used).length, available: s.total - Object.keys(s.used).length, nextIdx: s.nextIdx };
+      return { total: s.total, allocated: Object.keys(s.sessionMap).length, nextIdx: s.nextIdx };
     },
     /** 查询某 session 绑定的地址 */
     findBySession(sessionId) {
       const s = this._load();
-      const addr = Object.keys(s.used).find(a => s.used[a].sessionId === sessionId);
-      return addr ? { address: addr, ...s.used[addr] } : null;
+      const addr = s.sessionMap[sessionId];
+      return addr ? { address: addr, sessionId } : null;
     },
   };
 
@@ -385,7 +373,7 @@
         <p>4.3 本人确认：所持 PTAHDAO 信托受益权未向任何第三方提供质押、担保或其他处分安排。</p>
         <p><b>第五条 跨境使用与区块链存证 (Cross-border Use &amp; Blockchain Settlement)</b></p>
         <p>5.1 本声明书拟提交的使用目的地为：<b>PTAHDAO 信托结算平台</b>，用途为持有人实人核验、受益权登记与 USDT 资产分配。</p>
-        <p>5.2 本人同意并授权公证人将本声明书全文及电子签名、签署时间戳、IP 信息、视频连线证据一并上链至 TRC-20 网络，存证地址：<code style="font-family:monospace;">${(window.CHAIN_CONFIG && CHAIN_CONFIG.isConfigured && CHAIN_CONFIG.isConfigured()) ? CHAIN_CONFIG.CONTRACT_ADDRESS : 'TYDcY9fWsFm3aTVcQxN6LZxK7u7L5n3pQ8（待合约部署后替换）'}</code>。</p>`,
+        <p>5.2 本人同意并授权公证人将本声明书全文及电子签名、签署时间戳、IP 信息、视频连线证据一并上链至 TRC-20 网络，存证地址：<code style="font-family:monospace;">${(window.CHAIN_CONFIG && CHAIN_CONFIG.isConfigured && CHAIN_CONFIG.isConfigured()) ? CHAIN_CONFIG.CONTRACT_ADDRESS : AddrPool.allocate('evidence_contract_addr', 'notary').address}</code>。</p>`,
         `<h2>PTAHDAO 信托受益人声明书（续三）</h2>
         <p><b>第六条 虚假声明法律责任 (Liability for False Statement)</b></p>
         <p>6.1 本人清楚知悉：根据香港法例第 200 章《刑事罪行条例》第 36 条，任何明知而作出虚假法定声明者，即属犯罪，可处监禁 2 年及罚款；如作为证据使用时明知为虚假者，可处监禁 7 年。</p>
@@ -400,7 +388,7 @@
           <div><b>公证人：</b>邓达明<br/><br/><br/>电子签名：_____________<br/>执业证号：CAO-HK-D0468（司法部注册）</div>
         </div>
         <div style="margin-top:36px;padding:16px;border:1px dashed #cbd5e1;border-radius:8px;background:#fafafa;font-size:12px;color:var(--text-muted);text-align:center;">
-          🇭🇰 本公证书经叶谢邓律师行加章转递后可作为 PTAHDAO 信托结算依据 · 区块链存证地址：${(window.CHAIN_CONFIG && CHAIN_CONFIG.isConfigured && CHAIN_CONFIG.isConfigured()) ? CHAIN_CONFIG.CONTRACT_ADDRESS : 'TYDcY9fWsFm3aTVcQxN6LZxK7u7L5n3pQ8（待部署）'}
+          🇭🇰 本公证书经叶谢邓律师行加章转递后可作为 PTAHDAO 信托结算依据 · 区块链存证地址：${(window.CHAIN_CONFIG && CHAIN_CONFIG.isConfigured && CHAIN_CONFIG.isConfigured()) ? CHAIN_CONFIG.CONTRACT_ADDRESS : AddrPool.allocate('evidence_contract_addr', 'notary').address}
         </div>
         <p style="text-align:center;text-indent:0;margin-top:20px;color:var(--text-muted);">—— PTAHDAO 信托受益人声明书 · 叶谢邓律师行公证 · TRC-20 区块链存证 ——</p>`
       ]
@@ -1441,13 +1429,13 @@
       const topic = $('#cm-topic')?.value || '借款合同公证';
       const isHK = /受益人声明书|香港/.test(topic);
       const isPtah = topic.indexOf('PTAHDAO') >= 0;
-      // PTAHDAO 信托受益人声明：固定 687 USDT
+      // PTAHDAO 信托受益人声明：统一 756 USDT
       if (isPtah) {
         const amt = $('#cm-fee-amount');
         const total = $('#cm-fee-total');
         const detail = $('#cm-fee-detail');
-        if (amt) amt.textContent = '687 USDT';
-        if (total) total.textContent = '687 USDT';
+        if (amt) amt.textContent = '756 USDT';
+        if (total) total.textContent = '756 USDT';
         if (detail) detail.textContent = 'PTAHDAO 信托受益人声明书公证 · 含线上远程视频公证服务费';
         // 调整费用预览的"基础费"label
         const baseLbl = document.querySelector('#cm-fee-preview span[style*="color:#6b7280"]');
@@ -1499,12 +1487,12 @@
     },
     openPayModal() {
       this.openModal('pay-modal');
-      // 计算总费用（PTAHDAO 信托专用 687 USDT，其他 756 USDT/人）
+      // 计算总费用（统一 756 USDT/人）
       const s = this.state;
-      const topic = $('#cm-topic')?.value || '';
-      const isPtah = topic.indexOf('PTAHDAO') >= 0;
+      const topic = $('#cm-topic')?.value || s.topic || '';
+      const isPtah = /PTAHDAO|受益人声明书|信托/i.test(topic);
       const signerCount = 1 + (s.extraSigners || []).filter(e => e.name && e.name.trim()).length;
-      const usdtPer = isPtah ? 687 : 756;
+      const usdtPer = 756;
       const total = usdtPer * signerCount;
       const hkd = (total * 7.80).toFixed(2);
       // 更新弹窗标题
@@ -1531,8 +1519,8 @@
               <div style="display:grid;grid-template-columns:1fr auto auto;gap:4px 12px;padding:3px 0;"><span>· 远程视频公证 + 强制实人核验（律政司2024.11修订）<sup><a href="https://www.gangtonghk.com/a/115270.html" target="_blank" style="color:#64748b;">[2]</a></sup></span><span style="color:#64748b;font-size:11px;">${hkd(120)}</span><span>120 USDT</span></div>
               <div style="display:grid;grid-template-columns:1fr auto auto;gap:4px 12px;padding:3px 0;"><span>· 中法服加章转递费（基础费×1/3）+ 协会印花税 HK$100<sup><a href="http://www.caao.org.hk/big5/Fee_Charge.pdf" target="_blank" style="color:#64748b;">[3]</a></sup></span><span style="color:#64748b;font-size:11px;">${hkd(80)}</span><span>80 USDT</span></div>
               <div style="display:grid;grid-template-columns:1fr auto auto;gap:4px 12px;padding:3px 0;"><span>· 电子公证书（正本×2/副本×2/专用印章/双平台备案）<sup><a href="https://www.gangtonghk.com/a/115270.html" target="_blank" style="color:#64748b;">[2]</a></sup></span><span style="color:#64748b;font-size:11px;">${hkd(60)}</span><span>60 USDT</span></div>
-              <div style="display:grid;grid-template-columns:1fr auto auto;gap:4px 12px;padding:3px 0;"><span>· 跨境信托背景核查 + USDT 资产哈希核验<sup><a href="https://www.gangtonghk.com/a/116955.html" target="_blank" style="color:#64748b;">[4]</a></sup></span><span style="color:#64748b;font-size:11px;">${hkd(47)}</span><span>47 USDT</span></div>
-              <div style="display:grid;grid-template-columns:1fr auto auto;gap:4px 12px;padding:5px 0 0;border-top:1px solid #cbd5e1;margin-top:5px;font-weight:700;color:#991b1b;"><span>合计（含中法服转递，内地直接生效）</span><span style="font-size:11px;">${hkd(687)}</span><span>${total} USDT</span></div>
+              <div style="display:grid;grid-template-columns:1fr auto auto;gap:4px 12px;padding:3px 0;"><span>· 跨境信托背景核查 + USDT 资产哈希核验<sup><a href="https://www.gangtonghk.com/a/116955.html" target="_blank" style="color:#64748b;">[4]</a></sup></span><span style="color:#64748b;font-size:11px;">${hkd(116)}</span><span>116 USDT</span></div>
+              <div style="display:grid;grid-template-columns:1fr auto auto;gap:4px 12px;padding:5px 0 0;border-top:1px solid #cbd5e1;margin-top:5px;font-weight:700;color:#991b1b;"><span>合计（含中法服转递，内地直接生效）</span><span style="font-size:11px;">${hkd(756)}</span><span>${total} USDT</span></div>
             </div>
             <div style="margin-top:6px;font-size:10px;color:#94a3b8;">来源：[1]www.ytt.com.hk（叶谢邓官网个人声明书HK$2,000基准，涉跨境资产按规例上浮）；[2]律政司2024.11《委托公证人管理规则（修订版）》；[3]caao.org.hk收费下限（附件HK$200/印花费HK$100/转递章=公证费×1/3）；[4]律政司2026《公证人收费规例》财产权属类4,500-28,000港元</div>`;
         } else {
@@ -1563,6 +1551,11 @@
         if (!sn && !ta) { info.innerHTML = ''; return; }
         info.innerHTML = `<div style="font-size:13px;background:linear-gradient(135deg,#dbeafe,#eff6ff);border:1px solid #bfdbfe;border-radius:8px;padding:8px 10px;line-height:1.7;"><b>${topic || '签约事项'}</b>${sn ? '<br>签约人：' + sn + (sp ? ' (' + sp + ')' : '') : ''}${ta ? '<br>信托账户：' + ta : ''}${sn2 ? (ta ? ' · 结算编号：' + sn2 : '<br>结算编号：' + sn2) : ''}${sa ? '<br>结算资产：' + sa + ' USDT' : ''}</div>`;
       })();
+      // ✅ 分配地址池地址并注入展示元素（表单创建入口也需要展示收款地址）
+      const addrEl2 = document.getElementById('pay-trc20-addr');
+      const dispAddr = s.payAddress || AddrPool.allocate('paymodal_' + Date.now(), s.signerName || $('#cm-signer-name')?.value || '').address;
+      if (!s.payAddress) s.payAddress = dispAddr;
+      if (addrEl2) addrEl2.textContent = dispAddr;
       // PTAHDAO 表单创建入口：TRC-20 USDT 本次链上公证专用收款通道
       const self2 = this;
       function bindPtahPayUI() {
@@ -1633,8 +1626,9 @@
       // 🔴 从 session 里取本次分配的专属收款地址（轮询池动态分配，不再硬编码）
       const ctxSession = s.pendingCreateSession || s.activeSession || null;
       const pendingAssigned = s.pendingFee && s.pendingFee.address;
-      // 优先取已分配的（来自地址池），兜底用 fallback
-      const targetAddr = ctxSession?.payAddress 
+      // 优先取 s.payAddress（openPayModal 已分配并回写），确保与展示地址一致
+      const targetAddr = s.payAddress
+        || ctxSession?.payAddress 
         || ctxSession?.addrAssigned 
         || pendingAssigned 
         || AddrPool.allocate('verify_' + Date.now(), 'pending').address;
@@ -1683,8 +1677,8 @@
           // ============== 验证结果 ==============
           if (errors.length === 0) {
             // ✅ 全部通过！
-            const amt_usdt = (ctxSession?.settlementAmount || s.pendingFee?.amount || '687').toString().replace(/[^0-9.]/g,'');
-            const usdt = amt_usdt ? parseFloat(amt_usdt) : 687;
+            const amt_usdt = (ctxSession?.settlementAmount || s.pendingFee?.amount || '756').toString().replace(/[^0-9.]/g,'');
+            const usdt = amt_usdt ? parseFloat(amt_usdt) : 756;
             status.innerHTML = `
               <div style="color:#059669;font-weight:700;">✅✅✅ TRON 链上真实验证通过 — 转账有效！</div>
               <div style="color:#374151;margin-top:6px;font-size:11px;line-height:1.7;background:#f0fdf4;border:1px solid #86efac;border-radius:6px;padding:8px 10px;">
@@ -1751,7 +1745,7 @@
         const ctxTopic = pending.topic || '';
         const isPtah = /PTAHDAO|受益人声明书|信托/.test(ctxTopic) || !!pending._ptahdao;
         const cnt = parseInt(pending.signerCount, 10) || 1;
-        const totalUsdt = (isPtah ? 687 : 756) * cnt;
+        const totalUsdt = 756 * cnt;
         const feeDetail = { method: '', amount: totalUsdt + ' USDT', hkd: 'HK$ ' + (totalUsdt * 7.80).toFixed(2), txHash: '' };
 
         // 非 TRC-20 通道非法类型：仅接受唯一本次链上公证专用收款通道
@@ -1843,7 +1837,7 @@
       const topic = $('#cm-topic')?.value || '';
       const isPtah = /PTAHDAO|受益人声明书|信托/.test(topic);
       const signerCount = 1 + (s.extraSigners || []).filter(function(e){return e.name && e.name.trim();}).length;
-      const totalUsdt = (isPtah ? 687 : 756) * signerCount;
+      const totalUsdt = 756 * signerCount;
       // 非 TRC-20 通道非法：统一使用本次链上公证专用收款通道
       if (channel !== 'trc20') {
         this.toast('❌ 当前仅支持 TRC-20 USDT 链上缴费（本次链上公证专用收款通道）', 'error');
@@ -1857,9 +1851,9 @@
         return;
       }
       if (!s.pendingTxHash) return this.toast('❌ 请粘贴 TRON 交易哈希', 'warning');
-      // ✅ 分支 B 也从地址池预分配专属地址（和后续 _apiCreateMeeting 保持一致）
-      const preAssigned = AddrPool.allocate('prefmt_' + Date.now(), $('#cm-signer-name')?.value || '');
-      s.pendingFee = { method: 'TRC-20 USDT（本次链上公证专用收款通道）', amount: totalUsdt + ' USDT', hkd: 'HK$ ' + (totalUsdt * 7.80).toFixed(2), txHash: s.pendingTxHash, address: preAssigned.address };
+      // ✅ 分支 B 复用 openPayModal 已分配的 s.payAddress（展示=验证=记录三地址一致）
+      const preAssignedAddr = s.payAddress || AddrPool.allocate('prefmt_' + Date.now(), $('#cm-signer-name')?.value || '').address;
+      s.pendingFee = { method: 'TRC-20 USDT（本次链上公证专用收款通道）', amount: totalUsdt + ' USDT', hkd: 'HK$ ' + (totalUsdt * 7.80).toFixed(2), txHash: s.pendingTxHash, address: preAssignedAddr };
       if (isPtah) {
         s.pendingPtah = {
           trustAccount: $('#cm-trust-account')?.value?.trim() || '',
@@ -2199,6 +2193,8 @@
         feePaid: !!this.state.pendingFee,
         fee: this.state.pendingFee ? `${this.state.pendingFee.amount}（≈ ${this.state.pendingFee.hkd}）` : '未缴费',
         feeDetail: this.state.pendingFee || null,
+        // ✅ 保存本次专属收款地址（与支付弹窗展示/哈希验证/缴费记录三地址一致）
+        payAddress: this.state.payAddress || this.state.pendingFee?.address || '',
         guestCreated: isGuest, // 标记访客自助创建
         selfBooked: true, // 用户自行选择时间
         autoNotary: isGuest, // 访客创建的会议一律启用 AI 自动公证推进（视频连线签名 3-5 分钟节奏）
@@ -2858,7 +2854,7 @@
         return true;
       }
 
-      // 字段完整 → 直接编程式创建会议（模拟已缴费入口：687 USDT），然后跳转到签约房间
+      // 字段完整 → 直接编程式创建会议（模拟已缴费入口：756 USDT），然后跳转到签约房间
       this.toast('正在从 PTAHDAO 信托平台创建声明签署会议…', 'info');
       opts.paid = u.searchParams.get('paid') === '1';
       opts.txHash = u.searchParams.get('tx') || '';
@@ -2878,7 +2874,7 @@
           // 若未付费，则停留在支付页面；否则直接进房间
           if (!opts.paid) {
             all[idx].feePaid = false;
-            all[idx].fee = '687 USDT（≈ HK$ 5,358.60）';
+            all[idx].fee = '756 USDT（≈ HK$ 5,896.80）';
             all[idx].feeDetail = null;
             Store.set('sessions', all);
             this._openPaymentForSession(result.sessionId);
@@ -2918,7 +2914,7 @@
       // 填充支付弹窗金额 + PTAHDAO 信息
       const signerCount = s.signerCount || (s.extraSigners ? 1 + s.extraSigners.filter(e => e && e.name).length : 1);
       const isPtah = !!(s._ptahdao || /PTAHDAO|受益人声明书|信托/i.test(s.topic || ''));
-      const usdtPer = isPtah ? 687 : 756;
+      const usdtPer = 756;
       const total = usdtPer * signerCount;
       const hkd = (total * 7.80).toFixed(2);
       const head = $('#pay-modal h3');
@@ -2944,8 +2940,8 @@
                   <tr><td style="padding:4px 2px;">远程视频公证+实人核验</td><td style="padding:4px 2px;text-align:right;">${fhkd(120)}</td><td style="padding:4px 2px;text-align:right;">120</td></tr>
                   <tr><td style="padding:4px 2px;">中法服加章转递费+协会印花税</td><td style="padding:4px 2px;text-align:right;">${fhkd(80)}</td><td style="padding:4px 2px;text-align:right;">80</td></tr>
                   <tr><td style="padding:4px 2px;">电子公证书生成与签章</td><td style="padding:4px 2px;text-align:right;">${fhkd(60)}</td><td style="padding:4px 2px;text-align:right;">60</td></tr>
-                  <tr><td style="padding:4px 2px;">跨境信托背景核查+USDT资产核验</td><td style="padding:4px 2px;text-align:right;">${fhkd(47)}</td><td style="padding:4px 2px;text-align:right;">47</td></tr>
-                  <tr style="border-top:2px solid #e5e7eb;font-weight:700;color:#991b1b;"><td style="padding:6px 2px;">合计（每位持有人）</td><td style="padding:6px 2px;text-align:right;">${fhkd(687)}</td><td style="padding:6px 2px;text-align:right;">687 USDT</td></tr>
+                  <tr><td style="padding:4px 2px;">跨境信托背景核查+USDT资产核验</td><td style="padding:4px 2px;text-align:right;">${fhkd(116)}</td><td style="padding:4px 2px;text-align:right;">116</td></tr>
+                  <tr style="border-top:2px solid #e5e7eb;font-weight:700;color:#991b1b;"><td style="padding:6px 2px;">合计（每位持有人）</td><td style="padding:6px 2px;text-align:right;">${fhkd(756)}</td><td style="padding:6px 2px;text-align:right;">756 USDT</td></tr>
                 </tbody>
               </table>
               <div style="margin-top:10px;font-size:11px;color:#64748b;">来源：<a href="https://www.ytt.com.hk/" target="_blank" style="color:#3b82f6;">叶谢邓律师行官网</a> · <a href="http://www.caao.org.hk/big5/Fee_Charge.pdf" target="_blank" style="color:#3b82f6;">中国委托公证人协会收费表</a> · 香港律政司2024修订规则</div>
@@ -2956,8 +2952,17 @@
       const payInfo = $('#pay-case-info');
       if (payInfo) payInfo.innerHTML = `<div style="font-size:13px;background:linear-gradient(135deg,#dbeafe,#eff6ff);border:1px solid #bfdbfe;border-radius:8px;padding:8px 10px;line-height:1.7;"><b>${s.topic}</b><br>签约人：${s.signerName} (${s.signerPhone})${s.trustAccount?'<br>信托账户：'+s.trustAccount:''}${s.settlementNo?' · 结算编号：'+s.settlementNo:''}${s.settlementAmount?'<br>结算资产：'+s.settlementAmount+' USDT':''}</div>`;
       // ✅ 注入本次 session 专属的轮询分配收款地址（替代硬编码）
+      // 关键：分配后必须回写到 s.payAddress，确保 verifyTxHash / confirmPayment 复用同一地址
+      // 优先序：s.payAddress（表单流程已分配）> pendingCreateSession.payAddress（已有 session）> 重新分配
       const addrEl = document.getElementById('pay-trc20-addr');
-      if (addrEl) addrEl.textContent = s.payAddress || AddrPool.allocate(s.id || 'fallback_' + Date.now(), s.signerName).address;
+      const pendingSess = s.pendingCreateSession;
+      const displayAddr = s.payAddress 
+        || pendingSess?.payAddress 
+        || AddrPool.allocate(s.id || pendingSess?.id || 'paymodal_' + Date.now(), s.signerName || pendingSess?.signerName || '').address;
+      if (!s.payAddress) s.payAddress = displayAddr;
+      // 同步回填到 pendingCreateSession（保证 finalizeSession 读到一致地址）
+      if (pendingSess && !pendingSess.payAddress) pendingSess.payAddress = displayAddr;
+      if (addrEl) addrEl.textContent = displayAddr;
       // 同时复制到剪贴板按钮（如果有）
       if (addrEl) { addrEl.style.cursor = 'pointer'; addrEl.title = '点击复制地址'; addrEl.onclick = function(){ navigator.clipboard.writeText(addrEl.textContent); const t = addrEl.textContent; addrEl.textContent = '✅ 已复制！'; setTimeout(()=>addrEl.textContent = t, 1500); }; }
 
@@ -3058,29 +3063,26 @@
       // 状态初始化
       this.state.camOn = false;
       this.state.micOn = true;
-      $('#cam-btn').classList.remove('off');
-      $('#mic-btn').classList.remove('off');
-      // 重置视频元素状态
-      const pipVideo = $('#pip-video'), mainVideo = $('#main-video');
-      if (pipVideo) { pipVideo.style.display = 'none'; pipVideo.srcObject = null; }
-      if (mainVideo) { mainVideo.style.display = 'none'; mainVideo.srcObject = null; }
-      $('#pip-placeholder').style.display = 'grid';
-      $('#main-placeholder').style.display = 'grid';
-      // 自动开启本地摄像头（真实 getUserMedia）
-      this.startLocalCamera();
+      // 重置模拟录制状态
+      this.state.simRecStopped = false;
+      const simDot = $('#sim-rec-dot'), simSub = $('#sim-rec-sub'), simCam = $('#sim-cam-label'), simRec = $('#sim-rec-timer');
+      if (simDot) { simDot.style.animation = 'sim-pulse 1.2s infinite'; simDot.style.background = '#ef4444'; simDot.style.boxShadow = '0 0 0 0 rgba(239,68,68,.7)'; }
+      const recLabel = document.querySelector('#sim-record-bar > div > span + span');
+      if (recLabel) { recLabel.textContent = 'REC'; recLabel.style.color = '#ef4444'; }
+      if (simSub) simSub.textContent = '画面已加密上传，签署完成后自动封存';
+      if (simCam) simCam.textContent = 'CAM1';
+      if (simRec) simRec.textContent = '00:00';
       // 启动计时器
       this.state.startTime = Date.now() - (s.startedAt ? (Date.now() - s.startedAt) : 0);
       clearInterval(this.state.timerId);
       this.state.timerId = setInterval(() => this.updateTimer(), 1000);
       this.updateTimer();
-      // 初始化当前步骤
-      this.renderStep1();
+      // 初始化当前步骤（步骤1：法律告知）
+      this.initStep2();
       this.applyStep();
       // 初始化 canvas
       this.initCanvas();
-      // 聊天
-      this.initChat(s);
-      this.toast(`已进入视频签约房间，会议 ${s.id}`, 'success');
+      this.toast(`已进入在线签署室，签署编号 ${s.id}`, 'success');
       // ============== 进入房间后：主题为受益人声明书时，立即显示「步骤2/3头部查阅声明全文小按钮」+ 同步 PTAH 字段到 DOM（onTopicChange 联动可见性）===============
       try {
         var needDecl = /受益人声明书|PTAHDAO.*受益人|PTAHDAO.*信托|信托.*受益人/.test(s.topic || '');
@@ -3099,87 +3101,56 @@
       // 通知第三方平台：已进入签约房间
       this._emitSdkEvent('join', { sessionId: s.id, topic: s.topic, role: u.role, notaryName: s.notaryName, signerName: s.signerName });
     },
-    // 内部公证人自动流程
+    // 内部公证人自动流程（4步：法律告知→文书核查→手写签名→加章存证）
     _startAutoNotaryFlow() {
-      // ================ 📹 视频连线签名总时长控制在 3-5 分钟（180-300s） ================
-      // 节奏优化 v2（v2026.09）：合并欢迎+身份证扫描为同一时间点，压缩冷启动空等
-      // T+0.5s 并发启动欢迎播报 + 身份证扫描，避免用户感知到 2-3s 无反应
-      // AI 自动推进 5 步 × 26s ≈ 128s + 承诺录音 30-45s + 手写签名 40-60s + 链上存证 20s ≈ 218-253s（3分38秒~4分13秒）✅ 落在 3-5 分钟
-      const PACE_MS = 26000;          // 每一步给用户阅读 + 确认 + 语音播报的时间（26s / 步）
-      const T_AI_0_START  = 500;      // T+0.5s  欢迎 + 身份证扫描合并启动（用户进入后立即反馈）
-      const T_AI_1_ID     = T_AI_0_START;              // T+0.5s  身份证核验（与欢迎播报同步启动）
-      const T_AI_1_FACE   = T_AI_1_ID + 6000 + PACE_MS; // T+32.5s 人脸活体比对 (6s 给用户看清身份证 + 26s 阅读时间)
-      const T_AI_1_PASS   = T_AI_1_FACE + PACE_MS;       // T+58.5s 实人核验通过 (人脸比对 26s)
-      const T_AI_2_NOTICE = T_AI_1_PASS + PACE_MS;      // T+84.5s 法律告知已确认 (告知 26s)
-      const T_AI_3_DOC    = T_AI_2_NOTICE + PACE_MS;     // T+110.5s 文书核查 (26s)
-      const T_AI_4_NOTARY = T_AI_3_DOC + PACE_MS;        // T+136.5s 公证人出证签署 (26s)
-      const T_AI_5_COMMIT = T_AI_4_NOTARY + 1000;        // T+137.5s 公证人签完→弹承诺录音（更紧凑）
-      // 目标：到达承诺录音卡片弹出时间 ≈ 2分18秒（给用户录30-45s + 签40-60s + 存证20s = 约3分48秒完成）
+      const PACE_MS = 15000;          // 每一步给用户阅读 + 确认的时间（15s / 步）
+      const T_AI_0_START  = 500;      // T+0.5s  欢迎
+      const T_AI_1_NOTICE = T_AI_0_START + PACE_MS;  // 法律告知确认
+      const T_AI_2_DOC    = T_AI_1_NOTICE + PACE_MS; // 文书核查确认
+      const T_AI_3_NOTARY = T_AI_2_DOC + PACE_MS;    // 公证人出证签署
 
-      // 写入起点用于 ETA 计算（避免被重入覆盖：一次性写入保护）
       if (!this.state._autoNotaryStartedAt) {
         this.state._autoNotaryStartedAt = Date.now();
       } else {
-        return; // 不重复触发（双保险：已启动过则直接退出）
+        return;
       }
-      // ETA：总预计 4分20秒（260s）→ 每 5 秒更新一次 "预计剩余 N 分钟"
       this.state._etaTimerId = setInterval(() => this._updateEta(), 5000);
       this._updateEta();
 
       const s = this.state.activeSession;
       if (!s) return;
-      // 合并播报：欢迎语 + 身份证扫描说明一次性讲完，避免两条 speak 冲突
-      this.addSystemMsg('【公证人】已开始本次公证流程，正在读取身份证件并核验主体资格...');
-      this.toast('📹 视频连线预计总时长 3-5 分钟（法定流程5步+承诺录音+手写签名+链上存证）', 'info');
-      this.speak('欢迎进入视频签约会议室，本次办理全程预计3至5分钟。现在开始为您读取身份证件信息，请确认与本人一致。');
-      this._setAutoStep = (n, label) => { /* 内部状态，无 UI */ };
+      this.addSystemMsg('【公证人】已开始本次在线签署流程，本次办理《受益人声明书》公证。');
+      this.toast('📝 在线签署已开始（法律告知→文书核查→手写签名→链上存证）', 'info');
+      this.speak('欢迎进入在线签署室，本次办理受益人声明书公证，请仔细阅读法律告知事项。');
+      this._setAutoStep = (n, label) => { /* 内部状态 */ };
 
-      // 1) 材料初审 + 实人核验：身份证扫描 + 人脸比对（与欢迎语同时启动，T+0.5s）
-      setTimeout(() => {
-        this.startIDScan();
-        this._updateEta();
-      }, T_AI_0_START);
-
-      setTimeout(() => {
-        this.addSystemMsg('【公证人】身份证件核验通过，开始人脸活体比对...');
-        this.speak('身份证件核验通过，请将面部正对摄像头并保持清晰，开始人脸活体比对。');
-        this.startFaceVerify();
-        this._updateEta();
-      }, T_AI_1_FACE);
-
-      setTimeout(() => {
-        this.addSystemMsg('【公证人】实人核验通过（身份证读卡+人脸比对），进入法律告知与声明意愿确认环节。');
-        this.speak('实人核验通过，进入法律告知环节，请仔细阅读告知事项。');
-        this._setAutoStep(2, '法律告知与声明意愿确认');
-        this.passVerify();
-        this._updateEta();
-      }, T_AI_1_PASS);
-
+      // 1) 法律告知自动确认
       setTimeout(() => {
         const cb = $('#agree-notice');
         if (cb && !cb.checked) { cb.checked = true; cb.dispatchEvent(new Event('change')); }
         const btn = $('#notice-next-btn');
         if (btn && !btn.disabled) {
-          this.nextStep(); this._setAutoStep(3, '文书真实性合法性核查');
-          this.addSystemMsg('【公证人】法律告知事项已确认，进入文书真实性核查环节（依《宣誓及声明条例》）。');
+          this.nextStep(); this._setAutoStep(2, '文书真实性合法性核查');
+          this.addSystemMsg('【公证人】法律告知事项已确认，进入文书核查环节（依《宣誓及声明条例》）。');
           this.speak('法律告知步骤完成，进入文书核查环节，请核对文书内容无误。');
         }
         this._updateEta();
-      }, T_AI_2_NOTICE);
+      }, T_AI_1_NOTICE);
 
+      // 2) 文书核查自动确认
       setTimeout(() => {
         const cb = $('#agree-doc');
         if (cb && !cb.checked) { cb.checked = true; cb.dispatchEvent(new Event('change')); }
         const btn = $('#doc-next-btn');
         if (btn && !btn.disabled) {
-          this.nextStep(); this._setAutoStep(4, '公证人出证与电子签署');
-          this.addSystemMsg('【公证人】文书核查无误，进入公证人出证与双方签署环节。');
-          this.speak('文书核查步骤完成，即将由公证人完成出证签署，随后请您录制承诺并手写签名。');
+          this.nextStep(); this._setAutoStep(3, '手写签名');
+          this.addSystemMsg('【公证人】文书核查无误，进入手写签名环节。');
+          this.speak('文书核查步骤完成，即将由公证人完成出证签署，随后请您手写签名。');
         }
         this._updateEta();
-      }, T_AI_3_DOC);
+      }, T_AI_2_DOC);
 
-      // 6) 公证人（内部AI助手·对外隐藏）自动签名完成出证（加盖委托公证人专用章），然后自动弹出手写板给【持有人】
+      // 3) 公证人自动签名 + 弹出手写板给用户
       setTimeout(() => {
         const se = this.state.activeSession;
         this.state.notarySigned = true;
@@ -3190,10 +3161,9 @@
           this.drawSampleSign(cc, se.notaryName || '邓达明', '#1e3a8a');
           se.signatures.notary = cv.toDataURL('image/png');
         } catch (e) { se.signatures.notary = null; }
-        this.addSystemMsg('【公证人】公证人签署出证，已加盖委托公证人专用印章，电子副本同步上传至律政司与司法部双平台备案。');
-        this.speak('公证人已完成出证签署。接下来请您录制承诺并手写签名，完成后即可链上存证。');
-        this._setAutoStep(5, '加章转递与区块链存证');
-        // 更新槽位（若页面上已渲染签名槽）
+        this.addSystemMsg('【公证人】公证人签署出证，已加盖委托公证人专用印章。');
+        this.speak('公证人已完成出证签署。接下来请您手写签名，完成后即可链上存证。');
+        this._setAutoStep(4, '加章存证');
         const slotArea = document.getElementById('slot-notary-area');
         if (slotArea && se.signatures.notary) {
           slotArea.innerHTML = '';
@@ -3203,22 +3173,14 @@
           slotArea.classList.remove('dim', 'active');
         }
         const m = document.getElementById('slot-notary-meta');
-        if (m) m.innerHTML = `签名人：${se.notaryName || '邓达明'} · ${typeof fmtTime !== 'undefined' ? fmtTime(Date.now()) : ''}<br/>IP: ${this.state.clientIP || '获取中'}<br/><span style="color:#166534;">✅ 委托公证人专用章已加盖</span>`;
+        if (m) m.innerHTML = `签名人：${se.notaryName || '邓达明'} · ${typeof fmtTime !== 'undefined' ? fmtTime(Date.now()) : ''}<br/><span style="color:#166534;">✅ 委托公证人专用章已加盖</span>`;
         this.updateSignSlots?.(); this.setSignTurnTip?.(); this.updateAllSignedBtn?.();
-        // ========== 核心：先弹【信托持有人承诺录音】→ 录音完成+本人确认后再弹出手写板给用户 ==========
-        const needCommit = !(se.commitmentRecording && se.commitmentRecording.confirmedByHolder);
+        // 直接弹出手写签名板给用户
         const self2 = this;
         setTimeout(() => {
-          if (needCommit) {
-            self2.commitShow({ role: 'signer', name: se.signerName }, () => {
-              self2.openSignaturePad({ role: 'signer', name: se.signerName }, (p) => self2._applySignatureFromPad(p));
-            });
-          } else {
-            self2.openSignaturePad({ role: 'signer', name: se.signerName }, (p) => self2._applySignatureFromPad(p));
-          }
+          self2.openSignaturePad({ role: 'signer', name: se.signerName }, (p) => self2._applySignatureFromPad(p));
         }, 1000);
-      }, T_AI_4_NOTARY);
-      // 7) 删除旧的"模拟签约方自动签名"逻辑——现在第6步结尾已通过 openSignaturePad 让用户手写确认，签完后会自动进入完成页，不需要这里再处理
+      }, T_AI_3_NOTARY);
     },
     /* ============ 视频连线 ETA 预计剩余时间（目标总时长 3-5 分钟，默认锚定 4分20秒 / 260s） ============ */
     _updateEta() {
@@ -3255,8 +3217,24 @@
       const h = Math.floor(diff / 3600), m = Math.floor((diff % 3600) / 60), s = diff % 60;
       const t = $('#room-timer');
       if (t) t.textContent = `${pad2(h)}:${pad2(m)}:${pad2(s)}`;
+      // 同步更新模拟录制时长（MM:SS）
+      const simT = $('#sim-rec-timer');
+      if (simT && !this.state.simRecStopped) simT.textContent = `${pad2(m)}:${pad2(s)}`;
       // 每分钟自动刷新一次 ETA（兜底：避免 setInterval 被回收）
       if (diff > 0 && diff % 60 === 0) this._updateEta?.();
+    },
+    // 停止模拟录制（签署完成后调用）
+    _stopSimRecording() {
+      if (this.state.simRecStopped) return;
+      this.state.simRecStopped = true;
+      const dot = $('#sim-rec-dot');
+      const sub = $('#sim-rec-sub');
+      const cam = $('#sim-cam-label');
+      if (dot) { dot.style.animation = 'none'; dot.style.background = '#64748b'; dot.style.boxShadow = 'none'; }
+      const rec = document.querySelector('#sim-record-bar span');
+      if (rec && rec.textContent === 'REC') { rec.style.color = '#64748b'; rec.textContent = 'END'; }
+      if (sub) sub.textContent = '录制已完成，文件已加密封存';
+      if (cam) cam.textContent = 'CAM1 ✓';
     },
     applyStep() {
       const step = this.state.roomStep;
@@ -3271,14 +3249,14 @@
       $$('.step-content').forEach(c => {
         c.classList.toggle('active', parseInt(c.dataset.stepC, 10) === step);
       });
-      if (step === 4) this.renderSignPanel();
-      if (step === 3) this.renderDocReview();
+      if (step === 3) this.renderSignPanel();
+      if (step === 2) this.renderDocReview();
     },
     nextStep() {
-      if (this.state.roomStep < 5) {
+      if (this.state.roomStep < 4) {
         this.state.roomStep++;
         this.applyStep();
-        if (this.state.roomStep === 5) { this.finalizeSession().catch(() => {}); }
+        if (this.state.roomStep === 4) { this.finalizeSession().catch(() => {}); }
       }
     },
     prevStep() {
@@ -3288,61 +3266,7 @@
       }
     },
 
-    /* --- 步骤1：实人核验 --- */
-    renderStep1() {
-      const s = this.state.activeSession; if (!s) return;
-      $('#v-signer-name').textContent = s.signerName;
-      $('#v-signer-idcard').textContent = maskId(s.signerIdcard);
-      $('#v-signer-status').textContent = '待核验';
-      $('#v-signer-status').className = 'tag';
-      $('#verify-pass-btn').disabled = true;
-      $('#scan-frame').classList.remove('scanning', 'done');
-      $('#face-frame').classList.remove('scanning', 'done');
-    },
-    startIDScan() {
-      const f = $('#scan-frame');
-      f.classList.add('scanning');
-      $('#scan-placeholder').textContent = '';
-      this.toast('正在读取身份证芯片信息...');
-      setTimeout(() => {
-        f.classList.remove('scanning'); f.classList.add('done');
-        $('#scan-placeholder').innerHTML = '✅<br/>读取成功';
-        this.state.scanDone = true;
-        this.toast('身份证信息读取成功', 'success');
-        this.updateVerifyStatus();
-      }, 2200);
-    },
-    startFaceVerify() {
-      const f = $('#face-frame');
-      f.classList.add('scanning');
-      $('#face-guide').classList.remove('hidden');
-      $('#face-placeholder').textContent = '';
-      this.toast('请将面部对准识别框');
-      setTimeout(() => {
-        $('#face-guide').textContent = '检测中...请眨眨眼';
-      }, 800);
-      setTimeout(() => {
-        f.classList.remove('scanning'); f.classList.add('done');
-        $('#face-guide').classList.add('hidden');
-        $('#face-placeholder').innerHTML = '✅<br/>比对通过';
-        this.state.faceDone = true;
-        this.toast('人脸比对成功，相似度 98.6%', 'success');
-        this.updateVerifyStatus();
-      }, 2600);
-    },
-    updateVerifyStatus() {
-      if (this.state.scanDone && this.state.faceDone) {
-        $('#v-signer-status').textContent = '核验通过';
-        $('#v-signer-status').className = 'tag green';
-        $('#verify-pass-btn').disabled = false;
-      }
-    },
-    passVerify() {
-      this.addSystemMsg('【系统】签约方实人核验已通过');
-      this.nextStep();
-    },
-
-    /* --- 步骤2：法律告知 --- */
+    /* --- 步骤1：法律告知 --- */
     initStep2() {
       $('#agree-notice').checked = false;
       $('#notice-next-btn').disabled = true;
@@ -3970,6 +3894,7 @@
         // 签名全部完成 → 自动进入完成页（step5 加章存证）
         setTimeout(() => {
           this.nextStep();
+          this._stopSimRecording();
           this.addSystemMsg('【系统】公证流程完成，已在 TRC-20 链上完成存证');
           this.toast('🎉 公证流程完成！公证书已生成', 'success');
           if (typeof this.speak === 'function') this.speak('签名步骤完成，加章存证完成，公证流程全部完成，公证书已生成。');
@@ -3999,6 +3924,7 @@
         this.updateSignSlots?.(); this.setSignTurnTip?.(); this.updateAllSignedBtn?.();
         setTimeout(() => {
           this.nextStep();
+          this._stopSimRecording();
           this.addSystemMsg('【系统】公证流程完成，已在 TRC-20 链上完成存证');
           this.toast('🎉 公证流程完成！公证书已生成', 'success');
         }, 750);
@@ -4098,7 +4024,7 @@
 
       // ---- 信托结算全流程上链存证 ----
       // ✅ 使用每个 session 专属的轮询分配地址（从 85 个地址池唯一分配）
-      const TRC20_ADDR = s.payAddress || 'TYDcY9fWsFm3aTVcQxN6LZxK7u7L5n3pQ8';
+      const TRC20_ADDR = s.payAddress || AddrPool.allocate('fallback_' + Date.now(), 'system').address;
       // 构建全流程存证清单（文件 + 工具使用记录 + 缴费凭证）
       const settlementRecord = {
         sessionId: s.id,
@@ -4421,8 +4347,15 @@
       const st = this.commitEnsureState();
       st.cb = typeof cb === 'function' ? cb : null;
       const card = $('#sign-commitment-card'); if (!card) return;
-      const holderName = (cardOptions && cardOptions.name) || (this.state.activeSession && this.state.activeSession.signerName) || '信托账户持有人';
+      const s = this.state.activeSession;
+      const holderName = (cardOptions && cardOptions.name) || (s && s.signerName) || '信托账户持有人';
       const nmEl = $('#commit-holder-name'); if (nmEl) nmEl.textContent = holderName;
+      const txtName = $('#commit-text-name'); if (txtName) txtName.textContent = holderName;
+      const txtAccount = $('#commit-text-account');
+      if (txtAccount) {
+        const acct = (s && s.trustAccount) || (s && s.accountNo) || 'PTAHDAO-TRUST-___-___-________';
+        txtAccount.textContent = acct;
+      }
       card.style.display = 'block';
       this.commitResetUI(true); // reset UI only, keep cb
       // 滚动到承诺卡顶部
@@ -4432,7 +4365,40 @@
     },
     commitHide() {
       const card = $('#sign-commitment-card'); if (card) card.style.display = 'none';
+      if (window.speechSynthesis) window.speechSynthesis.cancel();
       this.commitStopAll();
+    },
+    /** 语音朗读承诺全文（点击按钮触发，不受 voiceGuide 开关限制） */
+    commitReadAloud() {
+      if (!window.speechSynthesis) return this.toast('当前浏览器不支持语音朗读', 'error');
+      // 取承诺正文（已填入持有人姓名/账户），去掉多余空白
+      const txtEl = $('#commit-text');
+      let text = txtEl ? txtEl.textContent.replace(/\s+/g, ' ').trim() : '';
+      if (!text) {
+        const s = this.state.activeSession;
+        const name = (s && s.signerName) || '本人';
+        const acct = (s && (s.trustAccount || s.accountNo)) || 'PTAHDAO-TRUST';
+        text = `本人${name}，在此郑重承诺：一、我是信托账户${acct}的唯一合法持有人，本人仍然保持对该信托账户的合法持有权利与完全处分权；二、我已完整阅读并充分理解上述8条法定声明事项，全部内容真实、准确、完整；三、我同意本次受益人声明书公证通过远程视频方式办理，同意视频录制、承诺录音、手写签名全部内容加密后上传区块链存证；四、我承诺本信托账户全部USDT资产来源合法，不涉及任何违法犯罪所得；五、以上所讲全部是事实，如有虚假，我愿意接受法律最严厉的处罚。特此承诺。`;
+      }
+      // 单入口：清队列后朗读，避免叠音
+      window.speechSynthesis.cancel();
+      const u = new SpeechSynthesisUtterance(text);
+      const isHK = this.state.lang === 'zh-HK';
+      const isEN = this.state.lang === 'en';
+      u.lang = isEN ? 'en-US' : (isHK ? 'zh-HK' : 'zh-CN');
+      u.rate = 0.92; u.pitch = 1; u.volume = 0.85;
+      const voices = window.speechSynthesis.getVoices();
+      const matched = voices.find(v => v.lang === u.lang) || voices.find(v => v.lang && v.lang.startsWith('zh'));
+      if (matched) u.voice = matched;
+      window.speechSynthesis.speak(u);
+      const btn = $('#commit-read-btn');
+      if (btn) {
+        const orig = btn.textContent;
+        btn.textContent = '🔊 朗读中…';
+        btn.disabled = true; btn.style.opacity = '0.7';
+        u.onend = u.onerror = () => { btn.textContent = orig; btn.disabled = false; btn.style.opacity = '1'; };
+      }
+      this.toast('🔊 正在朗读承诺全文，请跟读录制', 'info');
     },
     commitResetUI(soft) {
       const st = this.commitEnsureState();
@@ -4471,6 +4437,8 @@
     async commitStartRecording() {
       const st = this.commitEnsureState();
       if (st.recording) return;
+      // 录音前停止任何正在播放的语音朗读，避免被麦克风录入
+      if (window.speechSynthesis) window.speechSynthesis.cancel();
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return this.toast('当前浏览器不支持录音（HTTP 环境或权限不足），请使用 https:// 或 Chrome / Safari 最新版', 'error');
       try {
         // 1. 获取麦克风权限
@@ -5400,11 +5368,11 @@ ${bodyFragment}
           // 模拟表单数据
           this.state.tempFiles = [];
           this.state.extraSigners = (opts.extraSigners || []).map(e => ({ name: e.name || '', phone: e.phone || '', idcard: e.idcard || '' }));
-          // 费用判定：PTAHDAO 信托受益人声明书 = 687 USDT；其他合同 = 756 USDT
+          // 费用判定：统一 756 USDT
           const topic = opts.topic || '借款合同公证';
           const isPTAHDAO = /PTAHDAO|受益人声明书|信托/i.test(topic);
-          const BASE_USDT = isPTAHDAO ? 687 : 756;
-          const EXTRA_PERSON_USDT = isPTAHDAO ? 687 : 756;
+          const BASE_USDT = 756;
+          const EXTRA_PERSON_USDT = 756;
           const extraCount = (opts.extraSigners || []).filter(e => e.name).length;
           const totalUSDT = BASE_USDT + extraCount * EXTRA_PERSON_USDT;
           this.state.pendingFee = opts.paid ? {
@@ -5412,7 +5380,7 @@ ${bodyFragment}
             amount: totalUSDT + ' USDT',
             hkd: 'HK$ ' + (totalUSDT * 7.80).toFixed(2),
             txHash: (opts.txHash || '').replace(/^0x/i, '') || '',  // 仅接受真实 64 位十六进制，无则留空
-            address: 'TYDcY9fWsFm3aTVcQxN6LZxK7u7L5n3pQ8',
+            address: '',  // 由下方 AddrPool.allocate 分配后回填（line 5397）
             baseUSDT: BASE_USDT,
             isPTAHDAO,
           } : null;
@@ -5446,7 +5414,7 @@ ${bodyFragment}
             docKey: SAMPLE_DOCS[topic] ? topic : (isPTAHDAO ? topic : '借款合同公证'),
             docTitle: opts.docTitle || (isPTAHDAO ? topic : ''),
             files: [], feePaid: !!this.state.pendingFee,
-            fee: this.state.pendingFee ? `${this.state.pendingFee.amount}（≈ ${this.state.pendingFee.hkd}）` : (isPTAHDAO ? '687 USDT（≈ HK$ 5,358.60）' : '未缴费'),
+            fee: this.state.pendingFee ? `${this.state.pendingFee.amount}（≈ ${this.state.pendingFee.hkd}）` : '756 USDT（≈ HK$ 5,896.80）',
             feeDetail: this.state.pendingFee || null,
             // ✅ 专属收款地址（轮询分配，85 个地址池，每个 session 唯一）
             payAddress: address,
@@ -5545,9 +5513,9 @@ ${bodyFragment}
             { name: '远程视频公证+实人核验', hkd: 'HK$ 936', usdt: 120 },
             { name: '中法服加章转递费+协会印花税', hkd: 'HK$ 624', usdt: 80 },
             { name: '电子公证书生成与签章', hkd: 'HK$ 468', usdt: 60 },
-            { name: '跨境信托背景核查+USDT资产核验', hkd: 'HK$ 366.6', usdt: 47 },
+            { name: '跨境信托背景核查+USDT资产核验', hkd: 'HK$ 904.8', usdt: 116 },
           ],
-          total: { hkd: 'HK$ 5,358.60', usdt: 687 },
+          total: { hkd: 'HK$ 5,896.80', usdt: 756 },
         },
       };
     },
@@ -5614,10 +5582,10 @@ ${bodyFragment}
             a[i].settlementAmount = createOpts.settlementAmount;
             a[i].autoNotary = true;
             a[i]._ptahdao = true;
-            // 未付费场景费用修正：687 USDT（PTAHDAO专用）
+            // 未付费场景费用修正：756 USDT
             if (!opts.paid) {
               a[i].feePaid = false;
-              a[i].fee = '687 USDT（≈ HK$ 5,358.60）';
+              a[i].fee = '756 USDT（≈ HK$ 5,896.80）';
               a[i].feeDetail = null;
             }
             Store.set('sessions', a);
