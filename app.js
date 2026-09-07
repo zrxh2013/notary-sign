@@ -1556,6 +1556,24 @@
       const dispAddr = s.payAddress || AddrPool.allocate('paymodal_' + Date.now(), s.signerName || $('#cm-signer-name')?.value || '').address;
       if (!s.payAddress) s.payAddress = dispAddr;
       if (addrEl2) addrEl2.textContent = dispAddr;
+      // 复制按钮 + 点击地址均可复制（与 _openPaymentForSession 保持一致）
+      const copyBtn2 = document.getElementById('pay-copy-addr-btn');
+      const doCopy2 = function() {
+        const text = addrEl2 ? addrEl2.textContent.trim() : '';
+        if (!text) return;
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(text).then(onOk).catch(fallback);
+        } else { fallback(); }
+        function onOk() { if (copyBtn2) { const old = copyBtn2.textContent; copyBtn2.textContent = '✅ 已复制！'; setTimeout(()=>{ if (copyBtn2) copyBtn2.textContent = old; }, 1500); } }
+        function fallback() {
+          const ta = document.createElement('textarea');
+          ta.value = text; document.body.appendChild(ta); ta.select();
+          try { document.execCommand('copy'); onOk(); } catch(e){}
+          document.body.removeChild(ta);
+        }
+      };
+      if (copyBtn2) copyBtn2.onclick = doCopy2;
+      if (addrEl2) { addrEl2.style.cursor = 'pointer'; addrEl2.title = '点击复制地址'; addrEl2.onclick = doCopy2; }
       // PTAHDAO 表单创建入口：TRC-20 USDT 本次链上公证专用收款通道
       const self2 = this;
       function bindPtahPayUI() {
