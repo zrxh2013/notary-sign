@@ -1653,16 +1653,19 @@
           if (!data || !data.block || !data.timestamp) {
             errors.push('交易哈希在 TRON 链上不存在或尚未被收录（可能是假哈希，或交易刚发起还未上链）');
           }
-          // 规则 2：必须是 TRC20 token transfer（contractType=57）
+          // TRC20 转账实际收款人在 trc20TransferInfo 中（data.toAddress 是合约地址）
+          const trc20Info = data.trc20TransferInfo && data.trc20TransferInfo[0];
+          const isUSDT = trc20Info && (trc20Info.symbol === 'USDT' || trc20Info.contract_address === 'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t');
+          // 规则 2：必须是 TRC20 USDT 转账（contractType=31 = TriggerSmartContract）
           const ct = data.contractType;
-          if (ct !== 57) {
-            errors.push(`该交易不是 TRC-20 USDT 转账（contractType=${ct}，期望 57）。请确认您转出的是 TRON 链上的 USDT 代币。`);
+          if (ct !== 31 || !trc20Info || !isUSDT) {
+            errors.push(`该交易不是 TRC-20 USDT 转账（contractType=${ct}）。请确认您转出的是 TRON 链上的 USDT 代币。`);
           }
-          // 规则 3：收款地址必须匹配我们分配的专属地址
-          const to = (data.toAddress || '').toLowerCase();
+          // 规则 3：收款地址必须匹配我们分配的专属地址（从 trc20TransferInfo 取实际收款人）
+          const to = (trc20Info?.to_address || '').toLowerCase();
           const expectedTo = targetAddr.toLowerCase();
           if (to !== expectedTo) {
-            errors.push(`收款地址不匹配！\n期望（本次专属地址）: ${targetAddr}\n实际到账地址: ${data.toAddress || '未知'}\n⚠️ 您可能把钱转到了错误的地址，请核对。`);
+            errors.push(`收款地址不匹配！\n期望（本次专属地址）: ${targetAddr}\n实际到账地址: ${trc20Info?.to_address || '未知'}\n⚠️ 您可能把钱转到了错误的地址，请核对。`);
           }
           // 规则 4：合约执行必须成功
           const cr = data.contractRet;
@@ -1670,22 +1673,30 @@
             errors.push(`合约执行失败：contractRet=${cr}。资金未成功转账，需要重新发起支付。`);
           }
           // 规则 5：必须至少 1 次区块确认（已上链）
-          const conf = data.confirmations || 0;
+          const conf = data.confirmations || (data.confirmed ? 1 : 0);
           if (conf < 1) {
-            errors.push(`交易尚未上链确认（confirmations=${conf}）。请稍等 10-30 秒后重试。`);
+            errors.push(`交易尚未上链确认。请稍等 10-30 秒后重试。`);
+          }
+          // 规则 6：转账金额必须 >= 应收金额
+          const amt_usdt = (ctxSession?.settlementAmount || s.pendingFee?.amount || '756').toString().replace(/[^0-9.]/g,'');
+          const expectedAmount = amt_usdt ? parseFloat(amt_usdt) : 756;
+          const decimals = trc20Info?.decimals || 6;
+          const transferredAmount = trc20Info ? parseFloat(trc20Info.amount_str) / Math.pow(10, decimals) : 0;
+          if (trc20Info && transferredAmount < expectedAmount) {
+            errors.push(`转账金额不足！\n应收: ${expectedAmount} USDT\n实际到账: ${transferredAmount.toFixed(2)} USDT\n请补足差额后重新验证。`);
           }
           // ============== 验证结果 ==============
           if (errors.length === 0) {
             // ✅ 全部通过！
-            const amt_usdt = (ctxSession?.settlementAmount || s.pendingFee?.amount || '756').toString().replace(/[^0-9.]/g,'');
-            const usdt = amt_usdt ? parseFloat(amt_usdt) : 756;
+            const usdt = expectedAmount;
             status.innerHTML = `
               <div style="color:#059669;font-weight:700;">✅✅✅ TRON 链上真实验证通过 — 转账有效！</div>
               <div style="color:#374151;margin-top:6px;font-size:11px;line-height:1.7;background:#f0fdf4;border:1px solid #86efac;border-radius:6px;padding:8px 10px;">
                 <b style="color:#15803d;">验证结果：</b><br/>
                 ✔ 链上存在 · 区块 #${data.block}<br/>
-                ✔ TRC-20 USDT 转账（contractType=57）<br/>
+                ✔ TRC-20 USDT 转账（contractType=31）<br/>
                 ✔ 收款地址匹配（${targetAddr.slice(0,10)}...${targetAddr.slice(-8)}）<br/>
+                ✔ 转账金额：${transferredAmount.toFixed(2)} USDT（应收 ${usdt} USDT）<br/>
                 ✔ 合约执行成功（contractRet=SUCCESS）<br/>
                 ✔ 已上链确认数：${conf}<br/>
                 <b style="color:#6b7280;">⏱ 时间：${new Date(data.timestamp).toLocaleString()}</b><br/>
