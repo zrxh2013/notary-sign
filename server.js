@@ -1,9 +1,16 @@
-const http = require('http');
+const https = require('https');
 const fs = require('fs');
 const path = require('path');
 
 const PORT = 8090;
 const ROOT = __dirname;
+
+/* ========== HTTPS 自签证书 ========== */
+const CERT_DIR = path.join(ROOT, 'certs');
+const options = {
+  key:  fs.readFileSync(path.join(CERT_DIR, 'key.pem')),
+  cert: fs.readFileSync(path.join(CERT_DIR, 'cert.pem')),
+};
 
 const MIME = {
   '.html': 'text/html; charset=utf-8',
@@ -23,7 +30,7 @@ const MIME = {
 
 const ALLOWED = new Set(['index.html','styles.css','app.js','favicon.ico','notary-api.js']);
 
-const server = http.createServer((req, res) => {
+const server = https.createServer(options, (req, res) => {
   let urlPath = decodeURIComponent(req.url.split('?')[0]);
   if (urlPath === '/' || urlPath === '') urlPath = '/index.html';
 
@@ -63,8 +70,10 @@ server.on('error', (e) => {
 });
 
 server.listen(PORT, '0.0.0.0', () => {
-  console.log(`[OK] 信签云静态服务已启动，监听 0.0.0.0:${PORT}`);
+  console.log(`[OK] 信签云 HTTPS 服务已启动，监听 0.0.0.0:${PORT}`);
   console.log(`[OK] 服务根目录: ${ROOT}`);
+  console.log(`[OK] 证书目录: ${CERT_DIR}`);
   console.log(`[OK] 白名单文件: ${Array.from(ALLOWED).join(', ')}`);
-  console.log(`[OK] 访问入口: http://localhost:${PORT}/index.html`);
+  console.log(`[OK] 访问入口: https://localhost:${PORT}/index.html`);
+  console.log(`[WARN] 自签证书，浏览器首次访问需手动信任（高级 → 继续前往）`);
 });
