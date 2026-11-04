@@ -194,4 +194,111 @@ sudo update-ca-trust</pre>
   </div>
 </div>
 
-<h3>4.7 iOS / iPadOS（需两步，缺一不可）
+<h3>4.7 iOS / iPadOS（需两步，缺一不可）</h3>
+<div class="card">
+  <div class="step-body">
+    <p><strong>第一步 · 安装描述文件</strong></p>
+    <p>1. 通过 AirDrop、邮件附件，或直接用 Safari 从本服务下载 <code>cert.cer</code>。</p>
+    <p>2. 设置 → 通用 → VPN 与设备管理（或「已下载描述文件」）→ 点击该描述文件 → 安装 → 输入锁屏密码 → 再次确认安装。</p>
+    <p><strong>第二步 · 开启完全信任（关键）</strong></p>
+    <p>3. 设置 → 通用 → 关于本机 → 证书信任设置 → 找到 <strong>XinQianYun Notary</strong> → 打开「启用完全信任」开关。</p>
+    <div class="danger"><b>最常见失败原因：</b>只做了第一步、漏掉第二步。iOS 对用户安装的根证书默认不信任，必须手动开启「完全信任」，否则访问时仍会报证书无效。</div>
+  </div>
+</div>
+
+<h2>五、验证是否生效</h2>
+<div class="card">
+  <div class="card-header"><div class="step-num">3</div><div class="step-title">两种验证方式</div></div>
+  <div class="step-body">
+    <p><strong>方式 A · 浏览器目视检查</strong></p>
+    <p>打开 <code>https://localhost:8090/index.html</code>，地址栏左侧应显示<strong>锁形图标</strong>，且不再出现「不安全」警告。点击锁图标可查看证书颁发者与有效期。</p>
+    <p><strong>方式 B · 命令行校验</strong></p>
+<pre><span class="c"># 使用证书作为信任锚访问，成功返回 HTML 即表示证书链有效</span>
+curl --cacert /workspace/certs/cert.pem https://localhost:8090/
+
+<span class="c"># 仅检查状态码</span>
+curl --cacert /workspace/certs/cert.pem -o /dev/null -w "HTTP %{http_code}\n" https://localhost:8090/</pre>
+    <div class="ok">预期输出：<code>HTTP 200</code>。若返回 <code>SSL certificate problem</code>，说明证书未被信任或访问地址不在 SAN 中。</div>
+  </div>
+</div>
+
+<h2>六、常见问题排查</h2>
+<table>
+  <tr><th style="width:26%;">现象</th><th>原因与处理</th></tr>
+  <tr>
+    <td>仍然提示「不安全」</td>
+    <td>证书装错存储位置。Windows 必须装进「受信任的根证书颁发机构」；iOS 必须开启「完全信任」。删除后重新安装。</td>
+  </tr>
+  <tr>
+    <td>ERR_CERT_AUTHORITY_INVALID</td>
+    <td>同上，根证书未被信任。检查证书是否已过期，或是否安装到了「个人」存储。</td>
+  </tr>
+  <tr>
+    <td>证书名称不匹配 / NET::ERR_CERT_COMMON_NAME_INVALID</td>
+    <td>访问地址不在证书 SAN 内。按 4.2 节重新生成包含该 IP 或域名的证书。</td>
+  </tr>
+  <tr>
+    <td>ERR_CONNECTION_REFUSED</td>
+    <td>服务未启动或端口被占。执行 <code>ss -tlnp | grep 8090</code> 检查；如端口被占用先释放再启动。</td>
+  </tr>
+  <tr>
+    <td>摄像头 / 麦克风无法调用</td>
+    <td>浏览器仅在安全上下文（HTTPS 或 localhost）下允许摄像头。请确认访问协议是 <code>https://</code>，而非 <code>http://</code>。</td>
+  </tr>
+  <tr>
+    <td>Chrome 提示「您即将访问的网站包含恶意软件」</td>
+    <td>自签证书 + 非 443 端口偶发误报，可忽略或在浏览器设置中将该地址加入白名单。</td>
+  </tr>
+  <tr>
+    <td>证书过期</td>
+    <td>2027-11-02 后失效，按第七节重新生成。</td>
+  </tr>
+</table>
+
+<h2>七、证书信息与续期</h2>
+<p>自签证书有效期 1 年，到期前需重新生成（重新生成后各设备需重新安装并信任新证书）：</p>
+<pre>cd /workspace
+
+<span class="c"># 备份旧证书</span>
+cp certs/key.pem  certs/key.pem.bak.$(date +%Y%m%d)
+cp certs/cert.pem certs/cert.pem.bak.$(date +%Y%m%d)
+
+<span class="c"># 生成新证书（本机使用）</span>
+openssl req -x509 -newkey rsa:2048 \
+  -keyout certs/key.pem \
+  -out certs/cert.pem \
+  -days 365 -nodes \
+  -subj "/CN=localhost/O=XinQianYun Notary" \
+  -addext "subjectAltName=DNS:localhost,IP:127.0.0.1"
+
+<span class="c"># 重启服务使新证书生效</span>
+pkill -f "node server.js"; nohup node server.js &gt; /tmp/notary-https.log 2&gt;&amp;1 &amp;</pre>
+<p>查看当前证书详情：</p>
+<pre>openssl x509 -in /workspace/certs/cert.pem -noout -subject -dates -ext subjectAltName</pre>
+
+<h2>八、安全注意事项与后续升级</h2>
+<div class="danger">
+  <b>1. 私钥保密：</b><code>key.pem</code> 权限应为 <code>600</code>，不得提交到代码仓库、不得通过聊天工具传输、不得放入交付包。<br>
+  <b>2. 自签证书的定位：</b>适合本机演示、内网试用与开发联调，<strong>不适合</strong>对外正式业务。公共 CA 证书才能让陌生用户无需任何配置即可安全访问。<br>
+  <b>3. 分发范围：</b>只分发 <code>cert.cer</code> / <code>cert.pem</code>，并在分发说明中提示接收方核对 SHA-256 指纹。
+</div>
+
+<h3>升级为正式证书（拥有域名后）</h3>
+<p>项目已预置签发脚本 <code>scripts/issue-cert.sh</code>，通过阿里云 DNS-01 挑战申请 Let's Encrypt 证书：</p>
+<pre><span class="c"># 方式一：命令行参数</span>
+./scripts/issue-cert.sh notary.yourdomain.com &lt;Ali_Key&gt; &lt;Ali_Secret&gt;
+
+<span class="c"># 方式二：环境变量</span>
+Ali_Key=xxx Ali_Secret=yyy CERT_DOMAIN=notary.yourdomain.com ./scripts/issue-cert.sh
+
+<span class="c"># 方式三：交互式（Secret 不回显）</span>
+./scripts/issue-cert.sh</pre>
+<p>脚本会自动完成：DNS 验证 → 签发 → 备份旧证书 → 写入 <code>/workspace/certs/</code> → 重启服务。由于 <code>server.js</code> 始终从该目录读取证书，<strong>应用代码无需任何改动</strong>。</p>
+<div class="tip">前提：域名已在阿里云 DNS 解析托管，RAM 账号具备 <code>AliyunDNSFullAccess</code> 权限。<code>example.com</code> 等保留域名无法签发，必须使用真实自有域名。</div>
+
+<div class="footer">
+  信签云 · 公证人视频签约平台 &nbsp;|&nbsp; 自签 HTTPS 证书信任与访问操作指引 v1.0 &nbsp;|&nbsp; 生成日期 2026-11-04
+</div>
+
+</body>
+</html>
