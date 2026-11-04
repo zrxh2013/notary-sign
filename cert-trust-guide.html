@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>信签云 · 自签 HTTPS 证书信任与访问操作指引</title>
+<style>
+  * { box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Microsoft YaHei', sans-serif; margin: 0; padding: 40px 60px; color: #1e293b; background: #fff; line-height: 1.75; }
+  @media print { body { padding: 0; } .no-print { display: none !important; } .card { break-inside: avoid; } }
+  h1 { font-size: 26px; color: #4c1d95; border-bottom: 3px solid #7c3aed; padding-bottom: 12px; margin-top: 0; }
+  h2 { font-size: 19px; color: #6d28d9; border-left: 4px solid #7c3aed; padding-left: 12px; margin-top: 38px; }
+  h3 { font-size: 15.5px; color: #4c1d95; margin: 22px 0 8px; }
+  .meta { display: flex; gap: 12px; flex-wrap: wrap; font-size: 12.5px; color: #64748b; margin-top: 8px; }
+  .meta span { background: #f1f5f9; padding: 3px 10px; border-radius: 12px; }
+  .meta span b { color: #4c1d95; }
+  .print-bar { position: fixed; top: 20px; right: 20px; z-index: 999; }
+  .print-bar button { background: #7c3aed; color: #fff; border: none; padding: 10px 20px; border-radius: 8px; font-size: 14px; cursor: pointer; box-shadow: 0 4px 12px rgba(124,58,237,.3); }
+  .print-bar button:hover { background: #6d28d9; }
+  .print-bar div { font-size: 11px; color: #64748b; margin-top: 4px; text-align: center; }
+
+  .card { background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; margin-bottom: 22px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,.04); }
+  .card-header { display: flex; align-items: center; gap: 12px; padding: 12px 16px; background: #f8fafc; border-bottom: 1px solid #e2e8f0; }
+  .step-num { width: 30px; height: 30px; background: linear-gradient(135deg, #7c3aed, #4c1d95); color: #fff; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 13px; flex-shrink: 0; }
+  .step-title { font-size: 15px; font-weight: 700; color: #1e293b; }
+  .step-body { padding: 16px; }
+  .step-body p { margin: 8px 0; font-size: 13.5px; color: #475569; }
+
+  code, pre { font-family: 'SF Mono', Consolas, 'Courier New', monospace; }
+  code { background: #f1f5f9; padding: 2px 6px; border-radius: 4px; font-size: 12.5px; color: #7c3aed; }
+  pre { background: #1e293b; color: #e2e8f0; padding: 14px 18px; border-radius: 8px; overflow-x: auto; font-size: 12.5px; line-height: 1.7; margin: 10px 0; }
+  pre .c { color: #94a3b8; }
+
+  .tip { background: #fef3c7; border-left: 4px solid #f59e0b; padding: 10px 16px; border-radius: 6px; font-size: 13px; color: #78350f; margin: 12px 0; }
+  .danger { background: #fee2e2; border-left: 4px solid #dc2626; padding: 10px 16px; border-radius: 6px; font-size: 13px; color: #7f1d1d; margin: 12px 0; }
+  .ok { background: #dcfce7; border-left: 4px solid #16a34a; padding: 10px 16px; border-radius: 6px; font-size: 13px; color: #14532d; margin: 12px 0; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 13px; margin: 12px 0; }
+  th, td { padding: 8px 12px; text-align: left; border-bottom: 1px solid #e2e8f0; }
+  th { background: #f8fafc; color: #4c1d95; font-weight: 700; }
+  td:first-child { color: #64748b; white-space: nowrap; }
+
+  .toc { background: linear-gradient(135deg, #ede9fe, #faf5ff); border: 1px solid #ddd6fe; border-radius: 12px; padding: 18px 26px; margin: 24px 0; }
+  .toc h3 { margin: 0 0 10px; color: #4c1d95; }
+  .toc ol { margin: 0; padding-left: 20px; font-size: 13.5px; color: #334155; line-height: 2; }
+
+  .footer { margin-top: 56px; padding-top: 20px; border-top: 1px solid #e2e8f0; font-size: 12px; color: #94a3b8; text-align: center; }
+</style>
+</head>
+<body>
+
+<div class="print-bar no-print">
+  <button onclick="window.print()">🖨️ 打印 / 导出 PDF</button>
+  <div>浏览器打印 → 另存为 PDF</div>
+</div>
+
+<h1>信签云 · 自签 HTTPS 证书信任与访问操作指引</h1>
+<div class="meta">
+  <span><b>版本</b> v1.0</span>
+  <span><b>日期</b> 2026-11-04</span>
+  <span><b>服务地址</b> https://localhost:8090</span>
+  <span><b>证书有效期</b> 至 2027-11-02</span>
+</div>
+
+<div class="toc">
+  <h3>目录</h3>
+  <ol>
+    <li>适用场景与证书现状</li>
+    <li>启动服务</li>
+    <li>本机访问（无需安装证书）</li>
+    <li>其他设备信任证书（Windows / macOS / Linux / Android / iOS）</li>
+    <li>验证是否生效</li>
+    <li>常见问题排查</li>
+    <li>证书信息与续期</li>
+    <li>安全注意事项与后续升级</li>
+  </ol>
+</div>
+
+<h2>一、适用场景与证书现状</h2>
+<p>本平台当前使用<strong>自签 HTTPS 证书</strong>（未使用付费/免费 CA 签发的正式证书），因此浏览器首次访问时会提示「连接不是私密连接」。这是自签证书的正常现象，按下方步骤处理即可。</p>
+
+<table>
+  <tr><th>项目</th><th>内容</th></tr>
+  <tr><td>证书文件</td><td><code>/workspace/certs/cert.pem</code>（可公开分发）</td></tr>
+  <tr><td>私钥文件</td><td><code>/workspace/certs/key.pem</code>（<strong>严禁外传</strong>）</td></tr>
+  <tr><td>证书主题</td><td>CN = localhost, O = XinQianYun Notary</td></tr>
+  <tr><td>证书 SAN</td><td>DNS:localhost、IP:127.0.0.1</td></tr>
+  <tr><td>有效期</td><td>2026-11-02 ~ 2027-11-02（1 年）</td></tr>
+  <tr><td>SHA-256 指纹</td><td style="font-family:'SF Mono',Consolas,monospace;font-size:11.5px;word-break:break-all;">FA:92:A7:8C:43:53:A9:23:F0:3F:E4:74:04:75:AD:6C:3D:A4:15:2D:BE:70:DC:0A:DF:1C:B5:27:F8:FD:A3:0D</td></tr>
+</table>
+
+<div class="tip">
+  <b>关键认知：</b>证书是否「有效」，取决于访问地址是否在证书的 SAN（备用名称）列表里。当前证书只覆盖 <code>localhost</code> 和 <code>127.0.0.1</code>，因此<strong>本机访问无需安装证书</strong>；若要从其他设备或局域网 IP 访问，必须先重新生成包含该 IP 的证书（见 4.2 节）。
+</div>
+
+<h2>二、启动服务</h2>
+<div class="card">
+  <div class="card-header"><div class="step-num">1</div><div class="step-title">在服务器上启动 HTTPS 服务</div></div>
+  <div class="step-body">
+<pre><span class="c"># 进入项目目录</span>
+cd /workspace
+
+<span class="c"># 启动服务（监听 0.0.0.0:8090，仅 HTTPS）</span>
+node server.js</pre>
+    <p>启动成功后终端会输出：</p>
+<pre>[OK] 信签云 HTTPS 服务已启动，监听 0.0.0.0:8090
+[OK] 访问入口: https://localhost:8090/index.html</pre>
+    <p>如需后台常驻运行：</p>
+<pre>nohup node server.js &gt; /tmp/notary-https.log 2&gt;&amp;1 &amp;</pre>
+  </div>
+</div>
+
+<div class="tip">
+  <b>营业时间闸门：</b>首页默认仅在<strong>北京时间 09:00–21:00</strong>开放。非开放时段会显示休息页与倒计时。演示或调试时可在地址后加 <code>?force=1</code> 绕过，例如 <code>https://localhost:8090/index.html?force=1</code>。
+</div>
+
+<h2>三、本机访问（无需安装证书）</h2>
+<div class="card">
+  <div class="card-header"><div class="step-num">2</div><div class="step-title">在服务器本机浏览器打开并接受警告</div></div>
+  <div class="step-body">
+    <p>访问地址：<strong>https://localhost:8090/index.html</strong></p>
+    <p>浏览器会提示「您的连接不是私密连接」，按下面方式继续：</p>
+    <table>
+      <tr><th>浏览器</th><th>操作路径</th></tr>
+      <tr><td>Chrome / Edge</td><td>点击「高级」→「继续前往 localhost（不安全）」</td></tr>
+      <tr><td>Firefox</td><td>点击「高级…」→「接受风险并继续」</td></tr>
+      <tr><td>Safari</td><td>点击「显示详情」→「访问此网站」</td></tr>
+    </table>
+    <div class="ok"><b>为什么可以放心继续：</b>该证书由本服务自行生成，浏览器报警仅表示它不是公共 CA 签发，并不代表连接被第三方劫持。本机访问时流量不经过外网。</div>
+  </div>
+</div>
+
+<h2>四、其他设备信任证书</h2>
+
+<h3>4.1 导出可分发证书文件</h3>
+<p>把 PEM 转为 Windows / Android / iOS 更易识别的 DER 格式（扩展名 <code>.cer</code>）：</p>
+<pre>openssl x509 -in /workspace/certs/cert.pem -outform der -out /workspace/certs/cert.cer</pre>
+<div class="danger"><b>安全红线：</b>只分发 <code>cert.cer</code> 或 <code>cert.pem</code>。<strong>绝不可</strong>把 <code>key.pem</code> 交给任何人——私钥泄露等同于证书被冒用。</div>
+
+<h3>4.2 先确认访问地址是否在证书 SAN 内</h3>
+<p>若从局域网另一台设备访问（如 <code>https://192.168.1.20:8090</code>），当前证书不包含该 IP，即使安装了证书也会报「证书名称不匹配」。需重新生成证书并加入该 IP：</p>
+<pre>openssl req -x509 -newkey rsa:2048 \
+  -keyout /workspace/certs/key.pem \
+  -out /workspace/certs/cert.pem \
+  -days 365 -nodes \
+  -subj "/CN=192.168.1.20/O=XinQianYun Notary" \
+  -addext "subjectAltName=DNS:localhost,IP:127.0.0.1,IP:192.168.1.20"</pre>
+<p>把 <code>192.168.1.20</code> 替换为服务器的实际局域网 IP（Linux 用 <code>hostname -I</code> 或 <code>ip addr</code> 查看）。生成后需重启服务，并重新把新 <code>cert.cer</code> 装到各设备。</p>
+
+<h3>4.3 Windows</h3>
+<div class="card">
+  <div class="step-body">
+    <p>1. 将 <code>cert.cer</code> 拷贝到目标电脑，双击打开。</p>
+    <p>2. 点击「安装证书」→ 选择「<strong>本地计算机</strong>」（需管理员权限）。</p>
+    <p>3. 选择「将所有证书放入下列存储」→ 浏览 → 选择「<strong>受信任的根证书颁发机构</strong>」→ 确定 → 完成。</p>
+    <p>4. 关闭并重新打开浏览器。</p>
+    <div class="tip">若误装到「个人」存储，浏览器仍会报警。可在 <code>certlm.msc</code> 中检查证书是否位于「受信任的根证书颁发机构 → 证书」下。</div>
+  </div>
+</div>
+
+<h3>4.4 macOS</h3>
+<div class="card">
+  <div class="step-body">
+    <p>1. 双击 <code>cert.cer</code>，钥匙串访问会提示添加，选择「<strong>系统</strong>」钥匙串。</p>
+    <p>2. 在钥匙串访问中找到该证书，双击打开。</p>
+    <p>3. 展开「信任」→「使用此证书时」选择「<strong>始终信任</strong>」→ 关闭窗口并输入管理员密码。</p>
+    <p>也可用命令行一步完成：</p>
+<pre>sudo security add-trusted-cert -d -r trustRoot \
+  -k /Library/Keychains/System.keychain \
+  /workspace/certs/cert.cer</pre>
+  </div>
+</div>
+
+<h3>4.5 Linux</h3>
+<div class="card">
+  <div class="step-body">
+    <p>Debian / Ubuntu 系：</p>
+<pre>sudo cp /workspace/certs/cert.pem /usr/local/share/ca-certificates/xinqianyun.crt
+sudo update-ca-certificates</pre>
+    <p>CentOS / RHEL 系：</p>
+<pre>sudo cp /workspace/certs/cert.pem /etc/pki/ca-trust/source/anchors/xinqianyun.crt
+sudo update-ca-trust</pre>
+    <p>Firefox 使用独立的证书库，需额外导入：设置 → 隐私与安全 → 证书 → 查看证书 → 证书颁发机构 → 导入。</p>
+  </div>
+</div>
+
+<h3>4.6 Android</h3>
+<div class="card">
+  <div class="step-body">
+    <p>1. 将 <code>cert.cer</code> 传到手机（微信文件传输、邮件附件或数据线均可）。</p>
+    <p>2. 设置 → 安全（或「密码与安全」）→ 加密与凭据 → 安装证书 → <strong>CA 证书</strong> → 选择下载的 <code>cert.cer</code>。</p>
+    <p>3. 系统会提示「您的数据可能不安全」，确认继续并输入锁屏密码。</p>
+    <div class="tip">不同厂商路径略有差异：小米在「密码与安全 → 系统安全 → 加密与凭据」；华为在「安全 → 更多安全设置 → 加密和凭据」；OPPO/vivo 在「安全 → 更多 → 系统安全」。</div>
+  </div>
+</div>
+
+<h3>4.7 iOS / iPadOS（需两步，缺一不可）
