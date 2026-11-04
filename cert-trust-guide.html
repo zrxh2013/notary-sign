@@ -59,7 +59,7 @@
   <span><b>版本</b> v1.0</span>
   <span><b>日期</b> 2026-11-04</span>
   <span><b>服务地址</b> https://localhost:8090</span>
-  <span><b>证书有效期</b> 至 2027-11-02</span>
+  <span><b>证书有效期</b> 至 2027-11-04</span>
 </div>
 
 <div class="toc">
@@ -84,13 +84,13 @@
   <tr><td>证书文件</td><td><code>/workspace/certs/cert.pem</code>（可公开分发）</td></tr>
   <tr><td>私钥文件</td><td><code>/workspace/certs/key.pem</code>（<strong>严禁外传</strong>）</td></tr>
   <tr><td>证书主题</td><td>CN = localhost, O = XinQianYun Notary</td></tr>
-  <tr><td>证书 SAN</td><td>DNS:localhost、IP:127.0.0.1</td></tr>
-  <tr><td>有效期</td><td>2026-11-02 ~ 2027-11-02（1 年）</td></tr>
-  <tr><td>SHA-256 指纹</td><td style="font-family:'SF Mono',Consolas,monospace;font-size:11.5px;word-break:break-all;">FA:92:A7:8C:43:53:A9:23:F0:3F:E4:74:04:75:AD:6C:3D:A4:15:2D:BE:70:DC:0A:DF:1C:B5:27:F8:FD:A3:0D</td></tr>
+  <tr><td>证书 SAN</td><td>DNS:localhost、IP:127.0.0.1、IP:10.57.58.155（当前局域网 IP）</td></tr>
+  <tr><td>有效期</td><td>2026-11-04 ~ 2027-11-04（1 年）</td></tr>
+  <tr><td>SHA-256 指纹</td><td style="font-family:'SF Mono',Consolas,monospace;font-size:11.5px;word-break:break-all;">56:EC:97:C8:88:16:79:82:87:C1:1E:07:47:E2:E8:8C:60:6E:F6:DB:4D:D9:C3:C0:61:DC:12:74:AE:5F:D1:A0</td></tr>
 </table>
 
 <div class="tip">
-  <b>关键认知：</b>证书是否「有效」，取决于访问地址是否在证书的 SAN（备用名称）列表里。当前证书只覆盖 <code>localhost</code> 和 <code>127.0.0.1</code>，因此<strong>本机访问无需安装证书</strong>；若要从其他设备或局域网 IP 访问，必须先重新生成包含该 IP 的证书（见 4.2 节）。
+  <b>关键认知：</b>证书是否「有效」，取决于访问地址是否在证书的 SAN（备用名称）列表里。当前证书覆盖 <code>localhost</code>、<code>127.0.0.1</code> 与局域网 IP <code>10.57.58.155</code>；若服务器局域网 IP 变化或需从新地址访问，须重新生成包含该地址的证书（见 4.2 节，或直接运行 <code>scripts/renew-selfsigned-cert.sh</code>，会自动收录当前本机所有局域网 IP）。
 </div>
 
 <h2>二、启动服务</h2>
@@ -251,12 +251,15 @@ curl --cacert /workspace/certs/cert.pem -o /dev/null -w "HTTP %{http_code}\n" ht
   </tr>
   <tr>
     <td>证书过期</td>
-    <td>2027-11-02 后失效，按第七节重新生成。</td>
+    <td>2027-11-04 后失效，按第七节重新生成。</td>
   </tr>
 </table>
 
 <h2>七、证书信息与续期</h2>
-<p>自签证书有效期 1 年，到期前需重新生成（重新生成后各设备需重新安装并信任新证书）：</p>
+<p>自签证书有效期 1 年，到期前需重新生成（重新生成后各设备需重新安装并信任新证书）。<strong>推荐直接使用预置脚本</strong>（自动备份、自动收录局域网 IP、自动重启并校验）：</p>
+<pre>cd /workspace
+./scripts/renew-selfsigned-cert.sh</pre>
+<p>如需手工操作，等效命令如下：</p>
 <pre>cd /workspace
 
 <span class="c"># 备份旧证书</span>
